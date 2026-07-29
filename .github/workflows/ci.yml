@@ -1,0 +1,80 @@
+name: Studio Lumiere CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  frontend-test:
+    name: Build & Type Check Frontend (Next.js 15)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Frontend Dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Next.js Type Check & Build Verification
+        run: |
+          cd frontend
+          npm run build
+
+  backend-test:
+    name: Test Backend API (Laravel 12)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: studio_lumiere_test
+          POSTGRES_PASSWORD: secret_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo, pdo_pgsql, redis, bcmath
+          coverage: none
+
+      - name: Install Composer Dependencies
+        run: |
+          cd backend
+          composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Run Database Migrations
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_DATABASE: studio_lumiere_test
+          DB_USERNAME: postgres
+          DB_PASSWORD: secret_password
+        run: |
+          cd backend
+          php artisan migrate --force
