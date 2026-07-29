@@ -1,5 +1,9 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { clearSession } from '@/lib/session';
+import { isApiNetworkError, isApiTimeout } from '@/lib/api-error';
+
+const API_TIMEOUT_MS = 20000;
+const API_PROXY_TIMEOUT_MS = 15000;
 
 function normalizeApiV1Url(base: string): string {
   const trimmed = base.replace(/\/$/, '');
@@ -27,7 +31,7 @@ export function getApiBaseUrl(): string {
 
 export const apiClient: AxiosInstance = axios.create({
   baseURL: getApiBaseUrl(),
-  timeout: 15000,
+  timeout: API_TIMEOUT_MS,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
@@ -61,7 +65,13 @@ apiClient.interceptors.response.use(
   (response: AxiosResponse) => response,
   (error) => {
     if (!error.response) {
-      console.warn('[API Client] Impossible de contacter l\'API backend. Vérifiez que le serveur est accessible sur le même domaine (/api/v1).');
+      if (isApiTimeout(error)) {
+        console.warn('[API Client] Délai dépassé — le backend ne répond pas assez vite (vérifiez port 8050 / docker).');
+      } else if (isApiNetworkError(error)) {
+        console.warn('[API Client] Backend injoignable. Démarrez : docker compose up -d backend');
+      } else {
+        console.warn('[API Client] Impossible de contacter l\'API backend (/api/v1).');
+      }
     } else {
       console.error(`[API Client Error] ${error.response.status}:`, error.response.data);
       const status = error.response.status;
@@ -80,4 +90,5 @@ apiClient.interceptors.response.use(
   }
 );
 
+export { API_PROXY_TIMEOUT_MS };
 export default apiClient;

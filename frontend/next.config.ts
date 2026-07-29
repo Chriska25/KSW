@@ -22,6 +22,7 @@ function getLanDevOrigins(): string[] {
       for (const net of ifaces ?? []) {
         if (net.family === 'IPv4' && !net.internal) {
           hosts.add(net.address);
+          hosts.add(`${net.address}:3000`);
         }
       }
     }
@@ -31,41 +32,68 @@ function getLanDevOrigins(): string[] {
 
   const fromEnv = (process.env.ALLOWED_DEV_ORIGINS || process.env.ALLOWED_DEV_ORIGIN || '')
     .split(',')
-    .map((h) => h.trim().split(':')[0])
+    .map((h) => h.trim())
     .filter(Boolean);
 
-  fromEnv.forEach((h) => hosts.add(h));
+  fromEnv.forEach((entry) => {
+    const host = entry.split('://').pop()?.split('/')[0] || entry;
+    hosts.add(host);
+    if (!host.includes(':')) {
+      hosts.add(`${host}:3000`);
+    }
+  });
 
   return Array.from(hosts);
 }
 
+/** Plages IP privées — accès téléphone / autre machine sur le Wi-Fi en dev */
+const PRIVATE_LAN_WILDCARDS = [
+  '10.*.*.*',
+  '192.168.*.*',
+  '172.16.*.*',
+  '172.17.*.*',
+  '172.18.*.*',
+  '172.19.*.*',
+  '172.20.*.*',
+  '172.21.*.*',
+  '172.22.*.*',
+  '172.23.*.*',
+  '172.24.*.*',
+  '172.25.*.*',
+  '172.26.*.*',
+  '172.27.*.*',
+  '172.28.*.*',
+  '172.29.*.*',
+  '172.30.*.*',
+  '172.31.*.*',
+];
+
 const lanOrigins = getLanDevOrigins();
 
-const nextConfig: NextConfig = {
-  compress: true,
-  reactStrictMode: true,
-  // Obligatoire pour accès via IP réseau / ngrok en mode `next dev`
-  // Sans cela Next.js bloque les chunks JS (403) → page sans interactivité
-  allowedDevOrigins: [
+function getDevAllowedOrigins(): string[] {
+  return [
     '*.ngrok-free.app',
     '*.ngrok-free.dev',
     '*.ngrok.io',
     '*.loca.lt',
     'localhost',
     '127.0.0.1',
+    'localhost:3000',
+    '127.0.0.1:3000',
+    ...PRIVATE_LAN_WILDCARDS,
     ...lanOrigins,
-  ],
+  ];
+}
+
+const nextConfig: NextConfig = {
+  compress: true,
+  reactStrictMode: true,
+  // Obligatoire pour accès via IP réseau / ngrok en mode `next dev`
+  // Sans cela Next.js bloque les chunks JS (403) → page sans interactivité
+  allowedDevOrigins: getDevAllowedOrigins(),
   experimental: {
     serverActions: {
-      allowedOrigins: [
-        '*.ngrok-free.app',
-        '*.ngrok-free.dev',
-        '*.ngrok.io',
-        '*.loca.lt',
-        'localhost',
-        '127.0.0.1',
-        ...lanOrigins,
-      ],
+      allowedOrigins: getDevAllowedOrigins(),
     },
   },
   async rewrites() {

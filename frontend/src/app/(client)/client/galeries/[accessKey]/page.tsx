@@ -39,6 +39,7 @@ export default function ClientPrivateGalleryPage() {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxPhotoId, setLightboxPhotoId] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState('');
 
   const applyFavorites = useCallback((gal: GalleryAdminItem): PhotoItem[] => {
     const favs = loadGalleryFavorites(gal.id);
@@ -129,8 +130,17 @@ export default function ClientPrivateGalleryPage() {
         : filteredPhotos;
     if (toDownload.length === 0) return;
     setDownloading(true);
+    setDownloadProgress('');
     try {
-      await downloadGalleryPhotos(toDownload);
+      const result = await downloadGalleryPhotos(toDownload, (current, total) => {
+        setDownloadProgress(`${current}/${total}`);
+      });
+      if (result.failed > 0) {
+        setDownloadProgress(`${result.downloaded} OK, ${result.failed} ouvertes (CORS)`);
+      } else {
+        setDownloadProgress(`${result.downloaded} photo(s) téléchargée(s)`);
+      }
+      setTimeout(() => setDownloadProgress(''), 4000);
     } finally {
       setDownloading(false);
     }
@@ -184,7 +194,7 @@ export default function ClientPrivateGalleryPage() {
           </Button>
           <Button variant="gold" size="sm" onClick={handleDownloadAll} disabled={downloading || filteredPhotos.length === 0}>
             <Download className="h-4 w-4 mr-1" />
-            {downloading ? 'Téléchargement…' : 'Télécharger les photos'}
+            {downloading ? (downloadProgress || 'Téléchargement…') : 'Télécharger les photos'}
           </Button>
         </div>
       </div>

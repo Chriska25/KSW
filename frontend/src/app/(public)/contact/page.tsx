@@ -23,6 +23,7 @@ import { useSettings } from '@/context/settings-context';
 import { submitContactMessage } from '@/lib/contact-api';
 import { getApiErrorMessage } from '@/lib/api-error';
 import { submitTestimonial } from '@/lib/testimonials';
+import { fetchPublicFaq } from '@/lib/faq-api';
 
 export default function ContactPage() {
   const { settings } = useSettings();
@@ -34,6 +35,49 @@ export default function ContactPage() {
   const [captchaVerified, setCaptchaVerified] = useState(false);
   const [honeypot, setHoneypot] = useState('');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
+  const [faqs, setFaqs] = useState<{ q: string; a: string }[]>([]);
+
+  const fallbackFaqs = React.useMemo(
+    () => [
+      {
+        q: 'Combien de temps à l\'avance dois-je réserver mon mariage ?',
+        a: 'Pour les mariages entre mai et septembre, il est recommandé de réserver entre 8 et 12 mois à l\'avance. N\'hésitez pas toutefois à nous contacter pour vérifier la disponibilité sur une date spécifique.',
+      },
+      {
+        q: 'Comment s\'effectue la livraison de mes photographies ?',
+        a: 'Toutes vos photographies retouchées en Haute Définition vous sont livrées dans une galerie privée sécurisée sous 2 à 3 semaines, avec possibilité de téléchargement ZIP illimité.',
+      },
+      {
+        q: 'Fournissez-vous les fichiers bruts (RAW) ?',
+        a: `Le travail d'étalonnage et de retouche fait partie intégrante de la signature artistique de ${settings.studioName}. Nous livrons uniquement des images sélectionnées et sublimées en format JPEG HD.`,
+      },
+      {
+        q: 'Quels sont les modes de paiement acceptés pour l\'acompte ?',
+        a: `Nous acceptons le règlement de l'acompte (${settings.depositRate}%) directement en ligne par carte bancaire via Stripe sécurisé, PayPal ou par virement bancaire.`,
+      },
+    ],
+    [settings.studioName, settings.depositRate]
+  );
+
+  React.useEffect(() => {
+    let cancelled = false;
+    fetchPublicFaq()
+      .then((items) => {
+        if (cancelled) return;
+        if (items.length > 0) {
+          setFaqs(items.map((item) => ({ q: item.question, a: item.answer })));
+        } else {
+          setFaqs(fallbackFaqs);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setFaqs(fallbackFaqs);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [fallbackFaqs]);
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -41,25 +85,6 @@ export default function ContactPage() {
     subject: 'Mariage',
     message: '',
   });
-
-  const faqs = [
-    {
-      q: 'Combien de temps à l\'avance dois-je réserver mon mariage ?',
-      a: 'Pour les mariages entre mai et septembre, il est recommandé de réserver entre 8 et 12 mois à l\'avance. N\'hésitez pas toutefois à nous contacter pour vérifier la disponibilité sur une date spécifique.',
-    },
-    {
-      q: 'Comment s\'effectue la livraison de mes photographies ?',
-      a: 'Toutes vos photographies retouchées en Haute Définition vous sont livrées dans une galerie privée sécurisée sous 2 à 3 semaines, avec possibilité de téléchargement ZIP illimité.',
-    },
-    {
-      q: 'Fournissez-vous les fichiers bruts (RAW) ?',
-      a: `Le travail d'étalonnage et de retouche fait partie intégrante de la signature artistique de ${settings.studioName}. Nous livrons uniquement des images sélectionnées et sublimées en format JPEG HD.`,
-    },
-    {
-      q: 'Quels sont les modes de paiement acceptés pour l\'acompte ?',
-      a: `Nous acceptons le règlement de l'acompte (${settings.depositRate}%) directement en ligne par carte bancaire via Stripe sécurisé, PayPal ou par virement bancaire.`,
-    },
-  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

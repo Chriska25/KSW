@@ -13,7 +13,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ClientAuthGuard } from '@/components/client/client-auth-guard';
 import { LoadingState } from '@/components/common/loading-state';
 import {
   fetchClientNotifications,
@@ -23,11 +22,7 @@ import {
 import { getApiErrorMessage } from '@/lib/api-error';
 
 export default function ClientNotificationsPage() {
-  return (
-    <ClientAuthGuard>
-      <ClientNotificationsContent />
-    </ClientAuthGuard>
-  );
+  return <ClientNotificationsContent />;
 }
 
 function iconFor(type: ClientNotification['type']) {
@@ -150,9 +145,9 @@ function ClientNotificationsContent() {
                         </Link>
                       )}
                       {n.type === 'booking' && (
-                        <Link href="/reservation">
+                        <Link href="/client/reservations">
                           <Button variant="outline" size="sm" className="text-xs h-8">
-                            Voir réservation
+                            Voir mes réservations
                           </Button>
                         </Link>
                       )}

@@ -71,9 +71,29 @@ export function saveGalleryFavorites(galleryId: string, favoriteIds: string[]): 
 }
 
 export async function downloadPhoto(url: string, filename: string): Promise<void> {
+  const safeName = filename.replace(/[^\w.\-]+/g, '_');
+
+  try {
+    const res = await fetch(url, { credentials: 'same-origin' });
+    if (res.ok) {
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = safeName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+      return;
+    }
+  } catch {
+    // CORS ou réseau — repli ci-dessous
+  }
+
   const link = document.createElement('a');
   link.href = url;
-  link.download = filename;
+  link.download = safeName;
   link.target = '_blank';
   link.rel = 'noopener noreferrer';
   document.body.appendChild(link);
@@ -84,13 +104,21 @@ export async function downloadPhoto(url: string, filename: string): Promise<void
 export async function downloadGalleryPhotos(
   photos: { url: string; title: string }[],
   onProgress?: (current: number, total: number) => void
-): Promise<void> {
+): Promise<{ downloaded: number; failed: number }> {
+  let downloaded = 0;
+  let failed = 0;
   let i = 0;
   for (const photo of photos) {
     i += 1;
     onProgress?.(i, photos.length);
     const safeName = (photo.title || `photo-${i}`).replace(/[^\w\-]+/g, '_');
-    await downloadPhoto(photo.url, `${safeName}.jpg`);
-    await new Promise((r) => setTimeout(r, 400));
+    try {
+      await downloadPhoto(photo.url, `${safeName}.jpg`);
+      downloaded += 1;
+    } catch {
+      failed += 1;
+    }
+    await new Promise((r) => setTimeout(r, 350));
   }
+  return { downloaded, failed };
 }

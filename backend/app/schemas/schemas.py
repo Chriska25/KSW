@@ -25,6 +25,10 @@ class ResetPasswordRequest(BaseModel):
     token: str
     password: str
 
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
 class ServiceCreate(BaseModel):
     title: str
     category: str
@@ -51,6 +55,14 @@ class TestimonialsSaveAll(BaseModel):
 
 class BlogPostsSaveAll(BaseModel):
     posts: List[Dict[str, Any]]
+
+class FaqSaveAll(BaseModel):
+    items: List[Dict[str, Any]]
+
+class VisitTrack(BaseModel):
+    path: str
+    session_id: str
+    referrer: Optional[str] = None
 
 class SyncFromLocalPayload(BaseModel):
     settings: Optional[Dict[str, Any]] = None

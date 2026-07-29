@@ -8,6 +8,7 @@ import {
   Users,
   Calendar,
   ArrowUpRight,
+  Eye,
 } from 'lucide-react';
 import {
   BarChart,
@@ -27,19 +28,27 @@ import { Badge } from '@/components/ui/badge';
 import { useSettings } from '@/context/settings-context';
 import { LoadingState } from '@/components/common/loading-state';
 import { fetchDashboardData, type DashboardStats } from '@/lib/admin-dashboard';
+import { fetchVisitAnalytics } from '@/lib/visit-analytics';
 import { getApiErrorMessage } from '@/lib/api-error';
 
 export default function AdminDashboardPage() {
   const { formatPrice, currencySymbol } = useSettings();
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [todayViews, setTodayViews] = useState<number | null>(null);
+  const [todayUniqueVisitors, setTodayUniqueVisitors] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
     setError('');
     try {
-      const data = await fetchDashboardData();
+      const [data, visitData] = await Promise.all([
+        fetchDashboardData(),
+        fetchVisitAnalytics().catch(() => null),
+      ]);
       setStats(data.stats);
+      setTodayViews(visitData?.todayViews ?? null);
+      setTodayUniqueVisitors(visitData?.todayUniqueVisitors ?? null);
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, 'Impossible de charger le tableau de bord.'));
     } finally {
@@ -86,7 +95,7 @@ export default function AdminDashboardPage() {
         <p className="text-amber-400 text-xs rounded-xl border border-amber-400/30 bg-amber-400/5 px-4 py-3">{error}</p>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         <Card className="glass-panel border-amber-400/30">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-xs font-semibold text-zinc-400 uppercase">CA du mois</CardTitle>
@@ -128,6 +137,24 @@ export default function AdminDashboardPage() {
           <CardContent>
             <div className="text-2xl font-extrabold text-white">{stats.activeClientsCount}</div>
             <div className="text-xs text-zinc-400 mt-1">+{stats.newLeadsCount} message(s) contact (30 j)</div>
+          </CardContent>
+        </Card>
+
+        <Card className="glass-panel border-emerald-400/20">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-xs font-semibold text-zinc-400 uppercase">Visites aujourd&apos;hui</CardTitle>
+            <Eye className="h-4 w-4 text-emerald-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-extrabold text-white">{todayViews ?? '—'}</div>
+            <div className="text-xs text-zinc-400 mt-1">
+              {todayUniqueVisitors != null
+                ? `${todayUniqueVisitors} visiteur(s) unique(s)`
+                : 'Compteur site public'}
+            </div>
+            <Link href="/admin/analytics" className="text-xs text-emerald-400/90 hover:text-emerald-300 mt-2 inline-block">
+              Voir le trafic →
+            </Link>
           </CardContent>
         </Card>
       </div>

@@ -334,3 +334,48 @@ def ensure_blog_posts(db: Session) -> None:
             pass
     db.add(Setting(key='blog_posts', value=json.dumps(DEFAULT_BLOG_POSTS), group='content'))
     db.commit()
+
+
+DEFAULT_FAQ_ITEMS = [
+    {
+        'id': 'faq-1',
+        'question': "Combien de temps à l'avance dois-je réserver mon mariage ?",
+        'answer': "Pour les mariages entre mai et septembre, il est recommandé de réserver entre 8 et 12 mois à l'avance. N'hésitez pas toutefois à nous contacter pour vérifier la disponibilité sur une date spécifique.",
+        'order': 0,
+        'isPublished': True,
+    },
+    {
+        'id': 'faq-2',
+        'question': 'Comment s\'effectue la livraison de mes photographies ?',
+        'answer': 'Toutes vos photographies retouchées en Haute Définition vous sont livrées dans une galerie privée sécurisée sous 2 à 3 semaines, avec possibilité de téléchargement ZIP illimité.',
+        'order': 1,
+        'isPublished': True,
+    },
+    {
+        'id': 'faq-3',
+        'question': 'Fournissez-vous les fichiers bruts (RAW) ?',
+        'answer': "Le travail d'étalonnage et de retouche fait partie intégrante de la signature artistique du studio. Nous livrons uniquement des images sélectionnées et sublimées en format JPEG HD.",
+        'order': 2,
+        'isPublished': True,
+    },
+    {
+        'id': 'faq-4',
+        'question': "Quels sont les modes de paiement acceptés pour l'acompte ?",
+        'answer': "Nous acceptons le règlement de l'acompte directement en ligne par carte bancaire via Stripe sécurisé, PayPal ou par virement bancaire.",
+        'order': 3,
+        'isPublished': True,
+    },
+]
+
+
+def ensure_faq_items(db: Session) -> None:
+    setting = db.query(Setting).filter(Setting.key == 'faq_items').first()
+    if setting and setting.value:
+        try:
+            existing = json.loads(setting.value)
+            if isinstance(existing, list) and len(existing) > 0:
+                return
+        except Exception:
+            pass
+    db.add(Setting(key='faq_items', value=json.dumps(DEFAULT_FAQ_ITEMS), group='content'))
+    db.commit()

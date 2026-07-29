@@ -6,6 +6,7 @@ import { ShieldCheck, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { LoadingState } from '@/components/common/loading-state';
 import { useAuth, isAdminUser } from '@/hooks/use-auth';
 
 function Verify2FAForm() {
@@ -84,7 +85,7 @@ function Verify2FAForm() {
 
 export default function Verify2FAPage() {
   return (
-    <Suspense fallback={<div className="text-center text-zinc-400 text-sm">Chargement…</div>}>
+    <Suspense fallback={<LoadingState message="Chargement de la vérification 2FA…" className="py-8" />}>
       <Verify2FAForm />
     </Suspense>
   );

@@ -1,5 +1,12 @@
+'use client';
+
 import { ClientShell } from '@/components/client/client-shell';
+import { ClientAuthGuard } from '@/components/client/client-auth-guard';
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
-  return <ClientShell>{children}</ClientShell>;
+  return (
+    <ClientShell>
+      <ClientAuthGuard>{children}</ClientAuthGuard>
+    </ClientShell>
+  );
 }

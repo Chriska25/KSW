@@ -19,6 +19,10 @@ import {
   DollarSign,
   Download,
   Sparkles,
+  Plug,
+  ExternalLink,
+  Copy,
+  Activity,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -34,7 +38,7 @@ import { getApiErrorMessage } from '@/lib/api-error';
 export default function AdminSettingsPage() {
   const { settings: globalSettings, updateSettings } = useSettings();
 
-  const [activeTab, setActiveTab] = useState<'general' | 'booking' | 'payments' | 'watermark' | 'security'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'booking' | 'payments' | 'watermark' | 'security' | 'integrations'>('general');
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
@@ -70,6 +74,30 @@ export default function AdminSettingsPage() {
   };
 
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
+  const [webhookCopied, setWebhookCopied] = useState(false);
+  const [webhookUrl, setWebhookUrl] = useState('/api/v1/webhooks/stripe');
+
+  useEffect(() => {
+    setWebhookUrl(`${window.location.origin}/api/v1/webhooks/stripe`);
+  }, []);
+
+  const stripeDashboardUrl = settings.stripeTestMode
+    ? 'https://dashboard.stripe.com/test/dashboard'
+    : 'https://dashboard.stripe.com/dashboard';
+  const stripeWebhooksUrl = settings.stripeTestMode
+    ? 'https://dashboard.stripe.com/test/webhooks'
+    : 'https://dashboard.stripe.com/webhooks';
+  const backendDocsUrl = process.env.NEXT_PUBLIC_BACKEND_DOCS_URL || 'http://localhost:8050/docs';
+
+  const copyWebhookUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(webhookUrl);
+      setWebhookCopied(true);
+      setTimeout(() => setWebhookCopied(false), 2500);
+    } catch {
+      setWebhookCopied(false);
+    }
+  };
 
   const handleSyncLocalToDatabase = async () => {
     setSyncStatus('Synchronisation en cours...');
@@ -155,8 +183,9 @@ export default function AdminSettingsPage() {
           { id: 'general', label: '1. Titre & Infos Studio', icon: Settings },
           { id: 'booking', label: '2. Réservation & Acomptes', icon: Clock },
           { id: 'payments', label: '3. Clés Stripe & PayPal', icon: CreditCard },
-          { id: 'watermark', label: '4. Filigrane Photo', icon: ImageIcon },
-          { id: 'security', label: '5. Sécurité & Backup', icon: Shield },
+          { id: 'integrations', label: '4. Intégrations', icon: Plug },
+          { id: 'watermark', label: '5. Filigrane Photo', icon: ImageIcon },
+          { id: 'security', label: '6. Sécurité & Backup', icon: Shield },
         ].map((tab) => {
           const IconComp = tab.icon;
           return (
@@ -435,7 +464,118 @@ export default function AdminSettingsPage() {
           </Card>
         )}
 
-        {/* Tab 4: Watermark & Media Settings */}
+        {/* Tab 4: Integrations & external dashboards */}
+        {activeTab === 'integrations' && (
+          <Card className="glass-panel space-y-4">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center">
+                <Plug className="h-5 w-5 text-amber-400 mr-2" /> Intégrations & tableaux de bord
+              </CardTitle>
+              <CardDescription>
+                Accès rapide aux services externes, URL webhook Stripe et documentation API backend.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 text-xs">
+              <div className="grid sm:grid-cols-2 gap-3">
+                <a
+                  href={stripeDashboardUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-4 rounded-xl border border-zinc-800 bg-zinc-950 hover:border-amber-400/40 transition-colors flex items-center justify-between group"
+                >
+                  <div>
+                    <div className="font-bold text-white flex items-center gap-2">
+                      <CreditCard className="h-4 w-4 text-amber-400" />
+                      Stripe Dashboard
+                    </div>
+                    <div className="text-zinc-400 text-[11px] mt-1">
+                      Mode {settings.stripeTestMode ? 'test (sandbox)' : 'production (live)'}
+                    </div>
+                  </div>
+                  <ExternalLink className="h-4 w-4 text-zinc-500 group-hover:text-amber-400" />
+                </a>
+
+                <a
+                  href={stripeWebhooksUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-4 rounded-xl border border-zinc-800 bg-zinc-950 hover:border-amber-400/40 transition-colors flex items-center justify-between group"
+                >
+                  <div>
+                    <div className="font-bold text-white">Webhooks Stripe</div>
+                    <div className="text-zinc-400 text-[11px] mt-1">Configurer checkout.session.completed</div>
+                  </div>
+                  <ExternalLink className="h-4 w-4 text-zinc-500 group-hover:text-amber-400" />
+                </a>
+
+                <a
+                  href="https://www.paypal.com/businessmanage/account/home"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-4 rounded-xl border border-zinc-800 bg-zinc-950 hover:border-amber-400/40 transition-colors flex items-center justify-between group"
+                >
+                  <div>
+                    <div className="font-bold text-white">PayPal Business</div>
+                    <div className="text-zinc-400 text-[11px] mt-1">Gestion du compte marchand PayPal</div>
+                  </div>
+                  <ExternalLink className="h-4 w-4 text-zinc-500 group-hover:text-amber-400" />
+                </a>
+
+                <a
+                  href="/api/v1/health"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-4 rounded-xl border border-zinc-800 bg-zinc-950 hover:border-amber-400/40 transition-colors flex items-center justify-between group"
+                >
+                  <div>
+                    <div className="font-bold text-white flex items-center gap-2">
+                      <Activity className="h-4 w-4 text-emerald-400" />
+                      Santé API
+                    </div>
+                    <div className="text-zinc-400 text-[11px] mt-1">GET /api/v1/health</div>
+                  </div>
+                  <ExternalLink className="h-4 w-4 text-zinc-500 group-hover:text-amber-400" />
+                </a>
+              </div>
+
+              <div className="p-4 rounded-xl border border-amber-400/30 bg-amber-400/5 space-y-2">
+                <div className="font-bold text-white">URL webhook Stripe (à coller dans le dashboard)</div>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <code className="flex-1 px-3 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-amber-200 font-mono text-[11px] break-all">
+                    {webhookUrl}
+                  </code>
+                  <Button type="button" variant="outline" size="sm" onClick={copyWebhookUrl} className="shrink-0 space-x-1.5">
+                    <Copy className="h-3.5 w-3.5" />
+                    <span>{webhookCopied ? 'Copié !' : 'Copier'}</span>
+                  </Button>
+                </div>
+                <p className="text-zinc-500 text-[11px]">
+                  Événement recommandé : <code className="text-zinc-400">checkout.session.completed</code>. Secret dans{' '}
+                  <code className="text-zinc-400">STRIPE_WEBHOOK_SECRET</code>.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-950 space-y-2">
+                <div className="font-bold text-white">Documentation OpenAPI (backend FastAPI)</div>
+                <p className="text-zinc-400 text-[11px]">
+                  Swagger UI sur le serveur Python — en local :{' '}
+                  <a href={backendDocsUrl} target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:underline">
+                    {backendDocsUrl}
+                  </a>
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-950">
+                <div className="font-bold text-white">SMS / WhatsApp</div>
+                <p className="text-zinc-400 text-[11px] mt-1">
+                  Non configurés pour l&apos;instant. Les notifications admin restent en journal interne + email SMTP.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Tab 5: Watermark & Media Settings */}
         {activeTab === 'watermark' && (
           <Card className="glass-panel space-y-4">
             <CardHeader>
@@ -512,7 +652,7 @@ export default function AdminSettingsPage() {
           </Card>
         )}
 
-        {/* Tab 5: Security & Backup Trigger */}
+        {/* Tab 6: Security & Backup Trigger */}
         {activeTab === 'security' && (
           <Card className="glass-panel space-y-4">
             <CardHeader>

@@ -23,10 +23,9 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  if (
-    pathname.startsWith('/client') &&
-    !pathname.startsWith('/client/galeries')
-  ) {
+  const isGalleryViewer = /^\/client\/galeries\/[^/]+/.test(pathname);
+
+  if (pathname.startsWith('/client') && !isGalleryViewer) {
     if (!hasAuthToken(request)) {
       const loginUrl = new URL('/login', request.url);
       loginUrl.searchParams.set('redirect', pathname);

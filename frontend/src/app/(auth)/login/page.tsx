@@ -9,7 +9,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Input } from '@/components/ui/input';
 import { useAuth, isAdminUser } from '@/hooks/use-auth';
 import { useSettings } from '@/context/settings-context';
-import { isDevMode } from '@/lib/session';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -87,7 +86,7 @@ export default function LoginPage() {
               required
               type="email"
               autoComplete="email"
-              placeholder="sophie.d@email.com"
+              placeholder="vous@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -123,20 +122,6 @@ export default function LoginPage() {
             {loading ? 'Connexion en cours…' : 'Se connecter'}
             {!loading && <ArrowRight className="h-4 w-4 ml-2" />}
           </Button>
-
-          {isDevMode() && (
-          <div className="rounded-xl border border-zinc-800 bg-zinc-950/80 p-3 text-[11px] text-zinc-500 space-y-1">
-            <p className="font-semibold text-zinc-400">Comptes de démonstration (dev)</p>
-            <p>
-              Client : <span className="text-zinc-300">sophie.d@email.com</span> /{' '}
-              <span className="text-zinc-300">Password123!</span>
-            </p>
-            <p>
-              Admin : <span className="text-zinc-300">admin@kswstudio.fr</span> /{' '}
-              <span className="text-zinc-300">Password123!</span> (code 2FA : 123456)
-            </p>
-          </div>
-          )}
 
           <div className="pt-2 border-t border-zinc-800 text-center text-xs text-zinc-400">
             Nouveau client ?{' '}

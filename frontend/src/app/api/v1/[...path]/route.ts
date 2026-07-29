@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBackendApiBase } from '@/lib/backend-url';
 
+const PROXY_TIMEOUT_MS = 15000;
+
 type RouteContext = { params: Promise<{ path: string[] }> };
 
 const HOP_BY_HOP = new Set(['connection', 'keep-alive', 'transfer-encoding', 'upgrade', 'host']);
@@ -37,7 +39,14 @@ async function proxyToBackend(request: NextRequest, context: RouteContext): Prom
   }
 
   try {
-    const upstream = await fetch(target.toString(), init);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), PROXY_TIMEOUT_MS);
+    let upstream: Response;
+    try {
+      upstream = await fetch(target.toString(), { ...init, signal: controller.signal });
+    } finally {
+      clearTimeout(timeoutId);
+    }
     const responseHeaders = new Headers();
     const contentType = upstream.headers.get('Content-Type');
     if (contentType) responseHeaders.set('Content-Type', contentType);
@@ -47,9 +56,14 @@ async function proxyToBackend(request: NextRequest, context: RouteContext): Prom
       status: upstream.status,
       headers: responseHeaders,
     });
-  } catch {
+  } catch (err) {
+    const isTimeout = err instanceof Error && err.name === 'AbortError';
     return NextResponse.json(
-      { detail: 'Backend indisponible. Vérifiez que le serveur API est démarré.' },
+      {
+        detail: isTimeout
+          ? 'Backend trop lent ou injoignable (timeout). Vérifiez docker compose up -d backend ou le port 8050.'
+          : 'Backend indisponible. Vérifiez que le serveur API est démarré.',
+      },
       { status: 503 }
     );
   }

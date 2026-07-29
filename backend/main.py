@@ -15,8 +15,9 @@ from typing import Dict, Any, List, Optional
 
 from database import engine, Base, get_db, SessionLocal
 from models import Setting, User, Service, Testimonial, Gallery
-from schemas import SettingUpdate, LoginRequest, Verify2FARequest, RegisterRequest, ForgotPasswordRequest, ResetPasswordRequest, ServiceCreate, TestimonialCreate, GalleriesSaveAll, TestimonialsSaveAll, BlogPostsSaveAll, SyncFromLocalPayload, GalleryUnlockRequest, ContactCreate, BookingCreate, BookingStatusUpdate, BookingUpdate, StripeCheckoutCreate, NotificationMarkRead, ClientNotificationMarkRead, AdminEmailTest
-from seed import seed_database, ensure_demo_gallery, ensure_blog_posts, hash_password
+from schemas import SettingUpdate, LoginRequest, Verify2FARequest, RegisterRequest, ForgotPasswordRequest, ResetPasswordRequest, ChangePasswordRequest, ServiceCreate, TestimonialCreate, GalleriesSaveAll, TestimonialsSaveAll, BlogPostsSaveAll, FaqSaveAll, VisitTrack, SyncFromLocalPayload, GalleryUnlockRequest, ContactCreate, BookingCreate, BookingStatusUpdate, BookingUpdate, StripeCheckoutCreate, NotificationMarkRead, ClientNotificationMarkRead, AdminEmailTest
+from visit_analytics import track_visit, get_visit_analytics_summary
+from seed import seed_database, ensure_demo_gallery, ensure_blog_posts, ensure_faq_items, hash_password
 from auth import (
     create_access_token,
     create_pre_2fa_token,
@@ -43,6 +44,7 @@ from notifications_helpers import build_client_notifications, mark_client_notifi
 # Ensure uploads directory exists
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
 BLOG_POSTS_KEY = "blog_posts"
+FAQ_ITEMS_KEY = "faq_items"
 CONTACT_MESSAGES_KEY = "contact_messages"
 BOOKINGS_KEY = "bookings"
 NOTIFICATIONS_READ_KEY = "notifications_read_ids"
@@ -166,6 +168,7 @@ def startup_event():
     seed_database(db)
     ensure_demo_gallery(db)
     ensure_blog_posts(db)
+    ensure_faq_items(db)
 
 # -------------------------------------------------------------------
 # Health Check Endpoint
@@ -177,6 +180,23 @@ def health_check():
         "service": "KSW Studio Python FastAPI Backend",
         "version": "1.0.0"
     }
+
+
+@app.post("/api/v1/analytics/visit")
+def track_site_visit(payload: VisitTrack, db: Session = Depends(get_db)):
+    track_visit(
+        db,
+        path=payload.path,
+        session_id=payload.session_id,
+        referrer=payload.referrer or "",
+    )
+    return {"status": "ok"}
+
+
+@app.get("/api/v1/admin/analytics/visits")
+def admin_visit_analytics(db: Session = Depends(get_db), _admin: User = Depends(require_admin_user)):
+    return {"data": get_visit_analytics_summary(db)}
+
 
 @app.post("/api/v1/admin/purge-reset")
 def purge_system_reset(db: Session = Depends(get_db), _admin: User = Depends(require_admin_user)):
@@ -190,6 +210,7 @@ def purge_system_reset(db: Session = Depends(get_db), _admin: User = Depends(req
 
     # Re-seed single canonical dataset
     seed_database(db)
+    ensure_faq_items(db)
 
     return {
         "status": "success",
@@ -734,6 +755,50 @@ def save_all_blog_posts(payload: BlogPostsSaveAll, db: Session = Depends(get_db)
     db.commit()
     return {"status": "success", "count": len(posts), "data": posts}
 
+
+def _get_faq_items_from_db(db: Session) -> List[Dict[str, Any]]:
+    setting = db.query(Setting).filter(Setting.key == FAQ_ITEMS_KEY).first()
+    if setting and setting.value:
+        try:
+            parsed = json.loads(setting.value)
+            if isinstance(parsed, list):
+                return sorted(parsed, key=lambda x: int(x.get("order", 0)))
+        except Exception:
+            pass
+    return []
+
+
+@app.get("/api/v1/faq")
+def list_public_faq(db: Session = Depends(get_db)):
+    items = _get_faq_items_from_db(db)
+    return {"data": [i for i in items if i.get("isPublished", True)]}
+
+
+@app.get("/api/v1/admin/faq")
+def admin_list_faq(db: Session = Depends(get_db), _admin: User = Depends(require_admin_user)):
+    return {"data": _get_faq_items_from_db(db)}
+
+
+@app.post("/api/v1/admin/faq/save-all")
+def save_all_faq(payload: FaqSaveAll, db: Session = Depends(get_db), _admin: User = Depends(require_admin_user)):
+    items: List[Dict[str, Any]] = []
+    for idx, raw in enumerate(payload.items):
+        item = dict(raw)
+        if not item.get("id"):
+            item["id"] = f"faq-{uuid.uuid4().hex[:8]}"
+        item["order"] = int(item.get("order", idx))
+        items.append(item)
+    items.sort(key=lambda x: int(x.get("order", 0)))
+    existing = db.query(Setting).filter(Setting.key == FAQ_ITEMS_KEY).first()
+    val_str = json.dumps(items)
+    if existing:
+        existing.value = val_str
+    else:
+        db.add(Setting(key=FAQ_ITEMS_KEY, value=val_str))
+    db.commit()
+    return {"status": "success", "count": len(items), "data": items}
+
+
 def _append_json_setting(db: Session, key: str, item: Dict[str, Any]) -> Dict[str, Any]:
     from datetime import datetime
     setting = db.query(Setting).filter(Setting.key == key).first()
@@ -1263,6 +1328,52 @@ def _build_admin_notifications(db: Session) -> List[Dict[str, Any]]:
     return notifications[:100]
 
 
+def _build_admin_activity_logs(db: Session) -> List[Dict[str, Any]]:
+    level_map = {
+        "payment": "success",
+        "booking": "info",
+        "contact": "info",
+        "system": "warning",
+        "email": "info",
+        "security": "warning",
+    }
+    logs: List[Dict[str, Any]] = []
+    for n in _build_admin_notifications(db):
+        log_type = str(n.get("type", "system"))
+        logs.append({
+            "id": str(n.get("id")),
+            "level": level_map.get(log_type, "info"),
+            "source": log_type,
+            "title": n.get("title"),
+            "message": n.get("message"),
+            "recipient": n.get("recipient"),
+            "channels": n.get("channels", []),
+            "createdAt": n.get("createdAt"),
+            "relatedId": n.get("relatedId"),
+        })
+
+    for u in db.query(User).all():
+        logs.append({
+            "id": f"user-{u.id}",
+            "level": "info",
+            "source": "user",
+            "title": f"Compte {u.role}",
+            "message": f"{u.first_name} {u.last_name} ({u.email}) — statut {u.status}",
+            "recipient": u.email,
+            "channels": ["internal"],
+            "createdAt": "",
+            "relatedId": str(u.id),
+        })
+
+    logs.sort(key=lambda x: str(x.get("createdAt") or ""), reverse=True)
+    return logs[:150]
+
+
+@app.get("/api/v1/admin/logs")
+def admin_activity_logs(db: Session = Depends(get_db), _admin: User = Depends(require_admin_user)):
+    return {"data": _build_admin_activity_logs(db)}
+
+
 @app.get("/api/v1/admin/notifications")
 def admin_list_notifications(db: Session = Depends(get_db), _admin: User = Depends(require_admin_user)):
     read_ids = _get_read_notification_ids(db)
@@ -1545,6 +1656,104 @@ def _normalize_client_email(email: str) -> str:
     return email_clean
 
 
+def _require_client_user(user: User) -> None:
+    if (user.role or "client") != "client":
+        raise HTTPException(status_code=403, detail="Accès réservé aux clients.")
+
+
+def _get_client_bookings(db: Session, email: str) -> List[Dict[str, Any]]:
+    email_clean = _normalize_client_email(email)
+    matched: List[Dict[str, Any]] = []
+    for b in _get_json_setting_list(db, BOOKINGS_KEY):
+        if _normalize_client_email(str(b.get("email", ""))) != email_clean:
+            continue
+        matched.append(b)
+    matched.sort(key=lambda x: str(x.get("createdAt") or ""), reverse=True)
+    return matched
+
+
+def _booking_to_client_invoice(booking: Dict[str, Any]) -> Dict[str, Any]:
+    from datetime import datetime
+
+    total = float(booking.get("totalPrice") or 0)
+    deposit = float(booking.get("depositAmount") or 0)
+    paid = deposit if booking.get("paymentStatus") == "paid" else 0.0
+    status = "unpaid"
+    if paid >= total and total > 0:
+        status = "paid"
+    elif paid > 0:
+        status = "partially_paid"
+
+    bid = str(booking.get("id", ""))
+    invoice_number = booking.get("invoiceNumber") or f"FAC-{datetime.utcnow().year}-{bid[:6].upper()}"
+    name = f"{booking.get('firstName', '')} {booking.get('lastName', '')}".strip()
+
+    return {
+        "id": bid,
+        "number": invoice_number,
+        "clientName": name or booking.get("email", "Client"),
+        "serviceTitle": booking.get("serviceTitle", "Prestation"),
+        "issueDate": booking.get("createdAt") or booking.get("date", ""),
+        "dueDate": booking.get("date", ""),
+        "totalAmount": total,
+        "paidAmount": paid,
+        "status": status,
+        "paymentMethod": "Stripe (Carte)" if booking.get("paymentStatus") == "paid" else "Virement",
+        "reference": booking.get("reference", bid[:8]),
+    }
+
+
+@app.get("/api/v1/client/bookings")
+def client_list_bookings(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_client_user(current_user)
+    return {"data": _get_client_bookings(db, current_user.email)}
+
+
+@app.get("/api/v1/client/invoices")
+def client_list_invoices(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_client_user(current_user)
+    bookings = _get_client_bookings(db, current_user.email)
+    invoices = [_booking_to_client_invoice(b) for b in bookings]
+    total_invoiced = sum(i["totalAmount"] for i in invoices)
+    total_paid = sum(i["paidAmount"] for i in invoices)
+    return {
+        "data": invoices,
+        "summary": {
+            "totalInvoiced": total_invoiced,
+            "totalPaid": total_paid,
+            "remaining": max(0.0, total_invoiced - total_paid),
+        },
+    }
+
+
+@app.post("/api/v1/client/profile/password")
+def client_change_password(
+    payload: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if len(payload.new_password or "") < 8:
+        raise HTTPException(status_code=400, detail="Le nouveau mot de passe doit contenir au moins 8 caractères.")
+
+    user = db.query(User).filter(User.id == current_user.id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Utilisateur introuvable.")
+
+    hashed_current = hash_password(payload.current_password)
+    if not verify_password(user, payload.current_password, hashed_current):
+        raise HTTPException(status_code=400, detail="Mot de passe actuel incorrect.")
+
+    user.password = hash_password(payload.new_password)
+    db.commit()
+    return {"status": "success", "message": "Mot de passe mis à jour."}
+
+
 def _gallery_to_dict(g, include_password: bool = False) -> dict:
     data = {
         "id": g.id,
@@ -1594,9 +1803,7 @@ def list_client_galleries(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    role = current_user.role or "client"
-    if role != "client":
-        raise HTTPException(status_code=403, detail="Accès réservé aux clients.")
+    _require_client_user(current_user)
 
     email_clean = _normalize_client_email(current_user.email)
     if not email_clean:

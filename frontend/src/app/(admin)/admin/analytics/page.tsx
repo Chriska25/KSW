@@ -8,6 +8,8 @@ import {
   DollarSign,
   FileSpreadsheet,
   CheckCircle2,
+  Eye,
+  Globe,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -21,22 +23,27 @@ import {
 } from '@/lib/admin-dashboard';
 import type { ApiBooking } from '@/lib/admin-crm-api';
 import { getApiErrorMessage } from '@/lib/api-error';
+import { fetchVisitAnalytics, type VisitAnalyticsSummary } from '@/lib/visit-analytics';
 import {
   BarChart,
   Bar,
   PieChart,
   Pie,
   Cell,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Legend,
 } from 'recharts';
 
 export default function AdminAnalyticsPage() {
   const { formatPrice, currencySymbol } = useSettings();
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [visits, setVisits] = useState<VisitAnalyticsSummary | null>(null);
   const [bookings, setBookings] = useState<ApiBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
@@ -45,9 +52,13 @@ export default function AdminAnalyticsPage() {
   const load = useCallback(async () => {
     setError('');
     try {
-      const data = await fetchDashboardData();
+      const [data, visitData] = await Promise.all([
+        fetchDashboardData(),
+        fetchVisitAnalytics().catch(() => null),
+      ]);
       setStats(data.stats);
       setBookings(data.bookings);
+      setVisits(visitData);
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, 'Impossible de charger les analytics.'));
     } finally {
@@ -86,7 +97,7 @@ export default function AdminAnalyticsPage() {
             Statistiques & <span className="gold-gradient-text">Analytics</span>
           </h1>
           <p className="text-zinc-400 text-sm mt-1">
-            KPIs calculés depuis les réservations et messages contact réels.
+            Trafic visiteurs du site public + KPIs réservations et CRM.
           </p>
         </div>
         <Button
@@ -101,9 +112,100 @@ export default function AdminAnalyticsPage() {
         </Button>
       </div>
 
+      {visits && (
+        <>
+          <div className="rounded-xl border border-amber-400/20 bg-amber-400/5 px-4 py-3 text-xs text-zinc-300 flex items-center gap-2">
+            <Globe className="h-4 w-4 text-amber-400 shrink-0" />
+            Compteur de visites actif sur le site public
+            {visits.lastTrackedAt ? ` — dernière visite : ${visits.lastTrackedAt}` : ''}.
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Card className="glass-panel p-6 space-y-2">
+              <div className="flex items-center justify-between text-xs text-zinc-400 font-semibold uppercase">
+                <span>Aujourd&apos;hui</span>
+                <Eye className="h-4 w-4 text-amber-400" />
+              </div>
+              <div className="text-3xl font-extrabold text-white">{visits.todayViews}</div>
+              <div className="text-xs text-zinc-400">{visits.todayUniqueVisitors} visiteur(s) unique(s)</div>
+            </Card>
+
+            <Card className="glass-panel p-6 space-y-2">
+              <div className="flex items-center justify-between text-xs text-zinc-400 font-semibold uppercase">
+                <span>7 derniers jours</span>
+                <TrendingUp className="h-4 w-4 text-emerald-400" />
+              </div>
+              <div className="text-3xl font-extrabold text-emerald-400">{visits.weekViews}</div>
+              <div className="text-xs text-zinc-400">{visits.weekUniqueVisitors} uniques</div>
+            </Card>
+
+            <Card className="glass-panel p-6 space-y-2">
+              <div className="flex items-center justify-between text-xs text-zinc-400 font-semibold uppercase">
+                <span>30 derniers jours</span>
+                <Globe className="h-4 w-4 text-amber-400" />
+              </div>
+              <div className="text-3xl font-extrabold text-white">{visits.monthViews}</div>
+              <div className="text-xs text-zinc-400">{visits.monthUniqueVisitors} uniques</div>
+            </Card>
+
+            <Card className="glass-panel p-6 space-y-2">
+              <div className="flex items-center justify-between text-xs text-zinc-400 font-semibold uppercase">
+                <span>Total pages vues</span>
+                <Eye className="h-4 w-4 text-amber-400" />
+              </div>
+              <div className="text-3xl font-extrabold text-amber-400">{visits.totalPageViews}</div>
+              <div className="text-xs text-zinc-400">{visits.totalUniqueVisitors} sessions enregistrées</div>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <Card className="lg:col-span-8 glass-panel p-6 space-y-4">
+              <CardHeader className="p-0">
+                <CardTitle className="text-lg">Visites — 30 derniers jours</CardTitle>
+                <CardDescription>Pages vues et visiteurs uniques par jour.</CardDescription>
+              </CardHeader>
+              <CardContent className="p-0 pt-4 h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={visits.dailyChart}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                    <XAxis dataKey="label" stroke="#71717a" fontSize={11} interval="preserveStartEnd" />
+                    <YAxis stroke="#71717a" fontSize={12} allowDecimals={false} />
+                    <Tooltip contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '12px', fontSize: '12px' }} />
+                    <Legend />
+                    <Line type="monotone" dataKey="views" stroke="#d4af37" strokeWidth={2} dot={false} name="Pages vues" />
+                    <Line type="monotone" dataKey="uniqueVisitors" stroke="#10b981" strokeWidth={2} dot={false} name="Visiteurs uniques" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <Card className="lg:col-span-4 glass-panel p-6 space-y-4">
+              <CardHeader className="p-0">
+                <CardTitle className="text-lg">Pages les plus vues</CardTitle>
+                <CardDescription>Top pages du site public.</CardDescription>
+              </CardHeader>
+              <CardContent className="p-0 pt-2 space-y-2 max-h-72 overflow-y-auto">
+                {visits.topPages.length === 0 ? (
+                  <p className="text-zinc-500 text-sm text-center py-8">Aucune visite enregistrée.</p>
+                ) : (
+                  visits.topPages.map((page) => (
+                    <div
+                      key={page.path}
+                      className="flex items-center justify-between gap-2 py-2 border-b border-zinc-800/80 text-xs"
+                    >
+                      <code className="text-zinc-300 truncate">{page.path}</code>
+                      <Badge variant="outline" className="shrink-0">{page.views}</Badge>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
+
       <div className="rounded-xl border border-zinc-800 bg-zinc-950/50 px-4 py-3 text-xs text-zinc-400">
-        Le trafic visiteurs (Google Analytics) n&apos;est pas encore branché. Les graphiques ci-dessous
-        reflètent uniquement les réservations et leads enregistrés en base.
+        KPIs métier ci-dessous : réservations, leads CRM et chiffre d&apos;affaires.
       </div>
 
       {exporting && (

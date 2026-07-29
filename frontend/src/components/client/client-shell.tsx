@@ -4,31 +4,44 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  Calendar,
+  LayoutDashboard,
   FolderHeart,
   LogOut,
   ArrowLeft,
   KeyRound,
   Bell,
+  CalendarDays,
+  FileSpreadsheet,
+  User,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StudioLogo } from '@/components/brand/studio-logo';
-import { clearClientSession, getClientInitials, getClientSession } from '@/lib/client-session';
-import type { AuthUser } from '@/hooks/use-auth';
+import { clearClientSession, getClientInitials } from '@/lib/client-session';
 import { fetchClientNotifications } from '@/lib/client-notifications';
+import { useSessionUser } from '@/hooks/use-session-user';
 
 export function ClientShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const { user } = useSessionUser();
   const [unreadNotifs, setUnreadNotifs] = useState(0);
 
   useEffect(() => {
-    setUser(getClientSession());
-    fetchClientNotifications()
-      .then((r) => setUnreadNotifs(r.unreadCount))
-      .catch(() => {});
-  }, [pathname]);
+    let cancelled = false;
+    const load = () => {
+      fetchClientNotifications()
+        .then((r) => {
+          if (!cancelled) setUnreadNotifs(r.unreadCount);
+        })
+        .catch(() => {});
+    };
+    load();
+    const interval = window.setInterval(load, 60000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, []);
 
   const handleLogout = () => {
     clearClientSession();
@@ -38,15 +51,27 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
   const navItems: Array<{
     href: string;
     label: string;
-    icon: typeof Calendar;
+    icon: typeof LayoutDashboard;
     badge?: number;
+    matchPrefix?: boolean;
   }> = [
-    { href: '/client/dashboard', label: 'Tableau de bord', icon: Calendar },
+    { href: '/client/dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
+    { href: '/client/galeries', label: 'Mes galeries', icon: FolderHeart, matchPrefix: true },
+    { href: '/client/reservations', label: 'Réservations', icon: CalendarDays },
+    { href: '/client/documents', label: 'Factures', icon: FileSpreadsheet },
     { href: '/client/notifications', label: 'Notifications', icon: Bell, badge: unreadNotifs },
     { href: '/galerie-privee', label: 'Accès par clé', icon: KeyRound },
+    { href: '/client/profile', label: 'Mon profil', icon: User },
   ];
 
   const initials = user ? getClientInitials(user.name) : '?';
+
+  const isActive = (item: (typeof navItems)[0]) => {
+    if (item.matchPrefix) {
+      return pathname === item.href || pathname.startsWith(`${item.href}/`);
+    }
+    return pathname === item.href;
+  };
 
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col md:flex-row text-zinc-100">
@@ -56,7 +81,7 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
         <nav className="space-y-1 text-sm font-medium">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const active = isActive(item);
             return (
               <Link
                 key={item.href}
@@ -77,21 +102,15 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
               </Link>
             );
           })}
-          {user && (
-            <Link
-              href="/client/dashboard#galleries"
-              className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800/60 transition-colors"
-            >
-              <FolderHeart className="h-4 w-4 shrink-0" />
-              <span>Mes galeries</span>
-            </Link>
-          )}
         </nav>
 
         <div className="md:mt-auto pt-4 border-t border-zinc-800 space-y-3">
           {user ? (
             <>
-              <div className="flex items-center gap-3 px-1">
+              <Link
+                href="/client/profile"
+                className="flex items-center gap-3 px-1 rounded-lg hover:bg-zinc-800/40 py-1 transition-colors"
+              >
                 <div className="h-9 w-9 rounded-full bg-zinc-800 flex items-center justify-center font-bold text-amber-400 text-xs shrink-0">
                   {initials}
                 </div>
@@ -99,7 +118,7 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
                   <div className="font-semibold text-white truncate">{user.name}</div>
                   <div className="text-zinc-500 truncate">{user.email}</div>
                 </div>
-              </div>
+              </Link>
               <Button
                 variant="ghost"
                 size="sm"

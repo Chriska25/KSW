@@ -14,11 +14,14 @@ import {
   User,
   BookOpen,
   ImageIcon,
+  ChevronDown,
+  Zap,
+  ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { getSession, isAdminUser } from '@/lib/session';
+import { isAdminUser } from '@/lib/session';
 import {
   fetchAdminNotifications,
   markNotificationsRead,
@@ -30,6 +33,9 @@ import {
   type AdminSearchResult,
   type AdminSearchResultType,
 } from '@/lib/admin-search';
+import { ADMIN_USER_MENU } from '@/lib/admin-nav';
+import { AdminQuickActionsMenu, AdminLogoutButton } from '@/components/admin/admin-quick-actions';
+import { useSessionUser, getUserInitials } from '@/hooks/use-session-user';
 
 interface AdminTopbarProps {
   onToggleSidebar?: () => void;
@@ -68,14 +74,25 @@ function iconForSearch(type: AdminSearchResultType) {
 export function AdminTopbar({ onToggleSidebar }: AdminTopbarProps) {
   const router = useRouter();
   const searchRef = useRef<HTMLDivElement>(null);
+  const actionsRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchResults, setSearchResults] = useState<AdminSearchResult[]>([]);
-  const user = getSession();
+  const { user, ready: sessionReady } = useSessionUser();
+
+  const closePanels = useCallback(() => {
+    setNotificationsOpen(false);
+    setActionsOpen(false);
+    setUserMenuOpen(false);
+    setSearchOpen(false);
+  }, []);
 
   const loadNotifications = useCallback(async () => {
     try {
@@ -119,15 +136,24 @@ export function AdminTopbar({ onToggleSidebar }: AdminTopbarProps) {
 
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (searchRef.current && !searchRef.current.contains(target)) {
         setSearchOpen(false);
+      }
+      if (actionsRef.current && !actionsRef.current.contains(target)) {
+        setActionsOpen(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(target)) {
+        setUserMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', onDocClick);
     return () => document.removeEventListener('mousedown', onDocClick);
   }, []);
 
-  const handleOpen = () => {
+  const handleOpenNotifications = () => {
+    setActionsOpen(false);
+    setUserMenuOpen(false);
     setNotificationsOpen((o) => !o);
     if (!notificationsOpen) loadNotifications();
   };
@@ -143,30 +169,26 @@ export function AdminTopbar({ onToggleSidebar }: AdminTopbarProps) {
   };
 
   const handleSelectResult = (result: AdminSearchResult) => {
-    setSearchOpen(false);
+    closePanels();
     setSearchQuery('');
     router.push(result.href);
   };
 
-  const initials = user?.name
-    ? user.name
-        .split(/\s+/)
-        .slice(0, 2)
-        .map((p) => p[0]?.toUpperCase())
-        .join('')
-    : 'AD';
+  const initials = sessionReady ? getUserInitials(user?.name, '—') : '—';
+  const displayName = sessionReady ? user?.name || 'Administrateur' : 'Administrateur';
+  const displayRole = sessionReady && isAdminUser(user) ? 'Administrateur' : sessionReady ? 'Staff' : '…';
 
   return (
-    <header className="h-16 bg-zinc-900/80 border-b border-zinc-800 px-6 flex items-center justify-between sticky top-0 z-40 backdrop-blur-md">
-      <div className="flex items-center space-x-4 flex-1 max-w-md">
+    <header className="h-16 bg-zinc-900/80 border-b border-zinc-800 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-40 backdrop-blur-md gap-3">
+      <div className="flex items-center space-x-3 flex-1 min-w-0 max-w-md">
         <button
           type="button"
           onClick={onToggleSidebar}
-          className="md:hidden p-2 text-zinc-400 hover:text-white"
+          className="md:hidden p-2 text-zinc-400 hover:text-white shrink-0"
         >
           <Menu className="h-6 w-6" />
         </button>
-        <div ref={searchRef} className="relative w-full hidden sm:block">
+        <div ref={searchRef} className="relative w-full hidden sm:block min-w-0">
           <Search className="h-4 w-4 absolute left-3 top-3 text-zinc-500" />
           <Input
             placeholder="Rechercher clients, réservations, galeries…"
@@ -222,11 +244,41 @@ export function AdminTopbar({ onToggleSidebar }: AdminTopbarProps) {
         </div>
       </div>
 
-      <div className="flex items-center space-x-4">
+      <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
+        {/* Actions rapides */}
+        <div ref={actionsRef} className="relative hidden md:block">
+          <button
+            type="button"
+            onClick={() => {
+              setNotificationsOpen(false);
+              setUserMenuOpen(false);
+              setActionsOpen((o) => !o);
+            }}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl glass-panel text-zinc-300 hover:text-amber-400 text-xs font-semibold transition-colors"
+          >
+            <Zap className="h-4 w-4 text-amber-400" />
+            <span className="hidden lg:inline">Actions</span>
+            <ChevronDown className={`h-3.5 w-3.5 opacity-60 transition-transform ${actionsOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {actionsOpen && (
+            <div className="absolute right-0 mt-2 w-56 glass-panel rounded-2xl border border-zinc-800 shadow-2xl z-50 p-2">
+              <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                Actions rapides
+              </p>
+              <AdminQuickActionsMenu
+                variant="menu"
+                onDone={() => setActionsOpen(false)}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Notifications */}
         <div className="relative">
           <button
             type="button"
-            onClick={handleOpen}
+            onClick={handleOpenNotifications}
             className="relative p-2 rounded-xl glass-panel text-zinc-400 hover:text-amber-400 transition-colors"
             aria-label="Notifications"
           >
@@ -303,18 +355,60 @@ export function AdminTopbar({ onToggleSidebar }: AdminTopbarProps) {
           )}
         </div>
 
-        <div className="flex items-center space-x-3 pl-3 border-l border-zinc-800">
-          <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-amber-500 to-amber-300 p-0.5">
-            <div className="h-full w-full bg-zinc-950 rounded-full flex items-center justify-center font-bold text-amber-400 text-xs">
-              {initials}
+        {/* Menu utilisateur */}
+        <div ref={userMenuRef} className="relative pl-2 sm:pl-3 border-l border-zinc-800">
+          <button
+            type="button"
+            onClick={() => {
+              setNotificationsOpen(false);
+              setActionsOpen(false);
+              setUserMenuOpen((o) => !o);
+            }}
+            className="flex items-center gap-2 sm:gap-3 rounded-xl py-1 pr-1 hover:bg-zinc-800/40 transition-colors"
+          >
+            <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-amber-500 to-amber-300 p-0.5 shrink-0">
+              <div className="h-full w-full bg-zinc-950 rounded-full flex items-center justify-center font-bold text-amber-400 text-xs" suppressHydrationWarning>
+                {initials}
+              </div>
             </div>
-          </div>
-          <div className="hidden sm:block text-xs">
-            <div className="font-bold text-white">{user?.name || 'Administrateur'}</div>
-            <div className="text-amber-400/90 text-[10px] font-mono">
-              {isAdminUser(user) ? 'Administrateur' : 'Staff'}
+            <div className="hidden sm:block text-left text-xs min-w-0">
+              <div className="font-bold text-white truncate max-w-[120px]" suppressHydrationWarning>
+                {displayName}
+              </div>
+              <div className="text-amber-400/90 text-[10px] font-mono" suppressHydrationWarning>
+                {displayRole}
+              </div>
             </div>
-          </div>
+            <ChevronDown className={`h-4 w-4 text-zinc-500 hidden sm:block transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {userMenuOpen && (
+            <div className="absolute right-0 mt-2 w-56 glass-panel rounded-2xl border border-zinc-800 shadow-2xl z-50 p-2">
+              <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-500 truncate">
+                {user?.email || 'Compte admin'}
+              </p>
+              <div className="space-y-0.5 pb-2 border-b border-zinc-800 mb-2">
+                {ADMIN_USER_MENU.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      target={item.external ? '_blank' : undefined}
+                      rel={item.external ? 'noopener noreferrer' : undefined}
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-zinc-300 hover:bg-zinc-800/80 hover:text-white transition-colors"
+                    >
+                      <Icon className="h-3.5 w-3.5 text-amber-400/90 shrink-0" />
+                      <span className="flex-1 truncate">{item.label}</span>
+                      {item.external && <ExternalLink className="h-3 w-3 opacity-50 shrink-0" />}
+                    </Link>
+                  );
+                })}
+              </div>
+              <AdminLogoutButton onDone={() => setUserMenuOpen(false)} />
+            </div>
+          )}
         </div>
       </div>
     </header>

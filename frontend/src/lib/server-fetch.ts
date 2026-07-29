@@ -5,10 +5,14 @@ import { getBackendApiBase } from '@/lib/backend-url';
 
 export async function fetchSettingsServer(): Promise<SystemSettings> {
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
     const res = await fetch(`${getBackendApiBase()}/settings`, {
       cache: 'no-store',
       next: { revalidate: 0 },
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
     if (!res.ok) return DEFAULT_SETTINGS;
     const json = await res.json();
     if (json?.data && Object.keys(json.data).length > 0) {
