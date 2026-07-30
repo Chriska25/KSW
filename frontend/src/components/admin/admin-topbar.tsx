@@ -35,6 +35,7 @@ import {
 } from '@/lib/admin-search';
 import { ADMIN_USER_MENU } from '@/lib/admin-nav';
 import { AdminQuickActionsMenu, AdminLogoutButton } from '@/components/admin/admin-quick-actions';
+import { ThemeSwitcher } from '@/components/theme/theme-switcher';
 import { useSessionUser, getUserInitials } from '@/hooks/use-session-user';
 
 interface AdminTopbarProps {
@@ -245,6 +246,7 @@ export function AdminTopbar({ onToggleSidebar }: AdminTopbarProps) {
       </div>
 
       <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
+        <ThemeSwitcher variant="compact" />
         {/* Actions rapides */}
         <div ref={actionsRef} className="relative hidden md:block">
           <button

@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { Lock, ArrowRight, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StudioLogo } from '@/components/brand/studio-logo';
+import { ThemeSwitcher } from '@/components/theme/theme-switcher';
 
 export function PublicHeader() {
   const pathname = usePathname();
@@ -50,7 +51,8 @@ export function PublicHeader() {
         </nav>
 
         {/* CTA Buttons */}
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-3 sm:space-x-4">
+          <ThemeSwitcher variant="compact" className="hidden sm:inline-flex" />
           <Link href="/login" className="text-xs font-semibold text-zinc-400 hover:text-white hidden sm:block">
             Connexion
           </Link>
@@ -93,6 +95,10 @@ export function PublicHeader() {
             >
               <Lock className="h-4 w-4 mr-2" /> GALERIE PRIVÉE CLIENT
             </Link>
+            <div className="pt-2 border-t border-zinc-800">
+              <p className="text-[10px] uppercase tracking-wider text-zinc-500 px-3 mb-2">Apparence</p>
+              <ThemeSwitcher variant="compact" />
+            </div>
           </div>
         </div>
       )}

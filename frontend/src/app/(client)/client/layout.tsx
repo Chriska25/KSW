@@ -1,12 +1,17 @@
-'use client';
+import React from 'react';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { ClientShellWrapper } from '@/components/client/client-shell-wrapper';
 
-import { ClientShell } from '@/components/client/client-shell';
-import { ClientAuthGuard } from '@/components/client/client-auth-guard';
+const TOKEN_COOKIE = 'studio_token';
 
-export default function ClientLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <ClientShell>
-      <ClientAuthGuard>{children}</ClientAuthGuard>
-    </ClientShell>
-  );
+export default async function ClientLayout({ children }: { children: React.ReactNode }) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(TOKEN_COOKIE)?.value;
+
+  if (!token || token.length <= 10) {
+    redirect('/login?redirect=/client/dashboard');
+  }
+
+  return <ClientShellWrapper>{children}</ClientShellWrapper>;
 }

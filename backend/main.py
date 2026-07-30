@@ -2,6 +2,7 @@ import os
 import json
 import uuid
 import shutil
+from datetime import datetime
 # pyrefly: ignore [missing-import]
 from fastapi import FastAPI, Depends, HTTPException, status, File, UploadFile, Request, BackgroundTasks
 # pyrefly: ignore [missing-import]
@@ -9,15 +10,31 @@ from fastapi.middleware.cors import CORSMiddleware
 # pyrefly: ignore [missing-import]
 from fastapi.staticfiles import StaticFiles
 # pyrefly: ignore [missing-import]
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import Dict, Any, List, Optional
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from database import engine, Base, get_db, SessionLocal
 from models import Setting, User, Service, Testimonial, Gallery
 from schemas import SettingUpdate, LoginRequest, Verify2FARequest, RegisterRequest, ForgotPasswordRequest, ResetPasswordRequest, ChangePasswordRequest, ServiceCreate, TestimonialCreate, GalleriesSaveAll, TestimonialsSaveAll, BlogPostsSaveAll, FaqSaveAll, VisitTrack, SyncFromLocalPayload, GalleryUnlockRequest, ContactCreate, BookingCreate, BookingStatusUpdate, BookingUpdate, StripeCheckoutCreate, NotificationMarkRead, ClientNotificationMarkRead, AdminEmailTest
 from visit_analytics import track_visit, get_visit_analytics_summary
-from seed import seed_database, ensure_demo_gallery, ensure_blog_posts, ensure_faq_items, hash_password
+from geoip import extract_client_ip, lookup_geo
+from admin_logger import log_admin_request, get_admin_activity_logs, get_admin_log_file_path
+from seed import seed_database, ensure_demo_gallery, ensure_blog_posts, ensure_faq_items
+from security import (
+    hash_password,
+    cors_headers,
+    check_rate_limit,
+    resolve_booking_pricing,
+    validate_redirect_url,
+    validate_user_role_change,
+    redact_settings_payload,
+    is_blocked_upload,
+    is_production,
+    validate_jwt_secret_at_startup,
+)
 from auth import (
     create_access_token,
     create_pre_2fa_token,
@@ -30,6 +47,9 @@ from auth import (
     require_admin_user,
     serialize_user,
     is_development,
+    decode_token,
+    require_super_admin,
+    get_token_from_credentials,
 )
 from image_processor import (
     load_media_settings,
@@ -40,6 +60,7 @@ from image_processor import (
 )
 from email_service import notify_contact_received, notify_booking_created, notify_payment_received, send_test_email, send_password_reset_email, admin_email
 from notifications_helpers import build_client_notifications, mark_client_notifications_read
+from settings_store import get_json_setting_list, get_json_settings_batch
 
 # Ensure uploads directory exists
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
@@ -51,6 +72,47 @@ NOTIFICATIONS_READ_KEY = "notifications_read_ids"
 NOTIFICATIONS_MANUAL_KEY = "admin_notifications_manual"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+ADMIN_ROLES = {"admin", "photographer", "assistant"}
+
+PUBLIC_CACHE_GET_PREFIXES = (
+    "/api/v1/services",
+    "/api/v1/galleries/public",
+    "/api/v1/galleries",
+    "/api/v1/blog",
+    "/api/v1/faq",
+    "/api/v1/testimonials",
+)
+
+
+def _cache_control_header(method: str, path: str) -> str:
+    if method != "GET":
+        return "no-cache, no-store, must-revalidate, max-age=0"
+    if path.startswith("/api/v1/admin") or path.startswith("/api/v1/auth") or path.startswith("/api/v1/client"):
+        return "no-cache, no-store, must-revalidate, max-age=0"
+    if any(path == prefix or path.startswith(f"{prefix}/") for prefix in PUBLIC_CACHE_GET_PREFIXES):
+        return "public, max-age=60, stale-while-revalidate=300"
+    return "no-cache, no-store, must-revalidate, max-age=0"
+
+
+def _extract_admin_actor(request: Request) -> tuple[str, str, str]:
+    auth = request.headers.get("authorization") or request.headers.get("Authorization") or ""
+    if not auth.lower().startswith("bearer "):
+        return "", "", ""
+    token = auth[7:].strip()
+    if not token or token.startswith("demo-token-"):
+        return "", "", ""
+    try:
+        payload = decode_token(token)
+        role = payload.get("role") or ""
+        if role not in ADMIN_ROLES:
+            return "", "", ""
+        email = str(payload.get("email") or "")
+        user_id = str(payload.get("sub") or "")
+        name = email.split("@")[0] if email else user_id
+        return email, user_id, name
+    except Exception:
+        return "", "", ""
+
 # Auto-create tables on startup
 Base.metadata.create_all(bind=engine)
 
@@ -58,51 +120,57 @@ app = FastAPI(
     title="KSW Studio Python FastAPI Backend",
     description="High-performance Python backend for KSW Studio photography platform",
     version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc"
+    docs_url="/docs" if is_development() else None,
+    redoc_url="/redoc" if is_development() else None,
 )
 
 # Serve uploaded static files
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
+@app.on_event("startup")
+def validate_security_on_startup():
+    validate_jwt_secret_at_startup()
+
+
 @app.middleware("http")
 async def dynamic_cors_and_cache_middleware(request, call_next):
     origin = request.headers.get("origin")
-    
-    # Handle OPTIONS preflight requests directly
+
     if request.method == "OPTIONS":
-        headers = {
-            "Access-Control-Allow-Origin": origin if origin else "*",
-            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
-            "Access-Control-Allow-Headers": "*",
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-        }
-        if origin and origin != "*":
-            headers["Access-Control-Allow-Credentials"] = "true"
-        return JSONResponse(status_code=200, content={"status": "ok"}, headers=headers)
+        return JSONResponse(status_code=200, content={"status": "ok"}, headers=cors_headers(origin))
 
     try:
         response = await call_next(request)
     except Exception as exc:
         print(f"MIDDLEWARE ERROR: {exc}")
-        headers = {
-            "Access-Control-Allow-Origin": origin if origin else "*",
-            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
-            "Access-Control-Allow-Headers": "*",
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-        }
-        if origin and origin != "*":
-            headers["Access-Control-Allow-Credentials"] = "true"
-        return JSONResponse(status_code=200, content={"status": "error", "message": str(exc)}, headers=headers)
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Erreur interne du serveur."},
+            headers=cors_headers(origin),
+        )
 
-    response.headers["Access-Control-Allow-Origin"] = origin if origin else "*"
-    if origin and origin != "*":
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
-    response.headers["Access-Control-Allow-Headers"] = "*"
-    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
-    response.headers["Pragma"] = "no-cache"
-    response.headers["Expires"] = "0"
+    for key, value in cors_headers(origin).items():
+        response.headers[key] = value
+    cache_control = _cache_control_header(request.method.upper(), request.url.path)
+    response.headers["Cache-Control"] = cache_control
+    if cache_control.startswith("no-cache"):
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+
+    if request.url.path.startswith("/api/v1/admin") and request.method != "OPTIONS":
+        try:
+            actor_email, actor_id, actor_name = _extract_admin_actor(request)
+            log_admin_request(
+                None,
+                request=request,
+                status_code=response.status_code,
+                actor_email=actor_email,
+                actor_id=actor_id,
+                actor_name=actor_name,
+            )
+        except Exception as log_exc:
+            print(f"ADMIN LOG ERROR: {log_exc}")
+
     return response
 
 @app.post("/api/v1/upload")
@@ -124,8 +192,10 @@ async def upload_file(
             "format": "webp",
         }
 
-    ext = os.path.splitext(file.filename or "")[1] or ".bin"
-    filename = f"{uuid.uuid4()}{ext}"
+    if is_blocked_upload(file.filename or ""):
+        raise HTTPException(status_code=400, detail="Type de fichier non autorisé.")
+
+    filename = f"{uuid.uuid4()}.bin"
     file_path = os.path.join(UPLOAD_DIR, filename)
     with open(file_path, "wb") as buffer:
         buffer.write(content)
@@ -183,14 +253,48 @@ def health_check():
 
 
 @app.post("/api/v1/analytics/visit")
-def track_site_visit(payload: VisitTrack, db: Session = Depends(get_db)):
-    track_visit(
-        db,
-        path=payload.path,
-        session_id=payload.session_id,
-        referrer=payload.referrer or "",
+def track_site_visit(payload: VisitTrack, request: Request, background_tasks: BackgroundTasks):
+    ip = extract_client_ip(request)
+    geo = lookup_geo(ip)
+    background_tasks.add_task(
+        _track_visit_background,
+        payload.path,
+        payload.session_id,
+        payload.referrer or "",
+        ip,
+        str(geo.get("city") or ""),
+        str(geo.get("country") or ""),
+        str(geo.get("countryCode") or ""),
+        str(geo.get("region") or ""),
     )
     return {"status": "ok"}
+
+
+def _track_visit_background(
+    path: str,
+    session_id: str,
+    referrer: str,
+    ip: str,
+    city: str,
+    country: str,
+    country_code: str,
+    region: str,
+) -> None:
+    db = SessionLocal()
+    try:
+        track_visit(
+            db,
+            path=path,
+            session_id=session_id,
+            referrer=referrer,
+            ip=ip,
+            city=city,
+            country=country,
+            country_code=country_code,
+            region=region,
+        )
+    finally:
+        db.close()
 
 
 @app.get("/api/v1/admin/analytics/visits")
@@ -199,7 +303,12 @@ def admin_visit_analytics(db: Session = Depends(get_db), _admin: User = Depends(
 
 
 @app.post("/api/v1/admin/purge-reset")
-def purge_system_reset(db: Session = Depends(get_db), _admin: User = Depends(require_admin_user)):
+def purge_system_reset(
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_super_admin),
+):
+    if is_production() and os.getenv("ALLOW_PURGE_RESET", "").lower() != "true":
+        raise HTTPException(status_code=403, detail="Opération désactivée en production.")
     # Delete all stale data to enforce single database source of truth
     db.query(Setting).delete()
     db.query(User).delete()
@@ -395,7 +504,7 @@ def update_settings(payload: SettingUpdate, db: Session = Depends(get_db), _admi
         return {
             "status": "success",
             "message": "Paramètres enregistrés et persistés avec succès en BDD PostgreSQL (Python FastAPI)",
-            "data": payload.settings
+            "data": redact_settings_payload(payload.settings),
         }
     except Exception as e:
         db.rollback()
@@ -422,12 +531,13 @@ def auth_me(current_user: User = Depends(get_current_user)):
 
 
 @app.post("/api/v1/auth/login")
-def login(req: LoginRequest, db: Session = Depends(get_db)):
+def login(req: LoginRequest, request: Request, db: Session = Depends(get_db)):
+    client_ip = extract_client_ip(request)
+    check_rate_limit(f"login:{client_ip}:{req.email.lower().strip()}", max_attempts=8, window_seconds=900)
     email_clean = _normalize_login_email(req.email)
     user = db.query(User).filter(User.email == email_clean).first()
-    hashed = hash_password(req.password)
 
-    if not user or not verify_password(user, req.password, hashed):
+    if not user or not verify_password(user, req.password):
         raise HTTPException(status_code=400, detail="Identifiants incorrects.")
 
     if (user.status or "active") == "pending":
@@ -455,7 +565,23 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
 
 
 @app.post("/api/v1/auth/verify-2fa")
-def verify_2fa(req: Verify2FARequest, db: Session = Depends(get_db)):
+def verify_2fa(
+    req: Verify2FARequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
+):
+    check_rate_limit(f"2fa:{req.user_id}", max_attempts=8, window_seconds=900)
+    pre_token = get_token_from_credentials(credentials)
+    if not pre_token:
+        raise HTTPException(status_code=401, detail="Session 2FA requise. Reconnectez-vous.")
+    try:
+        payload = decode_token(pre_token)
+    except Exception:
+        raise HTTPException(status_code=401, detail="Session 2FA invalide ou expirée.")
+    if not payload.get("pre_2fa") or str(payload.get("sub")) != str(req.user_id):
+        raise HTTPException(status_code=401, detail="Session 2FA invalide.")
+
     user = db.query(User).filter(User.id == req.user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Utilisateur introuvable.")
@@ -470,7 +596,8 @@ def verify_2fa(req: Verify2FARequest, db: Session = Depends(get_db)):
     }
 
 @app.post("/api/v1/auth/register")
-def register(req: RegisterRequest, db: Session = Depends(get_db)):
+def register(req: RegisterRequest, request: Request, db: Session = Depends(get_db)):
+    check_rate_limit(f"register:{extract_client_ip(request)}", max_attempts=6, window_seconds=3600)
     existing = db.query(User).filter(User.email == req.email.lower()).first()
     if existing:
         raise HTTPException(status_code=400, detail="Un compte existe déjà avec cet email.")
@@ -481,15 +608,14 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
         email=req.email.lower(),
         password=hash_password(req.password),
         role="client",
-        status="active"
+        status="pending",
     )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
 
     return {
-        "message": "Compte créé avec succès",
-        "token": create_access_token(new_user, two_fa_verified=True),
+        "message": "Compte créé. Votre accès sera activé après validation par l'administrateur.",
         "user": {
             "id": new_user.id,
             "name": new_user.name,
@@ -501,7 +627,13 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
     }
 
 @app.post("/api/v1/auth/forgot-password")
-def forgot_password(req: ForgotPasswordRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+def forgot_password(
+    req: ForgotPasswordRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    check_rate_limit(f"forgot:{extract_client_ip(request)}:{req.email.lower().strip()}", max_attempts=5, window_seconds=3600)
     email_clean = _normalize_login_email(req.email)
     user = db.query(User).filter(User.email == email_clean).first()
     if user:
@@ -554,14 +686,20 @@ def list_users(db: Session = Depends(get_db), _admin: User = Depends(require_adm
     return {"data": res}
 
 @app.post("/api/v1/admin/users")
-def create_or_update_user(payload: Dict[str, Any], db: Session = Depends(get_db), _admin: User = Depends(require_admin_user)):
+def create_or_update_user(
+    payload: Dict[str, Any],
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin_user),
+):
     user_id = payload.get("id")
     email = payload.get("email", "").lower().strip()
     first_name = payload.get("firstName", "")
     last_name = payload.get("lastName", "")
-    role = payload.get("role", "photographer")
+    role = (payload.get("role") or "client").strip().lower()
     user_status = payload.get("status", "active")
     password = payload.get("password")
+
+    validate_user_role_change(admin.role or "client", role)
 
     existing = None
     if user_id:
@@ -829,15 +967,7 @@ def _append_json_setting(db: Session, key: str, item: Dict[str, Any]) -> Dict[st
 
 
 def _get_json_setting_list(db: Session, key: str) -> List[Dict[str, Any]]:
-    setting = db.query(Setting).filter(Setting.key == key).first()
-    if setting and setting.value:
-        try:
-            parsed = json.loads(setting.value)
-            if isinstance(parsed, list):
-                return parsed
-        except Exception:
-            pass
-    return []
+    return get_json_setting_list(db, key)
 
 
 def _save_json_setting_list(db: Session, key: str, items: List[Dict[str, Any]]) -> None:
@@ -988,9 +1118,12 @@ def create_booking(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
+    service_title, total_price, deposit_amount = resolve_booking_pricing(
+        db, req.service_id, req.service_title or ""
+    )
     entry = _append_json_setting(db, BOOKINGS_KEY, {
         "serviceId": req.service_id,
-        "serviceTitle": req.service_title,
+        "serviceTitle": service_title,
         "date": req.date,
         "time": req.time,
         "firstName": req.first_name,
@@ -999,8 +1132,8 @@ def create_booking(
         "phone": req.phone,
         "location": req.location,
         "notes": req.notes,
-        "depositAmount": req.deposit_amount,
-        "totalPrice": req.total_price,
+        "depositAmount": deposit_amount,
+        "totalPrice": total_price,
         "paymentStatus": "unpaid",
         "type": "booking",
     })
@@ -1087,6 +1220,10 @@ def create_stripe_checkout_session(payload: StripeCheckoutCreate, db: Session = 
     if deposit <= 0:
         raise HTTPException(status_code=400, detail="Montant d'acompte invalide.")
 
+    app_base = os.getenv("NEXT_PUBLIC_APP_URL") or os.getenv("APP_URL") or "http://localhost:3000"
+    success_url = validate_redirect_url(payload.success_url, app_base=app_base)
+    cancel_url = validate_redirect_url(payload.cancel_url, app_base=app_base)
+
     stripe.api_key = _load_stripe_secret(db)
     amount_cents = int(round(deposit * 100))
 
@@ -1112,8 +1249,8 @@ def create_stripe_checkout_session(payload: StripeCheckoutCreate, db: Session = 
                 "booking_id": str(booking.get("id")),
                 "reference": str(booking.get("reference", "")),
             },
-            success_url=payload.success_url,
-            cancel_url=payload.cancel_url,
+            success_url=success_url,
+            cancel_url=cancel_url,
         )
     except stripe.error.StripeError as exc:
         raise HTTPException(status_code=502, detail=f"Erreur Stripe: {exc.user_message or str(exc)}")
@@ -1179,12 +1316,9 @@ async def stripe_webhook(
     stripe.api_key = _load_stripe_secret(db)
 
     try:
-        if webhook_secret:
-            event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
-        elif is_development():
-            event = json.loads(payload.decode("utf-8"))
-        else:
+        if not webhook_secret:
             raise HTTPException(status_code=503, detail="Webhook Stripe non configuré.")
+        event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
     except stripe.error.SignatureVerificationError:
         raise HTTPException(status_code=400, detail="Signature webhook Stripe invalide.")
     except json.JSONDecodeError:
@@ -1273,8 +1407,9 @@ def _build_admin_notifications(db: Session) -> List[Dict[str, Any]]:
     from datetime import datetime
 
     notifications: List[Dict[str, Any]] = []
+    settings_batch = get_json_settings_batch(db, [BOOKINGS_KEY, CONTACT_MESSAGES_KEY])
 
-    for b in _get_json_setting_list(db, BOOKINGS_KEY):
+    for b in settings_batch.get(BOOKINGS_KEY, []):
         bid = str(b.get("id", ""))
         name = f"{b.get('firstName', '')} {b.get('lastName', '')}".strip() or b.get("email", "Client")
         ref = b.get("reference", bid[:8])
@@ -1305,7 +1440,7 @@ def _build_admin_notifications(db: Session) -> List[Dict[str, Any]]:
                 "relatedId": bid,
             })
 
-    for m in _get_json_setting_list(db, CONTACT_MESSAGES_KEY):
+    for m in settings_batch.get(CONTACT_MESSAGES_KEY, []):
         mid = str(m.get("id", ""))
         notifications.append({
             "id": f"contact-{mid}",
@@ -1336,12 +1471,19 @@ def _build_admin_activity_logs(db: Session) -> List[Dict[str, Any]]:
         "system": "warning",
         "email": "info",
         "security": "warning",
+        "admin": "info",
     }
-    logs: List[Dict[str, Any]] = []
+    logs: List[Dict[str, Any]] = list(get_admin_activity_logs(db, limit=400))
+
+    seen_ids = {str(log.get("id")) for log in logs}
+
     for n in _build_admin_notifications(db):
+        log_id = str(n.get("id"))
+        if log_id in seen_ids:
+            continue
         log_type = str(n.get("type", "system"))
         logs.append({
-            "id": str(n.get("id")),
+            "id": log_id,
             "level": level_map.get(log_type, "info"),
             "source": log_type,
             "title": n.get("title"),
@@ -1351,27 +1493,36 @@ def _build_admin_activity_logs(db: Session) -> List[Dict[str, Any]]:
             "createdAt": n.get("createdAt"),
             "relatedId": n.get("relatedId"),
         })
+        seen_ids.add(log_id)
 
-    for u in db.query(User).all():
-        logs.append({
-            "id": f"user-{u.id}",
-            "level": "info",
-            "source": "user",
-            "title": f"Compte {u.role}",
-            "message": f"{u.first_name} {u.last_name} ({u.email}) — statut {u.status}",
-            "recipient": u.email,
-            "channels": ["internal"],
-            "createdAt": "",
-            "relatedId": str(u.id),
-        })
-
-    logs.sort(key=lambda x: str(x.get("createdAt") or ""), reverse=True)
-    return logs[:150]
+    logs.sort(key=lambda x: str(x.get("createdAtIso") or x.get("createdAt") or ""), reverse=True)
+    return logs[:300]
 
 
 @app.get("/api/v1/admin/logs")
 def admin_activity_logs(db: Session = Depends(get_db), _admin: User = Depends(require_admin_user)):
     return {"data": _build_admin_activity_logs(db)}
+
+
+@app.get("/api/v1/admin/logs/export")
+def export_admin_activity_logs(
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_admin_user),
+):
+    log_path = get_admin_log_file_path()
+    if not os.path.isfile(log_path):
+        entries = get_admin_activity_logs(db, limit=2000)
+        os.makedirs(os.path.dirname(log_path), exist_ok=True)
+        with open(log_path, "w", encoding="utf-8") as handle:
+            for entry in reversed(entries):
+                handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+    filename = f"admin-activity-{datetime.utcnow().strftime('%Y%m%d')}.log"
+    return FileResponse(
+        log_path,
+        media_type="text/plain; charset=utf-8",
+        filename=filename,
+    )
 
 
 @app.get("/api/v1/admin/notifications")
@@ -1745,8 +1896,7 @@ def client_change_password(
     if not user:
         raise HTTPException(status_code=404, detail="Utilisateur introuvable.")
 
-    hashed_current = hash_password(payload.current_password)
-    if not verify_password(user, payload.current_password, hashed_current):
+    if not verify_password(user, payload.current_password):
         raise HTTPException(status_code=400, detail="Mot de passe actuel incorrect.")
 
     user.password = hash_password(payload.new_password)
@@ -1754,7 +1904,7 @@ def client_change_password(
     return {"status": "success", "message": "Mot de passe mis à jour."}
 
 
-def _gallery_to_dict(g, include_password: bool = False) -> dict:
+def _gallery_to_dict(g, include_password: bool = False, *, include_media: bool = True) -> dict:
     data = {
         "id": g.id,
         "title": g.title,
@@ -1765,9 +1915,13 @@ def _gallery_to_dict(g, include_password: bool = False) -> dict:
         "accessKey": g.access_key,
         "expiresAt": g.expires_at,
         "coverUrl": g.cover_url,
-        "albums": g.albums or [],
-        "photos": g.photos or [],
     }
+    if include_media:
+        data["albums"] = g.albums or []
+        data["photos"] = g.photos or []
+    else:
+        data["albums"] = []
+        data["photos"] = []
     if include_password:
         data["password"] = g.password
     return data
@@ -1809,15 +1963,15 @@ def list_client_galleries(
     if not email_clean:
         return {"data": []}
 
-    galleries_db = db.query(Gallery).filter(Gallery.is_private == True).all()
-    matched = []
-    for g in galleries_db:
-        g_email = (g.client_email or "").lower().strip()
-        if g_email and g_email == email_clean:
-            matched.append(_gallery_to_dict(g))
-            continue
-        if g.client_name and email_clean.split("@")[0] in (g.client_name or "").lower():
-            matched.append(_gallery_to_dict(g))
+    galleries_db = (
+        db.query(Gallery)
+        .filter(
+            Gallery.is_private == True,
+            func.lower(func.coalesce(Gallery.client_email, "")) == email_clean,
+        )
+        .all()
+    )
+    matched = [_gallery_to_dict(g, include_media=False) for g in galleries_db]
 
     return {"data": matched}
 

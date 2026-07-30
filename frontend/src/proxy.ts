@@ -8,7 +8,16 @@ function hasAuthToken(request: NextRequest): boolean {
   return Boolean(token && token.length > 10);
 }
 
-export function middleware(request: NextRequest) {
+function loginRedirect(request: NextRequest, pathname: string, admin = false): NextResponse {
+  const loginUrl = new URL('/login', request.url);
+  loginUrl.searchParams.set('redirect', pathname);
+  if (admin) {
+    loginUrl.searchParams.set('admin', '1');
+  }
+  return NextResponse.redirect(loginUrl);
+}
+
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (process.env.NODE_ENV === 'production' && pathname.startsWith('/debug')) {
@@ -17,9 +26,7 @@ export function middleware(request: NextRequest) {
 
   if (pathname.startsWith('/admin')) {
     if (!hasAuthToken(request)) {
-      const loginUrl = new URL('/login', request.url);
-      loginUrl.searchParams.set('redirect', pathname);
-      return NextResponse.redirect(loginUrl);
+      return loginRedirect(request, pathname, true);
     }
   }
 
@@ -27,9 +34,7 @@ export function middleware(request: NextRequest) {
 
   if (pathname.startsWith('/client') && !isGalleryViewer) {
     if (!hasAuthToken(request)) {
-      const loginUrl = new URL('/login', request.url);
-      loginUrl.searchParams.set('redirect', pathname);
-      return NextResponse.redirect(loginUrl);
+      return loginRedirect(request, pathname);
     }
   }
 

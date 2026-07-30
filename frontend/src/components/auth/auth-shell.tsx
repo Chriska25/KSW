@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Camera, FolderHeart, CalendarDays, FileSpreadsheet, ArrowLeft } from 'lucide-react';
 import { StudioLogo } from '@/components/brand/studio-logo';
+import { ThemeSwitcher } from '@/components/theme/theme-switcher';
 import { useSettings } from '@/context/settings-context';
 
 const CLIENT_FEATURES = [
@@ -33,16 +34,23 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
       </div>
 
       <div className="relative z-10 min-h-screen flex flex-col">
+        <div className="hidden lg:flex absolute top-6 right-6 xl:top-8 xl:right-8 z-20">
+          <ThemeSwitcher variant="compact" />
+        </div>
+
         {/* Header mobile */}
         <header className="flex items-center justify-between p-4 sm:p-6 lg:hidden">
           <StudioLogo size="sm" showSubtitle={false} />
-          <Link
-            href="/"
-            className="text-xs text-zinc-400 hover:text-amber-400 flex items-center gap-1.5 transition-colors"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Site
-          </Link>
+          <div className="flex items-center gap-3">
+            <ThemeSwitcher variant="compact" />
+            <Link
+              href="/"
+              className="text-xs text-zinc-400 hover:text-amber-400 flex items-center gap-1.5 transition-colors"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Site
+            </Link>
+          </div>
         </header>
 
         <div className="flex-1 flex flex-col lg:flex-row lg:items-stretch">

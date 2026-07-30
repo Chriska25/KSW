@@ -117,6 +117,8 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'images.unsplash.com' },
       { protocol: 'https', hostname: 'studiolumiere.fr' },
       { protocol: 'https', hostname: 'kswstudio.fr' },
+      { protocol: 'http', hostname: 'localhost', port: '8050', pathname: '/uploads/**' },
+      { protocol: 'http', hostname: '127.0.0.1', port: '8050', pathname: '/uploads/**' },
     ],
   },
   async headers() {
@@ -141,6 +143,11 @@ const nextConfig: NextConfig = {
           { key: 'X-DNS-Prefetch-Control', value: 'on' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+          ...(process.env.NODE_ENV === 'production'
+            ? [{ key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' }]
+            : []),
         ],
       },
       {

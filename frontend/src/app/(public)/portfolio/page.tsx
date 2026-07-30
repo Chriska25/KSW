@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Camera, Sparkles, Filter, Eye, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { PhotoLightbox } from '@/components/common/photo-lightbox';
+import { OptimizedPhoto } from '@/components/common/optimized-photo';
 import { useSettings } from '@/context/settings-context';
 import { useGalleries } from '@/context/gallery-context';
 
@@ -12,15 +13,10 @@ export default function PortfolioPage() {
   const { settings } = useSettings();
   const { publicPhotos } = useGalleries();
 
-  const [mounted, setMounted] = useState(false);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // Extract unique album names dynamically from public photos
   const dynamicAlbumButtons = useMemo(() => {
@@ -103,9 +99,9 @@ export default function PortfolioPage() {
       </div>
 
       {/* Grid Photos with Lazy Loading & Live Sync */}
-      {(!mounted || filtered.length === 0) ? (
+      {filtered.length === 0 ? (
         <div className="text-center py-12 glass-panel rounded-2xl text-zinc-400 text-sm">
-          {!mounted ? 'Chargement des réalisations...' : 'Aucun cliché ne correspond à votre recherche pour le moment.'}
+          Aucun cliché ne correspond à votre recherche pour le moment.
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -115,14 +111,10 @@ export default function PortfolioPage() {
               onClick={() => handleOpenLightbox(index)}
               className="group relative overflow-hidden rounded-2xl glass-panel aspect-[4/3] cursor-pointer"
             >
-              <img
+              <OptimizedPhoto
                 src={photo.url}
                 alt={photo.title}
-                loading="lazy"
-                onError={(e) => {
-                  e.currentTarget.src = 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=800&auto=format&fit=crop';
-                }}
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                className="group-hover:scale-110 transition-transform duration-700"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-6 flex flex-col justify-end">
                 <span className="text-xs uppercase font-mono tracking-widest text-amber-400">

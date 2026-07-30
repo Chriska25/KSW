@@ -1,15 +1,15 @@
+import { cache } from 'react';
 import { DEFAULT_SETTINGS, type SystemSettings } from '@/lib/studio-defaults';
 import type { GalleryAdminItem } from '@/lib/gallery-types';
 import type { ServiceItem } from '@/lib/service-types';
 import { getBackendApiBase } from '@/lib/backend-url';
 
-export async function fetchSettingsServer(): Promise<SystemSettings> {
+export const fetchSettingsServer = cache(async (): Promise<SystemSettings> => {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 8000);
     const res = await fetch(`${getBackendApiBase()}/settings`, {
-      cache: 'no-store',
-      next: { revalidate: 0 },
+      next: { revalidate: 60 },
       signal: controller.signal,
     });
     clearTimeout(timeoutId);
@@ -22,13 +22,12 @@ export async function fetchSettingsServer(): Promise<SystemSettings> {
     // backend indisponible au build/SSR
   }
   return DEFAULT_SETTINGS;
-}
+});
 
-export async function fetchGalleriesServer(): Promise<GalleryAdminItem[]> {
+export const fetchGalleriesServer = cache(async (): Promise<GalleryAdminItem[]> => {
   try {
     const res = await fetch(`${getBackendApiBase()}/galleries/public`, {
-      cache: 'no-store',
-      next: { revalidate: 0 },
+      next: { revalidate: 60 },
     });
     if (!res.ok) return [];
     const json = await res.json();
@@ -37,13 +36,12 @@ export async function fetchGalleriesServer(): Promise<GalleryAdminItem[]> {
     // ignore
   }
   return [];
-}
+});
 
-export async function fetchServicesServer(): Promise<ServiceItem[]> {
+export const fetchServicesServer = cache(async (): Promise<ServiceItem[]> => {
   try {
     const res = await fetch(`${getBackendApiBase()}/services`, {
-      cache: 'no-store',
-      next: { revalidate: 0 },
+      next: { revalidate: 60 },
     });
     if (!res.ok) return [];
     const json = await res.json();
@@ -54,4 +52,4 @@ export async function fetchServicesServer(): Promise<ServiceItem[]> {
     // ignore
   }
   return [];
-}
+});

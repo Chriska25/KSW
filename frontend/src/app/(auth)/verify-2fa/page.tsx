@@ -8,6 +8,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Input } from '@/components/ui/input';
 import { LoadingState } from '@/components/common/loading-state';
 import { useAuth, isAdminUser } from '@/hooks/use-auth';
+import { safeRedirect } from '@/lib/safe-redirect';
 
 function Verify2FAForm() {
   const router = useRouter();
@@ -24,9 +25,9 @@ function Verify2FAForm() {
     try {
       const res = await verify2FA(userId, code);
       if (isAdminUser(res.user)) {
-        router.replace(redirect || '/admin/dashboard');
+        router.replace(safeRedirect(redirect, '/admin/dashboard'));
       } else {
-        router.replace(redirect || '/client/dashboard');
+        router.replace(safeRedirect(redirect, '/client/dashboard'));
       }
     } catch {
       // Erreur gérée dans le hook

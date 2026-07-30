@@ -34,10 +34,8 @@ def load_media_settings(db) -> Dict[str, Any]:
     from models import Setting
 
     settings = dict(DEFAULT_MEDIA_SETTINGS)
-    rows = db.query(Setting).all()
+    rows = db.query(Setting).filter(Setting.key.in_(MEDIA_SETTING_KEYS)).all()
     for row in rows:
-        if row.key not in MEDIA_SETTING_KEYS:
-            continue
         try:
             settings[row.key] = json.loads(row.value)
         except Exception:

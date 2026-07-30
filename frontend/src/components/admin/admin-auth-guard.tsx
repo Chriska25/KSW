@@ -72,7 +72,7 @@ export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
 
   if (networkError) {
     return (
-      <div className="flex-1 flex items-center justify-center py-24 px-4">
+      <div className="min-h-screen flex items-center justify-center py-24 px-4 bg-zinc-950">
         <div className="max-w-md w-full glass-panel rounded-2xl border border-amber-400/20 p-8 text-center space-y-4">
           <AlertCircle className="h-10 w-10 text-amber-400 mx-auto" />
           <h2 className="text-lg font-bold text-white">API indisponible</h2>
@@ -88,7 +88,7 @@ export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
 
   if (denied || !ready) {
     return (
-      <div className="flex-1 flex items-center justify-center py-24">
+      <div className="min-h-screen flex items-center justify-center py-24 bg-zinc-950">
         <LoadingState message="Vérification de l'accès administrateur…" />
       </div>
     );

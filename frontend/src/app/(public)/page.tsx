@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   Sparkles,
   ArrowRight,
@@ -21,6 +22,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useSettings } from '@/context/settings-context';
 import { useGalleries } from '@/context/gallery-context';
+import { OptimizedPhoto } from '@/components/common/optimized-photo';
 
 export default function HomePage() {
   const { settings } = useSettings();
@@ -46,13 +48,16 @@ export default function HomePage() {
       <section className="relative min-h-[92vh] flex items-center justify-center pt-24 pb-16 overflow-hidden">
         {/* Background Ambient Glow & Subtle Pattern */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-500/10 via-zinc-950/80 to-zinc-950" />
-        <div
-          className="absolute inset-0 opacity-20 bg-cover bg-center mix-blend-overlay"
-          style={{
-            backgroundImage:
-              'url("https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?q=80&w=2000&auto=format&fit=crop")',
-          }}
-        />
+        <div className="absolute inset-0 opacity-20 mix-blend-overlay">
+          <Image
+            src="https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?q=80&w=2000&auto=format&fit=crop"
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover"
+          />
+        </div>
 
         <div className="relative max-w-5xl mx-auto px-4 text-center space-y-8 z-10">
           <Badge variant="gold" className="px-4 py-1.5 text-xs font-semibold uppercase tracking-widest">
@@ -306,11 +311,7 @@ export default function HomePage() {
               key={item.id}
               className="group relative overflow-hidden rounded-2xl glass-panel aspect-[4/3] cursor-pointer"
             >
-              <img
-                src={item.image}
-                alt={item.title}
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-              />
+              <OptimizedPhoto src={item.image} alt={item.title} />
               <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-6 flex flex-col justify-end">
                 <Badge variant="gold" className="w-max mb-2">
                   {item.tag}

@@ -15,38 +15,28 @@ export interface AuthUser {
   require2FA?: boolean;
 }
 
-export const INITIAL_USERS: AuthUser[] = [
-  {
-    id: 'u-1',
-    name: 'Photographe Master',
-    email: 'admin@kswstudio.fr',
-    role: 'admin',
-    status: 'active',
-    roles: [{ name: 'admin' }],
-    password: 'Password123!',
-    require2FA: true,
-  },
-  {
-    id: 'u-4',
-    name: 'Sophie Dupont',
-    email: 'sophie.d@email.com',
-    role: 'client',
-    status: 'active',
-    roles: [{ name: 'client' }],
-    password: 'Password123!',
-    require2FA: false,
-  },
-  {
-    id: 'demo-client',
-    name: 'Sophie Dupont',
-    email: 'client@kswstudio.fr',
-    role: 'client',
-    status: 'active',
-    roles: [{ name: 'client' }],
-    password: 'Password123!',
-    require2FA: false,
-  },
-];
+export const INITIAL_USERS: AuthUser[] = isDevMode()
+  ? [
+      {
+        id: 'u-1',
+        name: 'Photographe Master',
+        email: 'admin@kswstudio.fr',
+        role: 'admin',
+        status: 'active',
+        roles: [{ name: 'admin' }],
+        require2FA: true,
+      },
+      {
+        id: 'u-4',
+        name: 'Sophie Dupont',
+        email: 'sophie.d@email.com',
+        role: 'client',
+        status: 'active',
+        roles: [{ name: 'client' }],
+        require2FA: false,
+      },
+    ]
+  : [];
 
 function normalizeLoginEmail(email: string): string {
   const clean = email.toLowerCase().trim();
@@ -157,6 +147,7 @@ export function useAuth() {
       } else if (typeof window !== 'undefined') {
         try {
           sessionStorage.setItem('studio_pending_2fa_user', JSON.stringify(normalized));
+          sessionStorage.setItem('studio_pre_2fa_token', data.token);
         } catch {
           // ignore
         }
@@ -198,14 +189,23 @@ export function useAuth() {
     setError(null);
 
     try {
+      const pre2fa =
+        typeof window !== 'undefined' ? sessionStorage.getItem('studio_pre_2fa_token') : null;
       const response = await apiClient.post(
         '/auth/verify-2fa',
         { user_id: userId, code },
-        { timeout: 15000 }
+        {
+          timeout: 15000,
+          headers: pre2fa ? { Authorization: `Bearer ${pre2fa}` } : undefined,
+        }
       );
       const data = response.data;
       if (data?.token && data?.user) {
         persistSession(data.token, data.user);
+      }
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('studio_pre_2fa_token');
+        sessionStorage.removeItem('studio_pending_2fa_user');
       }
       setLoading(false);
       return { ...data, user: normalizeUser(data.user) };
@@ -245,10 +245,8 @@ export function useAuth() {
         { timeout: 15000 }
       );
       const resData = response.data;
-      if (resData?.token && resData?.user) {
+      if (resData?.token && resData?.user && (resData.user.status || 'active') === 'active') {
         persistSession(resData.token, resData.user);
-      } else if (resData?.user) {
-        persistSession(resData.token || '', resData.user);
       }
       setLoading(false);
       return resData;

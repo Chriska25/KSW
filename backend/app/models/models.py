@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Text, Boolean, Integer, Float, DateTime, JSON
+from sqlalchemy import Column, String, Text, Boolean, Integer, Float, DateTime, JSON, Index
 from datetime import datetime
 from app.db.session import Base
 
@@ -41,7 +41,7 @@ class Service(Base):
     duration_minutes = Column(Integer, default=120)
     photos_count = Column(Integer, default=20)
     cover_image = Column(Text, nullable=True)
-    is_active = Column(Boolean, default=True)
+    is_active = Column(Boolean, default=True, index=True)
     seo_title = Column(String, nullable=True)
     seo_description = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -56,17 +56,20 @@ class Testimonial(Base):
     rating = Column(Integer, default=5)
     content = Column(Text, nullable=False)
     avatar_url = Column(Text, nullable=True)
-    is_published = Column(Boolean, default=False)
+    is_published = Column(Boolean, default=False, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class Gallery(Base):
     __tablename__ = "galleries"
+    __table_args__ = (
+        Index("ix_galleries_private_email", "is_private", "client_email"),
+    )
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     title = Column(String, nullable=False)
     client_name = Column(String, nullable=False)
-    client_email = Column(String, nullable=True)
+    client_email = Column(String, nullable=True, index=True)
     category = Column(String, default="mariage")
     is_private = Column(Boolean, default=True)
     access_key = Column(String, unique=True, index=True, nullable=False)

@@ -2,6 +2,7 @@ import json
 from typing import Any, Dict, List, Set, Optional
 
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from models import Setting, Gallery
 
@@ -98,11 +99,15 @@ def build_client_notifications(db: Session, user_email: str) -> List[Dict[str, A
                 "relatedId": bid,
             })
 
-    galleries = db.query(Gallery).filter(Gallery.is_private == True).all()
+    galleries = (
+        db.query(Gallery)
+        .filter(
+            Gallery.is_private == True,
+            func.lower(func.coalesce(Gallery.client_email, "")) == email_clean,
+        )
+        .all()
+    )
     for g in galleries:
-        g_email = _normalize_email(g.client_email or "")
-        if g_email != email_clean:
-            continue
         gid = str(g.id)
         notifications.append({
             "id": f"gallery-{gid}",

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import apiClient from '@/lib/api-client';
 import type { PhotoItem, AlbumItem, GalleryAdminItem } from '@/lib/gallery-types';
 
@@ -135,13 +135,16 @@ interface GalleryProviderProps {
   initialGalleries?: GalleryAdminItem[];
 }
 
+const SYNC_INTERVAL_MS = 300_000;
+
 export function GalleryProvider({ children, initialGalleries = [] }: GalleryProviderProps) {
   const [galleries, setGalleries] = useState<GalleryAdminItem[]>(initialGalleries);
+  const hasInitialData = initialGalleries.length > 0;
 
-  const fetchLiveGalleries = async () => {
+  const fetchLiveGalleries = useCallback(async () => {
     try {
-      const res = await apiClient.get(`/galleries/public?t=${Date.now()}`, {
-        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' },
+      const res = await apiClient.get('/galleries/public', {
+        headers: { 'Cache-Control': 'no-cache' },
       });
       const data = res.data;
       if (data && Array.isArray(data.data)) {
@@ -155,15 +158,14 @@ export function GalleryProvider({ children, initialGalleries = [] }: GalleryProv
     } catch (e) {
       console.error('Erreur chargement API galeries:', e);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchLiveGalleries();
-
-    const interval = setInterval(() => {
+    if (!hasInitialData) {
       fetchLiveGalleries();
-    }, 30000);
+    }
 
+    const interval = setInterval(fetchLiveGalleries, SYNC_INTERVAL_MS);
     const handleUpdate = () => fetchLiveGalleries();
     window.addEventListener('galleries_updated', handleUpdate);
     window.addEventListener('storage', handleUpdate);
@@ -173,9 +175,9 @@ export function GalleryProvider({ children, initialGalleries = [] }: GalleryProv
       window.removeEventListener('galleries_updated', handleUpdate);
       window.removeEventListener('storage', handleUpdate);
     };
-  }, []);
+  }, [fetchLiveGalleries, hasInitialData]);
 
-  const updateGalleries = async (newGalleries: GalleryAdminItem[]) => {
+  const updateGalleries = useCallback(async (newGalleries: GalleryAdminItem[]) => {
     setGalleries(newGalleries);
     try {
       localStorage.setItem('studio_galleries', JSON.stringify(newGalleries));
@@ -193,7 +195,7 @@ export function GalleryProvider({ children, initialGalleries = [] }: GalleryProv
       console.error('Erreur sauvegarde BDD galeries:', e);
       throw e;
     }
-  };
+  }, [fetchLiveGalleries]);
 
   const publicPhotos = useMemo(() => {
     return galleries.flatMap((g) => {
@@ -211,8 +213,13 @@ export function GalleryProvider({ children, initialGalleries = [] }: GalleryProv
     });
   }, [galleries]);
 
+  const value = useMemo(
+    () => ({ galleries, setGalleries, updateGalleries, publicPhotos }),
+    [galleries, updateGalleries, publicPhotos]
+  );
+
   return (
-    <GalleryContext.Provider value={{ galleries, setGalleries, updateGalleries, publicPhotos }}>
+    <GalleryContext.Provider value={value}>
       {children}
     </GalleryContext.Provider>
   );

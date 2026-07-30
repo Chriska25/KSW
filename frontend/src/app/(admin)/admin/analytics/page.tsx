@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import {
   TrendingUp,
   Users,
@@ -10,6 +11,7 @@ import {
   CheckCircle2,
   Eye,
   Globe,
+  MapPin,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -24,21 +26,11 @@ import {
 import type { ApiBooking } from '@/lib/admin-crm-api';
 import { getApiErrorMessage } from '@/lib/api-error';
 import { fetchVisitAnalytics, type VisitAnalyticsSummary } from '@/lib/visit-analytics';
-import {
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from 'recharts';
+
+const AnalyticsCharts = dynamic(() => import('@/components/admin/analytics-charts'), {
+  ssr: false,
+  loading: () => <div className="h-72 animate-pulse rounded-xl bg-zinc-900/40" />,
+});
 
 export default function AdminAnalyticsPage() {
   const { formatPrice, currencySymbol } = useSettings();
@@ -159,23 +151,53 @@ export default function AdminAnalyticsPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <Card className="lg:col-span-8 glass-panel p-6 space-y-4">
+            <Card className="lg:col-span-4 glass-panel p-6 space-y-4">
               <CardHeader className="p-0">
-                <CardTitle className="text-lg">Visites — 30 derniers jours</CardTitle>
-                <CardDescription>Pages vues et visiteurs uniques par jour.</CardDescription>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <MapPin className="h-5 w-5 text-emerald-400" />
+                  Top villes
+                </CardTitle>
+                <CardDescription>Localisation des visiteurs (IP).</CardDescription>
               </CardHeader>
-              <CardContent className="p-0 pt-4 h-72">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={visits.dailyChart}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                    <XAxis dataKey="label" stroke="#71717a" fontSize={11} interval="preserveStartEnd" />
-                    <YAxis stroke="#71717a" fontSize={12} allowDecimals={false} />
-                    <Tooltip contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '12px', fontSize: '12px' }} />
-                    <Legend />
-                    <Line type="monotone" dataKey="views" stroke="#d4af37" strokeWidth={2} dot={false} name="Pages vues" />
-                    <Line type="monotone" dataKey="uniqueVisitors" stroke="#10b981" strokeWidth={2} dot={false} name="Visiteurs uniques" />
-                  </LineChart>
-                </ResponsiveContainer>
+              <CardContent className="p-0 pt-2 space-y-2 max-h-72 overflow-y-auto">
+                {(visits.topCities ?? []).length === 0 ? (
+                  <p className="text-zinc-500 text-sm text-center py-8">Aucune donnée géo.</p>
+                ) : (
+                  (visits.topCities ?? []).map((item) => (
+                    <div
+                      key={item.location}
+                      className="flex items-center justify-between gap-2 py-2 border-b border-zinc-800/80 text-xs"
+                    >
+                      <span className="text-zinc-300 truncate">{item.location}</span>
+                      <Badge variant="outline" className="shrink-0">{item.views}</Badge>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="lg:col-span-4 glass-panel p-6 space-y-4">
+              <CardHeader className="p-0">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Globe className="h-5 w-5 text-amber-400" />
+                  Top pays
+                </CardTitle>
+                <CardDescription>Répartition par pays.</CardDescription>
+              </CardHeader>
+              <CardContent className="p-0 pt-2 space-y-2 max-h-72 overflow-y-auto">
+                {(visits.topCountries ?? []).length === 0 ? (
+                  <p className="text-zinc-500 text-sm text-center py-8">Aucune donnée géo.</p>
+                ) : (
+                  (visits.topCountries ?? []).map((item) => (
+                    <div
+                      key={item.country}
+                      className="flex items-center justify-between gap-2 py-2 border-b border-zinc-800/80 text-xs"
+                    >
+                      <span className="text-zinc-300 truncate">{item.country}</span>
+                      <Badge variant="outline" className="shrink-0">{item.views}</Badge>
+                    </div>
+                  ))
+                )}
               </CardContent>
             </Card>
 
@@ -201,6 +223,48 @@ export default function AdminAnalyticsPage() {
               </CardContent>
             </Card>
           </div>
+
+          <Card className="glass-panel p-6 space-y-4">
+            <CardHeader className="p-0">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-amber-400" />
+                Visites récentes — IP &amp; localisation
+              </CardTitle>
+              <CardDescription>
+                Dernières pages consultées avec adresse IP, ville et pays du visiteur.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0 pt-2 overflow-x-auto">
+              {(visits.recentVisits ?? []).length === 0 ? (
+                <p className="text-zinc-500 text-sm text-center py-8">Aucune visite récente.</p>
+              ) : (
+                <table className="w-full text-left text-xs text-zinc-300">
+                  <thead className="text-zinc-500 uppercase tracking-wide border-b border-zinc-800">
+                    <tr>
+                      <th className="py-2 pr-4">Date</th>
+                      <th className="py-2 pr-4">Page</th>
+                      <th className="py-2 pr-4">IP</th>
+                      <th className="py-2 pr-4">Ville</th>
+                      <th className="py-2 pr-4">Pays</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-800/80">
+                    {(visits.recentVisits ?? []).map((visit) => (
+                      <tr key={visit.id} className="hover:bg-zinc-900/40">
+                        <td className="py-2.5 pr-4 whitespace-nowrap text-zinc-500">{visit.createdAt}</td>
+                        <td className="py-2.5 pr-4">
+                          <code className="text-amber-400/90">{visit.path}</code>
+                        </td>
+                        <td className="py-2.5 pr-4 font-mono text-zinc-400">{visit.ip}</td>
+                        <td className="py-2.5 pr-4">{visit.city}{visit.region ? ` (${visit.region})` : ''}</td>
+                        <td className="py-2.5 pr-4">{visit.country}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </CardContent>
+          </Card>
         </>
       )}
 
@@ -252,64 +316,14 @@ export default function AdminAnalyticsPage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <Card className="lg:col-span-8 glass-panel p-6 space-y-4">
-          <CardHeader className="p-0">
-            <CardTitle className="text-lg">Réservations par mois</CardTitle>
-            <CardDescription>Nombre de demandes enregistrées.</CardDescription>
-          </CardHeader>
-          <CardContent className="p-0 pt-4 h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.monthlyRevenueChart}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                <XAxis dataKey="month" stroke="#71717a" fontSize={12} />
-                <YAxis stroke="#71717a" fontSize={12} allowDecimals={false} />
-                <Tooltip contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '12px', fontSize: '12px' }} />
-                <Bar dataKey="bookings" fill="#d4af37" radius={[6, 6, 0, 0]} name="Réservations" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-4 glass-panel p-6 space-y-4">
-          <CardHeader className="p-0">
-            <CardTitle className="text-lg">Répartition</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0 pt-4 h-64">
-            {stats.serviceDistribution.length === 0 ? (
-              <p className="text-zinc-500 text-sm text-center pt-16">Aucune donnée</p>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={stats.serviceDistribution} innerRadius={50} outerRadius={75} paddingAngle={5} dataKey="value">
-                    {stats.serviceDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '12px', fontSize: '12px' }} />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="glass-panel space-y-4">
-        <CardHeader>
-          <CardTitle className="text-lg">CA mensuel ({currencySymbol})</CardTitle>
-        </CardHeader>
-        <CardContent className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={stats.monthlyRevenueChart}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-              <XAxis dataKey="month" stroke="#71717a" />
-              <YAxis stroke="#71717a" />
-              <Tooltip formatter={(value) => formatPrice(Number(value ?? 0))} contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '12px' }} />
-              <Bar dataKey="revenue" fill="#10b981" radius={[6, 6, 0, 0]} name="CA" />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+      {stats && (
+        <AnalyticsCharts
+          visits={visits}
+          stats={stats}
+          formatPrice={formatPrice}
+          currencySymbol={currencySymbol}
+        />
+      )}
     </div>
   );
 }

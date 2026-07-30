@@ -19,12 +19,21 @@ export default function RegisterPage() {
     password: '',
   });
 
+  const [successMessage, setSuccessMessage] = useState('');
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSuccessMessage('');
     try {
-      await register(formData);
+      const res = await register(formData);
+      if (res?.user?.status === 'pending') {
+        setSuccessMessage(
+          res.message || 'Compte créé. Votre accès sera activé après validation par l\'administrateur.'
+        );
+        return;
+      }
       router.push('/client/dashboard');
-    } catch (err) {
+    } catch {
       // Handled in hook
     }
   };
@@ -39,6 +48,14 @@ export default function RegisterPage() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleRegister} className="space-y-4">
+          {successMessage && (
+            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs">
+              {successMessage}{' '}
+              <Link href="/login" className="underline font-semibold">
+                Se connecter
+              </Link>
+            </div>
+          )}
           {error && (
             <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs">
               {error}

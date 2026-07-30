@@ -2,21 +2,28 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { ArrowRight } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { ArrowRight, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useAuth, isAdminUser } from '@/hooks/use-auth';
+import { safeRedirect } from '@/lib/safe-redirect';
 import { useSettings } from '@/context/settings-context';
+import { clearSession } from '@/lib/session';
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login, loading, error, clearError } = useAuth();
   const { settings } = useSettings();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
+
+  const redirect = searchParams.get('redirect');
+  const isAdminLogin =
+    searchParams.get('admin') === '1' || (redirect?.startsWith('/admin') ?? false);
 
   const displayError = localError || error;
 
@@ -32,26 +39,32 @@ export default function LoginPage() {
 
     try {
       const res = await login(email.trim(), password);
-      const redirect =
-        typeof window !== 'undefined'
-          ? new URLSearchParams(window.location.search).get('redirect')
-          : null;
 
       if (res.requires_2fa) {
         router.replace(
           `/verify-2fa?userId=${encodeURIComponent(res.user_id || res.user.id)}${
             redirect ? `&redirect=${encodeURIComponent(redirect)}` : ''
-          }`
+          }${isAdminLogin ? '&admin=1' : ''}`
         );
         return;
       }
 
       if (isAdminUser(res.user)) {
-        router.replace('/admin/dashboard');
+        const adminTarget = safeRedirect(
+          redirect && redirect.startsWith('/admin') ? redirect : null,
+          '/admin/dashboard'
+        );
+        router.replace(adminTarget);
         return;
       }
 
-      router.replace(redirect || '/client/dashboard');
+      if (isAdminLogin) {
+        clearSession();
+        setLocalError('Accès réservé aux comptes administrateur.');
+        return;
+      }
+
+      router.replace(safeRedirect(redirect, '/client/dashboard'));
     } catch (err: unknown) {
       if (err instanceof Error && err.message) {
         setLocalError(err.message);
@@ -62,11 +75,19 @@ export default function LoginPage() {
   return (
     <Card className="glass-panel border-amber-400/30 gold-border-glow">
       <CardHeader className="text-center space-y-2">
+        {isAdminLogin && (
+          <div className="inline-flex items-center gap-2 mx-auto px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/30 text-amber-400 text-xs font-semibold uppercase tracking-wider">
+            <Shield className="h-3.5 w-3.5" />
+            Espace administrateur
+          </div>
+        )}
         <CardTitle className="text-2xl font-bold">
           Connexion à <span className="gold-gradient-text">{settings.studioName || 'KSW Studio'}</span>
         </CardTitle>
         <CardDescription>
-          Accédez à vos galeries privées, devis et espace membre.
+          {isAdminLogin
+            ? 'Identifiez-vous pour accéder au back-office studio.'
+            : 'Accédez à vos galeries privées, devis et espace membre.'}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -124,10 +145,18 @@ export default function LoginPage() {
           </Button>
 
           <div className="pt-2 border-t border-zinc-800 text-center text-xs text-zinc-400">
-            Nouveau client ?{' '}
-            <Link href="/register" className="text-amber-400 font-semibold hover:underline">
-              Créer un compte
-            </Link>
+            {isAdminLogin ? (
+              <Link href="/" className="text-amber-400 font-semibold hover:underline">
+                Retour au site public
+              </Link>
+            ) : (
+              <>
+                Nouveau client ?{' '}
+                <Link href="/register" className="text-amber-400 font-semibold hover:underline">
+                  Créer un compte
+                </Link>
+              </>
+            )}
           </div>
         </form>
       </CardContent>

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { VisitTracker } from '@/components/analytics/visit-tracker';
+import { ThemeProvider } from '@/components/providers/theme-provider';
 import { SettingsProvider } from '@/context/settings-context';
 import { GalleryProvider } from '@/context/gallery-context';
 import { ServicesProvider } from '@/context/services-context';
@@ -23,13 +23,14 @@ export function AppProviders({
   initialServices,
 }: AppProvidersProps) {
   return (
-    <SettingsProvider initialSettings={initialSettings}>
-      <GalleryProvider initialGalleries={initialGalleries}>
-        <ServicesProvider initialServices={initialServices}>
-          <VisitTracker />
-          {children}
-        </ServicesProvider>
-      </GalleryProvider>
-    </SettingsProvider>
+    <ThemeProvider>
+      <SettingsProvider initialSettings={initialSettings}>
+        <GalleryProvider initialGalleries={initialGalleries}>
+          <ServicesProvider initialServices={initialServices}>
+            {children}
+          </ServicesProvider>
+        </GalleryProvider>
+      </SettingsProvider>
+    </ThemeProvider>
   );
 }

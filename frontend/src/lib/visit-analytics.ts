@@ -16,6 +16,20 @@ export interface VisitAnalyticsSummary {
     uniqueVisitors: number;
   }>;
   topPages: Array<{ path: string; views: number }>;
+  topCities: Array<{ location: string; views: number }>;
+  topCountries: Array<{ country: string; views: number }>;
+  recentVisits: Array<{
+    id: string;
+    path: string;
+    ip: string;
+    city: string;
+    country: string;
+    countryCode: string;
+    region: string;
+    sessionId: string;
+    referrer?: string;
+    createdAt: string;
+  }>;
   lastTrackedAt?: string;
 }
 

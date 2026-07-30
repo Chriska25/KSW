@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getBackendApiBase } from '@/lib/backend-url';
+import { buildSafeBackendUrl } from '@/lib/safe-proxy';
 
 const PROXY_TIMEOUT_MS = 15000;
 
@@ -10,7 +10,10 @@ const HOP_BY_HOP = new Set(['connection', 'keep-alive', 'transfer-encoding', 'up
 async function proxyToBackend(request: NextRequest, context: RouteContext): Promise<NextResponse> {
   const { path } = await context.params;
   const segment = path?.join('/') ?? '';
-  const target = new URL(`${getBackendApiBase()}/${segment}`);
+  const target = buildSafeBackendUrl(path ?? []);
+  if (!target) {
+    return NextResponse.json({ detail: 'Chemin API invalide.' }, { status: 400 });
+  }
 
   request.nextUrl.searchParams.forEach((value, key) => {
     target.searchParams.set(key, value);
@@ -24,6 +27,13 @@ async function proxyToBackend(request: NextRequest, context: RouteContext): Prom
   });
   headers.set('ngrok-skip-browser-warning', 'true');
   headers.set('Accept', 'application/json');
+
+  const clientIp =
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip')?.trim() ||
+    '127.0.0.1';
+  headers.set('X-Forwarded-For', clientIp);
+  headers.set('X-Real-IP', clientIp);
 
   const init: RequestInit = {
     method: request.method,

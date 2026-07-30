@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { JsonLdSchema } from '@/components/seo/json-ld';
 import { AppProviders } from '@/components/providers/app-providers';
+import { themeInitScript } from '@/lib/theme-script';
 import { fetchSettingsServer, fetchGalleriesServer, fetchServicesServer } from '@/lib/server-fetch';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -80,11 +81,12 @@ export default async function RootLayout({
   ]);
 
   return (
-    <html lang="fr" className="h-full antialiased dark">
+    <html lang="fr" className="h-full antialiased" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <JsonLdSchema />
       </head>
-      <body className="min-h-full flex flex-col bg-zinc-950 text-zinc-100 font-sans">
+      <body className="min-h-full flex flex-col bg-zinc-950 text-zinc-100 font-sans transition-colors duration-200">
         <AppProviders
           initialSettings={initialSettings}
           initialGalleries={initialGalleries}

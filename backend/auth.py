@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import User
+from security import verify_password_hash, is_development as security_is_dev
 
 JWT_SECRET = os.getenv("JWT_SECRET_KEY", "ksw-dev-secret-change-in-production")
 JWT_ALGORITHM = "HS256"
@@ -17,7 +18,7 @@ ACCESS_TOKEN_HOURS = int(os.getenv("JWT_ACCESS_TOKEN_HOURS", "24"))
 PRE_2FA_TOKEN_MINUTES = 10
 
 ADMIN_ROLES = {"admin", "photographer", "assistant"}
-STAFF_ROLES = {"admin", "photographer"}
+STAFF_ROLES = {"admin", "photographer", "assistant"}
 
 _bearer = HTTPBearer(auto_error=False)
 _pending_2fa: Dict[str, Dict[str, Any]] = {}
@@ -26,7 +27,7 @@ RESET_TOKEN_HOURS = 1
 
 
 def is_development() -> bool:
-    return os.getenv("ENVIRONMENT", "development").lower() in ("development", "dev", "local")
+    return security_is_dev()
 
 
 def _user_payload(user: User) -> Dict[str, Any]:
@@ -126,12 +127,10 @@ def verify_2fa_code(user_id: str, code: str) -> bool:
     return True
 
 
-def verify_password(user: User, password: str, hashed_input: str) -> bool:
-    if not password:
+def verify_password(user: User, password: str) -> bool:
+    if not password or not user:
         return False
-    if user.password and user.password == hashed_input:
-        return True
-    return False
+    return verify_password_hash(user.password or "", password)
 
 
 def get_token_from_credentials(
@@ -185,6 +184,12 @@ def require_admin_user(current_user: User = Depends(get_current_user)) -> User:
     role = current_user.role or "client"
     if role not in ADMIN_ROLES:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Accès administrateur requis.")
+    return current_user
+
+
+def require_super_admin(current_user: User = Depends(get_current_user)) -> User:
+    if (current_user.role or "client") != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Accès réservé à l'administrateur principal.")
     return current_user
 
 

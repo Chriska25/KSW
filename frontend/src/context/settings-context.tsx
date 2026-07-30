@@ -1,8 +1,9 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import apiClient from '@/lib/api-client';
 import { DEFAULT_SETTINGS, type SystemSettings } from '@/lib/studio-defaults';
+import { stripSecretsFromSettings } from '@/lib/safe-redirect';
 
 export type { SystemSettings };
 export { DEFAULT_SETTINGS };
@@ -28,18 +29,21 @@ interface SettingsProviderProps {
   initialSettings?: SystemSettings;
 }
 
+const SYNC_INTERVAL_MS = 300_000;
+
 export function SettingsProvider({ children, initialSettings }: SettingsProviderProps) {
   const [settings, setSettings] = useState<SystemSettings>(initialSettings ?? DEFAULT_SETTINGS);
+  const hasInitialData = Boolean(initialSettings);
 
-  const fetchLiveSettings = async () => {
+  const fetchLiveSettings = useCallback(async () => {
     try {
-      const res = await apiClient.get(`/settings?t=${Date.now()}`, {
-        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', Pragma: 'no-cache' },
+      const res = await apiClient.get('/settings', {
+        headers: { 'Cache-Control': 'no-cache' },
       });
       const data = res.data;
-      if (data && data.data && Object.keys(data.data).length > 0) {
+      if (data?.data && Object.keys(data.data).length > 0) {
         setSettings((prev) => {
-          const merged = { ...prev, ...data.data };
+          const merged = stripSecretsFromSettings({ ...prev, ...data.data } as SystemSettings);
           try {
             localStorage.setItem('studio_settings', JSON.stringify(merged));
           } catch {
@@ -51,15 +55,14 @@ export function SettingsProvider({ children, initialSettings }: SettingsProvider
     } catch (e) {
       console.error('Erreur synchronisation API settings:', e);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchLiveSettings();
-
-    const interval = setInterval(() => {
+    if (!hasInitialData) {
       fetchLiveSettings();
-    }, 30000);
+    }
 
+    const interval = setInterval(fetchLiveSettings, SYNC_INTERVAL_MS);
     const handleUpdate = () => fetchLiveSettings();
     window.addEventListener('settings_updated', handleUpdate);
     window.addEventListener('storage', handleUpdate);
@@ -69,7 +72,7 @@ export function SettingsProvider({ children, initialSettings }: SettingsProvider
       window.removeEventListener('settings_updated', handleUpdate);
       window.removeEventListener('storage', handleUpdate);
     };
-  }, []);
+  }, [fetchLiveSettings, hasInitialData]);
 
   const fullStudioName = `${settings.studioNameFirstPart || 'KSW'} ${settings.studioNameSecondPart || 'STUDIO'}`.trim();
 
@@ -78,18 +81,22 @@ export function SettingsProvider({ children, initialSettings }: SettingsProvider
       const activeTitle = settings.siteTitle || `${fullStudioName} - Photographie d'Art & Studio Photo d'Exception`;
       document.title = activeTitle;
     }
-  }, [settings, settings.siteTitle, fullStudioName]);
+  }, [settings.siteTitle, fullStudioName]);
 
-  const updateSettings = async (newSettings: Partial<SystemSettings>) => {
-    const updated = { ...settings, ...newSettings };
-    setSettings(updated);
+  const updateSettings = useCallback(async (newSettings: Partial<SystemSettings>) => {
+    let nextSettings = DEFAULT_SETTINGS as SystemSettings;
+    setSettings((prev) => {
+      nextSettings = stripSecretsFromSettings({ ...prev, ...newSettings } as SystemSettings);
+      return nextSettings;
+    });
+
     try {
-      localStorage.setItem('studio_settings', JSON.stringify(updated));
+      localStorage.setItem('studio_settings', JSON.stringify(nextSettings));
     } catch {
       // localStorage indisponible
     }
 
-    const res = await apiClient.post('/settings', { settings: updated });
+    const res = await apiClient.post('/settings', { settings: nextSettings });
     if (res.data?.status === 'error') {
       throw new Error(res.data.message || 'Erreur lors de la sauvegarde des paramètres');
     }
@@ -101,35 +108,38 @@ export function SettingsProvider({ children, initialSettings }: SettingsProvider
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new Event('settings_updated'));
     }
-  };
+  }, []);
 
-  const getCurrencySymbol = (currencyStr: string) => {
+  const getCurrencySymbol = useCallback((currencyStr: string) => {
     if (currencyStr.includes('(') && currencyStr.includes(')')) {
       const match = currencyStr.match(/\((.*?)\)/);
-      if (match && match[1]) return match[1];
+      if (match?.[1]) return match[1];
     }
     return currencyStr.trim() || '€';
-  };
+  }, []);
 
-  const currencySymbol = getCurrencySymbol(settings.currency);
-
-  const formatPrice = (amount: number) => {
-    return `${amount.toLocaleString('fr-FR')} ${currencySymbol}`;
-  };
-
-  return (
-    <SettingsContext.Provider
-      value={{
-        settings: { ...settings, studioName: fullStudioName },
-        updateSettings,
-        formatPrice,
-        currencySymbol,
-        fullStudioName,
-      }}
-    >
-      {children}
-    </SettingsContext.Provider>
+  const currencySymbol = useMemo(
+    () => getCurrencySymbol(settings.currency),
+    [getCurrencySymbol, settings.currency]
   );
+
+  const formatPrice = useCallback(
+    (amount: number) => `${amount.toLocaleString('fr-FR')} ${currencySymbol}`,
+    [currencySymbol]
+  );
+
+  const value = useMemo(
+    () => ({
+      settings: { ...settings, studioName: fullStudioName },
+      updateSettings,
+      formatPrice,
+      currencySymbol,
+      fullStudioName,
+    }),
+    [settings, updateSettings, formatPrice, currencySymbol, fullStudioName]
+  );
+
+  return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
 }
 
 export const useSettings = () => useContext(SettingsContext);

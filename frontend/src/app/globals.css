@@ -1,52 +1,84 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+@custom-variant light (&:where(.light, .light *));
+
 @layer base {
   :root {
-    --background: 240 10% 4%;
-    --foreground: 0 0% 98%;
-
-    --card: 240 10% 6%;
-    --card-foreground: 0 0% 98%;
-
-    --popover: 240 10% 6%;
-    --popover-foreground: 0 0% 98%;
-
-    --primary: 43 74% 53%; /* Elegant Gold #d4af37 */
+    color-scheme: light dark;
+    --background: 0 0% 98%;
+    --foreground: 240 10% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 10%;
+    --primary: 43 74% 53%;
     --primary-foreground: 240 10% 4%;
-
-    --secondary: 240 5% 15%;
-    --secondary-foreground: 0 0% 98%;
-
-    --muted: 240 5% 18%;
-    --muted-foreground: 240 5% 65%;
-
+    --secondary: 240 5% 96%;
+    --secondary-foreground: 240 10% 10%;
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 5% 40%;
     --accent: 43 74% 53%;
     --accent-foreground: 240 10% 4%;
-
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 43 74% 53%;
+    --radius: 0.75rem;
+  }
 
+  .dark {
+    color-scheme: dark;
+    --background: 240 10% 4%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 6%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 6%;
+    --popover-foreground: 0 0% 98%;
+    --secondary: 240 5% 15%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 5% 18%;
+    --muted-foreground: 240 5% 65%;
     --border: 240 6% 16%;
     --input: 240 6% 16%;
-    --ring: 43 74% 53%;
-
-    --radius: 0.75rem;
   }
 }
 
-body {
-  background-color: #0b0c10;
-  color: #f3f4f6;
-  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
-  overflow-x: hidden;
+/* Palette zinc inversée en mode clair */
+.light {
+  --color-zinc-50: #09090b;
+  --color-zinc-100: #18181b;
+  --color-zinc-200: #27272a;
+  --color-zinc-300: #3f3f46;
+  --color-zinc-400: #52525b;
+  --color-zinc-500: #71717a;
+  --color-zinc-600: #a1a1aa;
+  --color-zinc-700: #d4d4d8;
+  --color-zinc-800: #e4e4e7;
+  --color-zinc-900: #f4f4f5;
+  --color-zinc-950: #fafafa;
 }
 
-/* Glassmorphism Utilities */
+body {
+  background-color: var(--color-zinc-950);
+  color: var(--color-zinc-100);
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
 .glass-panel {
   background: rgba(18, 18, 24, 0.75);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.light .glass-panel {
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 24px -8px rgba(0, 0, 0, 0.08);
 }
 
 .glass-panel-gold {
@@ -56,25 +88,47 @@ body {
   border: 1px solid rgba(212, 175, 55, 0.25);
 }
 
+.light .glass-panel-gold {
+  background: rgba(212, 175, 55, 0.08);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+}
+
 .gold-gradient-text {
   background: linear-gradient(135deg, #fce074 0%, #d4af37 50%, #aa820a 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .gold-border-glow {
   box-shadow: 0 0 25px -5px rgba(212, 175, 55, 0.3);
 }
 
-/* Smooth Scrollbar */
+.light .gold-border-glow {
+  box-shadow: 0 0 20px -5px rgba(212, 175, 55, 0.25);
+}
+
+.light .text-white {
+  color: #18181b;
+}
+
+.light button[class*='bg-amber'],
+.light button[class*='from-amber'] {
+  color: #18181b;
+}
+
+.light .bg-black\/60 {
+  background-color: rgba(0, 0, 0, 0.35);
+}
+
 ::-webkit-scrollbar {
   width: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #0b0c10;
+  background: var(--color-zinc-950);
 }
 ::-webkit-scrollbar-thumb {
-  background: #27272a;
+  background: var(--color-zinc-800);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {

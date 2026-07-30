@@ -10,6 +10,9 @@ import { getClientInitials, normalizeClientEmail } from '@/lib/client-session';
 import { useSessionUser } from '@/hooks/use-session-user';
 import { changeClientPassword } from '@/lib/client-api';
 import { getApiErrorMessage } from '@/lib/api-error';
+import { ThemeSwitcher } from '@/components/theme/theme-switcher';
+import { useTheme } from '@/components/providers/theme-provider';
+import { THEME_MODE_LABELS } from '@/lib/theme';
 
 export default function ClientProfilePage() {
   return <ClientProfileContent />;
@@ -17,6 +20,7 @@ export default function ClientProfilePage() {
 
 function ClientProfileContent() {
   const { user, ready } = useSessionUser();
+  const { mode: themeMode } = useTheme();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -84,6 +88,18 @@ function ClientProfileContent() {
               <Badge variant="outline" className="text-[10px] mt-1">Client actif</Badge>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="glass-panel">
+        <CardHeader>
+          <CardTitle className="text-lg">Apparence</CardTitle>
+          <CardDescription>
+            Thème d&apos;affichage — actuellement : {THEME_MODE_LABELS[themeMode]}.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ThemeSwitcher />
         </CardContent>
       </Card>
 

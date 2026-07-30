@@ -22,6 +22,7 @@ import { useSettings } from '@/context/settings-context';
 import { useServices } from '@/context/services-context';
 import { submitBooking, createStripeCheckoutSession, getStripeSessionStatus, type BookingRecord } from '@/lib/contact-api';
 import { getApiErrorMessage } from '@/lib/api-error';
+import { isAllowedStripeCheckoutUrl } from '@/lib/safe-redirect';
 
 export default function ReservationPage() {
   const { settings: systemSettings, formatPrice } = useSettings();
@@ -140,6 +141,9 @@ export default function ReservationPage() {
         successUrl: `${origin}/reservation?session_id={CHECKOUT_SESSION_ID}`,
         cancelUrl: `${origin}/reservation?cancelled=1`,
       });
+      if (!isAllowedStripeCheckoutUrl(checkoutUrl)) {
+        throw new Error('URL de paiement Stripe invalide.');
+      }
       window.location.href = checkoutUrl;
     } catch (err: unknown) {
       setPaymentError(getApiErrorMessage(err, 'Impossible d\'ouvrir le paiement Stripe.'));

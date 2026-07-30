@@ -1,10 +1,7 @@
 import json
-import hashlib
 from sqlalchemy.orm import Session
 from models import Setting, User, Service, Testimonial, Gallery
-
-def hash_password(pwd: str) -> str:
-    return hashlib.sha256(pwd.encode('utf-8')).hexdigest()
+from security import hash_password
 
 def seed_database(db: Session):
     # Seed Settings if empty

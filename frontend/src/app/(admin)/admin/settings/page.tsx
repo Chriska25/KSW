@@ -23,6 +23,7 @@ import {
   ExternalLink,
   Copy,
   Activity,
+  Sun,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -34,11 +35,15 @@ import apiClient from '@/lib/api-client';
 import { buildWatermarkLabel } from '@/lib/watermark-text';
 import { downloadAdminBackup } from '@/lib/admin-search';
 import { getApiErrorMessage } from '@/lib/api-error';
+import { ThemeSwitcher } from '@/components/theme/theme-switcher';
+import { useTheme } from '@/components/providers/theme-provider';
+import { THEME_MODE_LABELS } from '@/lib/theme';
 
 export default function AdminSettingsPage() {
   const { settings: globalSettings, updateSettings } = useSettings();
+  const { mode: themeMode } = useTheme();
 
-  const [activeTab, setActiveTab] = useState<'general' | 'booking' | 'payments' | 'watermark' | 'security' | 'integrations'>('general');
+  const [activeTab, setActiveTab] = useState<'appearance' | 'general' | 'booking' | 'payments' | 'watermark' | 'security' | 'integrations'>('general');
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
@@ -180,6 +185,7 @@ export default function AdminSettingsPage() {
       {/* Sub-Tabs Navigation Bar */}
       <div className="flex items-center space-x-2 border-b border-zinc-800 pb-2 overflow-x-auto">
         {[
+          { id: 'appearance', label: 'Apparence', icon: Sun },
           { id: 'general', label: '1. Titre & Infos Studio', icon: Settings },
           { id: 'booking', label: '2. Réservation & Acomptes', icon: Clock },
           { id: 'payments', label: '3. Clés Stripe & PayPal', icon: CreditCard },
@@ -204,6 +210,23 @@ export default function AdminSettingsPage() {
           );
         })}
       </div>
+
+      {activeTab === 'appearance' && (
+        <Card className="glass-panel space-y-4">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center">
+              <Sun className="h-5 w-5 text-amber-400 mr-2" /> Apparence de l&apos;interface
+            </CardTitle>
+            <CardDescription>
+              Préférence personnelle enregistrée dans ce navigateur. Mode actuel :{' '}
+              <span className="text-amber-400 font-semibold">{THEME_MODE_LABELS[themeMode]}</span>.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ThemeSwitcher />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Master Form */}
       <form onSubmit={handleSave} className="space-y-6">
@@ -798,12 +821,14 @@ export default function AdminSettingsPage() {
           </Card>
         )}
 
+        {activeTab !== 'appearance' && (
         <div className="sticky bottom-0 -mx-2 px-2 py-4 bg-zinc-950/90 backdrop-blur-md border-t border-zinc-800 flex justify-end z-10">
           <Button type="submit" variant="gold" size="lg" className="px-8 space-x-2 font-bold shadow-lg shadow-amber-400/20">
             <Save className="h-4 w-4" />
             <span>Enregistrer la configuration</span>
           </Button>
         </div>
+        )}
       </form>
     </div>
   );
