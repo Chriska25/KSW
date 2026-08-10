@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { LoadingState } from '@/components/common/loading-state';
+import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { useAdminToast } from '@/components/admin/admin-toast';
 import {
   fetchAdminNotifications,
@@ -106,30 +107,27 @@ export default function AdminNotificationsPage() {
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-white">
-            Centre de Notifications <span className="gold-gradient-text">Studio</span>
-          </h1>
-          <p className="text-zinc-400 text-sm mt-1">
-            Journal d&apos;activité : réservations, messages contact et paiements Stripe.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {unreadCount > 0 && (
-            <Button variant="outline" size="sm" onClick={handleMarkAllRead}>
-              Tout marquer lu ({unreadCount})
+      <AdminPageHeader
+        title="Centre de Notifications"
+        accent="Studio"
+        description="Journal d'activité : réservations, messages contact et paiements Stripe."
+        actions={
+          <>
+            {unreadCount > 0 && (
+              <Button variant="outline" size="sm" onClick={handleMarkAllRead}>
+                Tout marquer lu ({unreadCount})
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={handleTestEmail} disabled={testingEmail}>
+              {testingEmail ? 'Envoi…' : 'Test email SMTP'}
             </Button>
-          )}
-          <Button variant="outline" size="sm" onClick={handleTestEmail} disabled={testingEmail}>
-            {testingEmail ? 'Envoi…' : 'Test email SMTP'}
-          </Button>
-          <Button variant="gold" size="sm" onClick={handleSendTest} disabled={testing} className="space-x-2">
-            <Send className="h-4 w-4" />
-            <span>{testing ? 'Envoi…' : 'Test journal'}</span>
-          </Button>
-        </div>
-      </div>
+            <Button variant="gold" size="sm" onClick={handleSendTest} disabled={testing} className="space-x-2">
+              <Send className="h-4 w-4" />
+              <span>{testing ? 'Envoi…' : 'Test journal'}</span>
+            </Button>
+          </>
+        }
+      />
 
       <div className="rounded-xl border border-zinc-800 bg-zinc-950/50 px-4 py-3 text-xs text-zinc-400">
         Les emails transactionnels (contact, réservation, paiement) partent via SMTP si configuré

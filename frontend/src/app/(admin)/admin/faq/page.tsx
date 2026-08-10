@@ -15,6 +15,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { LoadingState } from '@/components/common/loading-state';
+import { AdminPageHeader } from '@/components/admin/admin-page-header';
+import { AdminStickyActions } from '@/components/admin/admin-sticky-actions';
 import { useAdminToast } from '@/components/admin/admin-toast';
 import { fetchAdminFaqItems, saveAllFaqItems, type FaqItem } from '@/lib/admin-faq-api';
 import { getApiErrorMessage } from '@/lib/api-error';
@@ -86,27 +88,24 @@ export default function AdminFaqPage() {
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-white flex items-center gap-3">
-            <HelpCircle className="h-8 w-8 text-amber-400" />
-            FAQ <span className="gold-gradient-text">Contact</span>
-          </h1>
-          <p className="text-zinc-400 text-sm mt-1">
-            Questions affichées sur la page contact publique. Publiez ou masquez chaque entrée.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={addItem} className="space-x-2">
-            <Plus className="h-4 w-4" />
-            <span>Ajouter</span>
-          </Button>
-          <Button type="button" variant="gold" size="sm" onClick={handleSave} disabled={saving} className="space-x-2">
-            <Save className="h-4 w-4" />
-            <span>{saving ? 'Enregistrement...' : 'Enregistrer'}</span>
-          </Button>
-        </div>
-      </div>
+      <AdminPageHeader
+        title="FAQ"
+        accent="Contact"
+        description="Questions affichées sur la page contact publique. Publiez ou masquez chaque entrée."
+        icon={HelpCircle}
+        actions={
+          <>
+            <Button type="button" variant="outline" size="sm" onClick={addItem} className="space-x-2 hidden sm:inline-flex">
+              <Plus className="h-4 w-4" />
+              <span>Ajouter</span>
+            </Button>
+            <Button type="button" variant="gold" size="sm" onClick={handleSave} disabled={saving} className="space-x-2 hidden sm:inline-flex">
+              <Save className="h-4 w-4" />
+              <span>{saving ? 'Enregistrement…' : 'Enregistrer'}</span>
+            </Button>
+          </>
+        }
+      />
 
       {loading ? (
         <LoadingState message="Chargement de la FAQ..." />
@@ -178,6 +177,17 @@ export default function AdminFaqPage() {
           ))}
         </div>
       )}
+
+      <AdminStickyActions mobileOnly>
+        <Button type="button" variant="outline" size="sm" onClick={addItem} className="space-x-2">
+          <Plus className="h-4 w-4" />
+          <span>Ajouter</span>
+        </Button>
+        <Button type="button" variant="gold" size="lg" onClick={handleSave} disabled={saving} className="flex-1 px-6 space-x-2 font-bold shadow-lg shadow-amber-400/20">
+          <Save className="h-4 w-4" />
+          <span>{saving ? 'Enregistrement…' : 'Enregistrer'}</span>
+        </Button>
+      </AdminStickyActions>
     </div>
   );
 }

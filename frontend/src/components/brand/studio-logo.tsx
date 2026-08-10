@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
+import { AppLink } from '@/components/navigation/app-link';
 import { Camera } from 'lucide-react';
 import { useSettings } from '@/context/settings-context';
 
@@ -24,7 +24,7 @@ export function StudioLogo({ className = '', size = 'md', showSubtitle = true }:
   const titleTextSize = size === 'sm' ? 'text-base' : size === 'lg' ? 'text-2xl' : 'text-xl';
 
   return (
-    <Link href="/" className={`flex items-center space-x-3.5 group select-none ${className}`}>
+    <AppLink href="/" className={`flex items-center space-x-3.5 group select-none ${className}`}>
       {/* Glowing Gold Box with Camera Icon */}
       <div className={`${iconBoxSize} bg-zinc-950 border-2 border-amber-400 text-amber-400 flex items-center justify-center shadow-lg shadow-amber-500/25 group-hover:scale-105 group-hover:shadow-amber-400/40 transition-all duration-300 shrink-0`}>
         <Camera className={iconSize} />
@@ -43,6 +43,6 @@ export function StudioLogo({ className = '', size = 'md', showSubtitle = true }:
           </span>
         )}
       </div>
-    </Link>
+    </AppLink>
   );
 }

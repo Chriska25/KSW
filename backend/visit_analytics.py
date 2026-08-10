@@ -1,6 +1,6 @@
 import json
 from datetime import datetime, timedelta
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
@@ -11,7 +11,7 @@ MAX_SESSIONS_PER_DAY = 3000
 MAX_DAYS_STORED = 120
 TOP_PATHS_LIMIT = 15
 TOP_GEO_LIMIT = 12
-MAX_RECENT_VISITS = 400
+MAX_RECENT_VISITS = 2000
 
 DEFAULT_DATA: Dict[str, Any] = {
     "totalPageViews": 0,
@@ -190,6 +190,83 @@ def _build_daily_chart(by_day: Dict[str, Any], days: int = 30) -> List[Dict[str,
     return chart
 
 
+def _parse_connection_datetime(value: Optional[str]) -> datetime:
+    if not value:
+        return datetime.min
+    raw = str(value).strip()
+    if raw.endswith("Z"):
+        raw = raw[:-1]
+    for fmt in ("%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S", "%d/%m/%Y %H:%M"):
+        try:
+            return datetime.strptime(raw[:26] if "T" in raw else raw, fmt)
+        except ValueError:
+            continue
+    try:
+        return datetime.fromisoformat(raw)
+    except ValueError:
+        return datetime.min
+
+
+def build_all_connections(db: Session) -> List[Dict[str, Any]]:
+    """Fusionne visites publiques + connexions clients en une liste chronologique."""
+    from client_presence import list_all_connection_events
+
+    connections: List[Dict[str, Any]] = []
+    visit_data = _load(db)
+
+    for visit in visit_data.get("recentVisits") or []:
+        if not isinstance(visit, dict):
+            continue
+        created = visit.get("createdAt") or ""
+        connections.append(
+            {
+                "id": visit.get("id") or f"visit-{created}",
+                "kind": "public",
+                "label": "Visite site public",
+                "path": visit.get("path") or "/",
+                "ip": visit.get("ip") or "—",
+                "city": visit.get("city") or "Inconnue",
+                "country": visit.get("country") or "Inconnu",
+                "region": visit.get("region") or "",
+                "countryCode": visit.get("countryCode") or "??",
+                "userName": "",
+                "email": "",
+                "sessionId": visit.get("sessionId") or "",
+                "referrer": visit.get("referrer") or "",
+                "createdAt": created,
+                "_sortAt": _parse_connection_datetime(created),
+            }
+        )
+
+    for event in list_all_connection_events(db):
+        created = event.get("createdAt") or ""
+        iso_created = event.get("createdAtIso") or created
+        connections.append(
+            {
+                "id": event.get("id"),
+                "kind": "client",
+                "label": event.get("label") or "Connexion client",
+                "path": event.get("path") or "",
+                "ip": event.get("ip") or "—",
+                "city": event.get("city") or "Inconnue",
+                "country": event.get("country") or "Inconnu",
+                "region": event.get("region") or "",
+                "countryCode": "??",
+                "userName": event.get("userName") or "",
+                "email": event.get("email") or "",
+                "sessionId": "",
+                "referrer": "",
+                "createdAt": created,
+                "_sortAt": _parse_connection_datetime(iso_created or created),
+            }
+        )
+
+    connections.sort(key=lambda row: row.get("_sortAt") or datetime.min, reverse=True)
+    for row in connections:
+        row.pop("_sortAt", None)
+    return connections
+
+
 def get_visit_analytics_summary(db: Session) -> Dict[str, Any]:
     data = _load(db)
     by_day: Dict[str, Any] = data.get("byDay") or {}
@@ -243,7 +320,8 @@ def get_visit_analytics_summary(db: Session) -> Dict[str, Any]:
         reverse=True,
     )[:TOP_GEO_LIMIT]
 
-    recent_visits = list(data.get("recentVisits") or [])[:100]
+    recent_visits = list(data.get("recentVisits") or [])
+    all_connections = build_all_connections(db)
 
     return {
         "totalPageViews": int(data.get("totalPageViews") or 0),
@@ -259,5 +337,7 @@ def get_visit_analytics_summary(db: Session) -> Dict[str, Any]:
         "topCities": top_cities,
         "topCountries": top_countries,
         "recentVisits": recent_visits,
+        "allConnections": all_connections,
+        "connectionsCount": len(all_connections),
         "lastTrackedAt": data.get("lastTrackedAt"),
     }

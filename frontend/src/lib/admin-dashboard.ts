@@ -1,4 +1,9 @@
 import type { ApiBooking, ApiContactMessage } from '@/lib/admin-crm-api';
+import { bookingToInvoice, computeInvoiceSummary, type InvoiceRow } from '@/lib/invoice-utils';
+import { resolveStudioCurrency } from '@/lib/currency';
+
+export type { InvoiceRow } from '@/lib/invoice-utils';
+export { computeInvoiceSummary } from '@/lib/invoice-utils';
 
 const MONTH_LABELS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
 
@@ -23,19 +28,6 @@ export interface DashboardStats {
     status: string;
     paymentStatus?: string;
   }>;
-}
-
-export interface InvoiceRow {
-  id: string;
-  number: string;
-  clientName: string;
-  serviceTitle: string;
-  issueDate: string;
-  dueDate: string;
-  totalAmount: number;
-  paidAmount: number;
-  status: 'paid' | 'partially_paid' | 'unpaid';
-  paymentMethod: 'Stripe (Carte)' | 'PayPal' | 'Virement';
 }
 
 function parseBookingDate(raw?: string): Date | null {
@@ -189,42 +181,9 @@ export function computeDashboardStats(
   };
 }
 
-export function bookingsToInvoices(bookings: ApiBooking[]): InvoiceRow[] {
-  return bookings.map((b) => {
-    const total = Number(b.totalPrice) || 0;
-    const deposit = Number(b.depositAmount) || 0;
-    const paid = b.paymentStatus === 'paid' ? deposit : 0;
-    let status: InvoiceRow['status'] = 'unpaid';
-    if (paid >= total && total > 0) status = 'paid';
-    else if (paid > 0) status = 'partially_paid';
-
-    const invoiceNumber =
-      (b as ApiBooking & { invoiceNumber?: string }).invoiceNumber ||
-      `FAC-${new Date().getFullYear()}-${(b.reference || b.id).replace(/[^A-Z0-9]/gi, '').slice(0, 6).toUpperCase()}`;
-
-    return {
-      id: b.id,
-      number: invoiceNumber,
-      clientName: `${b.firstName || ''} ${b.lastName || ''}`.trim() || b.email,
-      serviceTitle: b.serviceTitle,
-      issueDate: b.createdAt || b.date,
-      dueDate: b.date,
-      totalAmount: total,
-      paidAmount: paid,
-      status,
-      paymentMethod: b.paymentStatus === 'paid' ? 'Stripe (Carte)' : 'Virement',
-    };
-  });
-}
-
-export function computeInvoiceSummary(invoices: InvoiceRow[]) {
-  const totalInvoiced = invoices.reduce((s, i) => s + i.totalAmount, 0);
-  const totalPaid = invoices.reduce((s, i) => s + i.paidAmount, 0);
-  return {
-    totalInvoiced,
-    totalPaid,
-    remaining: Math.max(0, totalInvoiced - totalPaid),
-  };
+export function bookingsToInvoices(bookings: ApiBooking[], defaultCurrency?: string): InvoiceRow[] {
+  const fallbackCurrency = resolveStudioCurrency(defaultCurrency);
+  return bookings.map((b) => bookingToInvoice(b as ApiBooking & Record<string, unknown>, fallbackCurrency));
 }
 
 export function exportBookingsCsv(bookings: ApiBooking[]): void {

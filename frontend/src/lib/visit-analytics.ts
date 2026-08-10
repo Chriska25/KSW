@@ -1,4 +1,4 @@
-import apiClient from '@/lib/api-client';
+import { getApiBaseUrl } from '@/lib/api-client';
 
 export interface VisitAnalyticsSummary {
   totalPageViews: number;
@@ -30,7 +30,26 @@ export interface VisitAnalyticsSummary {
     referrer?: string;
     createdAt: string;
   }>;
+  allConnections?: ConnectionLogEntry[];
+  connectionsCount?: number;
   lastTrackedAt?: string;
+}
+
+export interface ConnectionLogEntry {
+  id: string;
+  kind: 'public' | 'client';
+  label: string;
+  path: string;
+  ip: string;
+  city: string;
+  country: string;
+  region?: string;
+  countryCode?: string;
+  userName?: string;
+  email?: string;
+  sessionId?: string;
+  referrer?: string;
+  createdAt: string;
 }
 
 const SESSION_KEY = 'studio_visit_session';
@@ -76,14 +95,32 @@ export async function trackPageVisit(path: string): Promise<void> {
     // ignore
   }
 
-  await apiClient.post('/analytics/visit', {
-    path,
-    session_id: getOrCreateSessionId(),
-    referrer: typeof document !== 'undefined' ? document.referrer || undefined : undefined,
-  });
+  try {
+    const res = await fetch(`${getApiBaseUrl()}/analytics/visit`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        'ngrok-skip-browser-warning': 'true',
+      },
+      body: JSON.stringify({
+        path,
+        session_id: getOrCreateSessionId(),
+        referrer: typeof document !== 'undefined' ? document.referrer || undefined : undefined,
+      }),
+      keepalive: true,
+    });
+    if (!res.ok) {
+      // Analytics non bloquant — pas de bruit console
+      return;
+    }
+  } catch {
+    // Réseau indisponible — ignorer
+  }
 }
 
 export async function fetchVisitAnalytics(): Promise<VisitAnalyticsSummary> {
+  const { default: apiClient } = await import('@/lib/api-client');
   const res = await apiClient.get('/admin/analytics/visits');
   return res.data?.data as VisitAnalyticsSummary;
 }

@@ -64,8 +64,15 @@ export function isAdminUser(user: Partial<AuthUser> | null | undefined): boolean
   return (
     user.role === 'admin' ||
     user.role === 'photographer' ||
-    user.roles?.some((r) => r.name === 'admin' || r.name === 'photographer') === true
+    user.role === 'assistant' ||
+    user.roles?.some(
+      (r) => r.name === 'admin' || r.name === 'photographer' || r.name === 'assistant'
+    ) === true
   );
+}
+
+export function isSuperUser(user: Partial<AuthUser> | null | undefined): boolean {
+  return Boolean(user?.isSuperuser);
 }
 
 export function isClientUser(user: Partial<AuthUser> | null | undefined): boolean {

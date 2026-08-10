@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowRight, Shield } from 'lucide-react';
@@ -11,8 +11,17 @@ import { useAuth, isAdminUser } from '@/hooks/use-auth';
 import { safeRedirect } from '@/lib/safe-redirect';
 import { useSettings } from '@/context/settings-context';
 import { clearSession } from '@/lib/session';
+import { buildLoginUrl, isAdminLoginContext } from '@/lib/auth-login-url';
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="text-zinc-400 text-sm text-center py-8">Chargement…</div>}>
+      <LoginPageContent />
+    </Suspense>
+  );
+}
+
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login, loading, error, clearError } = useAuth();
@@ -22,8 +31,7 @@ export default function LoginPage() {
   const [localError, setLocalError] = useState<string | null>(null);
 
   const redirect = searchParams.get('redirect');
-  const isAdminLogin =
-    searchParams.get('admin') === '1' || (redirect?.startsWith('/admin') ?? false);
+  const isAdminLogin = isAdminLoginContext(searchParams);
 
   const displayError = localError || error;
 
@@ -144,17 +152,31 @@ export default function LoginPage() {
             {!loading && <ArrowRight className="h-4 w-4 ml-2" />}
           </Button>
 
-          <div className="pt-2 border-t border-zinc-800 text-center text-xs text-zinc-400">
+          <div className="pt-2 border-t border-zinc-800 text-center text-xs text-zinc-400 space-y-2">
             {isAdminLogin ? (
-              <Link href="/" className="text-amber-400 font-semibold hover:underline">
-                Retour au site public
-              </Link>
+              <>
+                <Link href="/" className="text-amber-400 font-semibold hover:underline block">
+                  Retour au site public
+                </Link>
+                <Link href="/login" className="text-zinc-500 hover:text-zinc-300 block">
+                  Connexion client →
+                </Link>
+              </>
             ) : (
               <>
                 Nouveau client ?{' '}
-                <Link href="/register" className="text-amber-400 font-semibold hover:underline">
+                <Link
+                  href={redirect ? `/register?redirect=${encodeURIComponent(redirect)}` : '/register'}
+                  className="text-amber-400 font-semibold hover:underline"
+                >
                   Créer un compte
                 </Link>
+                <span className="block pt-1 text-zinc-500">
+                  Personnel du studio ?{' '}
+                  <Link href={buildLoginUrl({ admin: true })} className="text-amber-400 font-semibold hover:underline">
+                    Accès administrateur
+                  </Link>
+                </span>
               </>
             )}
           </div>

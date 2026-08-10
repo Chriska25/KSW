@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { LoadingState } from '@/components/common/loading-state';
+import { ClientPageHeader } from '@/components/client/client-page-header';
+import { useSettings } from '@/context/settings-context';
 import {
   fetchClientBookings,
   bookingStatusLabel,
@@ -15,15 +17,12 @@ import {
 } from '@/lib/client-api';
 import { getApiErrorMessage } from '@/lib/api-error';
 
-function formatEuro(amount?: number) {
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount || 0);
-}
-
 export default function ClientReservationsPage() {
   return <ClientReservationsContent />;
 }
 
 function ClientReservationsContent() {
+  const { formatPrice } = useSettings();
   const [bookings, setBookings] = useState<ClientBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -50,26 +49,23 @@ function ClientReservationsContent() {
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white flex items-center gap-2">
-            <CalendarDays className="h-7 w-7 text-amber-400" />
-            Mes <span className="gold-gradient-text">Réservations</span>
-          </h1>
-          <p className="text-zinc-400 text-sm mt-1">
-            Suivi de vos séances photo, acomptes et confirmations studio.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={load} className="space-x-1.5">
-            <RefreshCw className="h-3.5 w-3.5" />
-            <span>Actualiser</span>
-          </Button>
-          <Link href="/reservation">
-            <Button variant="gold" size="sm">Nouvelle réservation</Button>
-          </Link>
-        </div>
-      </div>
+      <ClientPageHeader
+        title="Mes"
+        accent="Réservations"
+        description="Suivi de vos séances photo, acomptes et confirmations studio."
+        icon={CalendarDays}
+        actions={
+          <>
+            <Button type="button" variant="outline" size="sm" onClick={load} className="space-x-1.5">
+              <RefreshCw className="h-3.5 w-3.5" />
+              <span>Actualiser</span>
+            </Button>
+            <Link href="/reservation">
+              <Button variant="gold" size="sm">Nouvelle réservation</Button>
+            </Link>
+          </>
+        }
+      />
 
       {error && (
         <p className="text-rose-400 text-sm rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3">
@@ -113,11 +109,11 @@ function ClientReservationsContent() {
                 <div className="grid sm:grid-cols-3 gap-3 text-xs">
                   <div className="p-3 rounded-lg bg-zinc-900/80 border border-zinc-800">
                     <p className="text-zinc-500">Total TTC</p>
-                    <p className="font-bold text-white mt-0.5">{formatEuro(b.totalPrice)}</p>
+                    <p className="font-bold text-white mt-0.5">{formatPrice(b.totalPrice || 0)}</p>
                   </div>
                   <div className="p-3 rounded-lg bg-zinc-900/80 border border-zinc-800">
                     <p className="text-zinc-500">Acompte</p>
-                    <p className="font-bold text-amber-400 mt-0.5">{formatEuro(b.depositAmount)}</p>
+                    <p className="font-bold text-amber-400 mt-0.5">{formatPrice(b.depositAmount || 0)}</p>
                   </div>
                   <div className="p-3 rounded-lg bg-zinc-900/80 border border-zinc-800">
                     <p className="text-zinc-500">Créée le</p>

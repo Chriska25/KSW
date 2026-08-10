@@ -1,5 +1,7 @@
 import apiClient from '@/lib/api-client';
 import { clearSession } from '@/lib/session';
+import { buildLoginUrl } from '@/lib/auth-login-url';
+import { bookingToInvoice, normalizeInvoiceRow, type InvoiceRow } from '@/lib/invoice-utils';
 
 export interface ApiBooking {
   id: string;
@@ -18,8 +20,20 @@ export interface ApiBooking {
   totalPrice: number;
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
   paymentStatus?: string;
+  paymentMethod?: string;
+  mobileMoneyReference?: string;
+  mobileMoneyPhone?: string;
+  galleryId?: string;
+  galleryAccessKey?: string;
   createdAt?: string;
   invoiceNumber?: string;
+  balancePaidAmount?: number;
+  balancePaymentMethod?: string;
+  balancePaidAt?: string;
+  balancePaymentReference?: string;
+  paidAt?: string;
+  currency?: string;
+  preferredPaymentMethod?: string;
 }
 
 export interface ApiContactMessage {
@@ -70,6 +84,92 @@ export async function updateBooking(
   return res.data?.data;
 }
 
+/** Suppression définitive — superUser uniquement (réservation + facture). */
+export async function deleteBookingPermanently(bookingId: string): Promise<void> {
+  await apiClient.delete(`/admin/bookings/${bookingId}`);
+}
+
+export async function confirmMobileMoneyPayment(
+  bookingId: string,
+  transactionReference: string
+): Promise<ApiBooking> {
+  const res = await apiClient.post(`/admin/bookings/${bookingId}/confirm-mobile-money`, {
+    transaction_reference: transactionReference.trim(),
+  });
+  return res.data?.data;
+}
+
+export interface BookingGalleryAccess {
+  id: string;
+  title: string;
+  accessKey: string;
+  password?: string;
+  clientEmail?: string;
+  bookingId?: string;
+}
+
+export async function fetchBookingGallery(bookingId: string): Promise<BookingGalleryAccess> {
+  const res = await apiClient.get(`/admin/bookings/${bookingId}/gallery`);
+  return res.data?.data;
+}
+
+export async function sendBookingGalleryAccess(bookingId: string): Promise<BookingGalleryAccess> {
+  const res = await apiClient.post(`/admin/bookings/${bookingId}/send-gallery-access`);
+  return res.data?.data;
+}
+
+export async function sendGalleryAccessEmail(galleryId: string): Promise<BookingGalleryAccess> {
+  const res = await apiClient.post(`/admin/galleries/${galleryId}/send-access`, undefined, {
+    timeout: 25000,
+  });
+  return res.data?.data;
+}
+
+export async function fetchRegisteredClients(): Promise<
+  Array<{ id: string; name: string; email: string }>
+> {
+  const res = await apiClient.get('/admin/users');
+  const rows = (res.data?.data || []) as Array<{
+    id: string;
+    name?: string;
+    firstName?: string;
+    lastName?: string;
+    email: string;
+    role?: string;
+    status?: string;
+  }>;
+  return rows
+    .filter((u) => u.role === 'client' && u.status !== 'suspended' && u.email)
+    .map((u) => ({
+      id: u.id,
+      name: u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email,
+      email: u.email,
+    }));
+}
+
+export async function recordBalancePayment(
+  bookingId: string,
+  payload: {
+    amount: number;
+    paymentMethod: string;
+    transactionReference?: string;
+    notes?: string;
+  }
+): Promise<{ booking: ApiBooking; invoice: InvoiceRow }> {
+  const res = await apiClient.post(`/admin/bookings/${bookingId}/record-balance-payment`, {
+    amount: payload.amount,
+    payment_method: payload.paymentMethod,
+    transaction_reference: payload.transactionReference,
+    notes: payload.notes,
+  });
+  const booking = res.data?.data as ApiBooking;
+  const invoiceRaw = res.data?.invoice as Record<string, unknown> | undefined;
+  return {
+    booking,
+    invoice: invoiceRaw ? normalizeInvoiceRow(invoiceRaw) : bookingToInvoice(booking as ApiBooking & Record<string, unknown>),
+  };
+}
+
 export function mapBookingToRow(b: ApiBooking) {
   const clientName = `${b.firstName || ''} ${b.lastName || ''}`.trim() || b.email;
   return {
@@ -86,6 +186,11 @@ export function mapBookingToRow(b: ApiBooking) {
     depositAmount: Number(b.depositAmount) || 0,
     status: (b.status || 'pending') as ApiBooking['status'],
     paymentStatus: b.paymentStatus,
+    paymentMethod: b.paymentMethod,
+    mobileMoneyReference: b.mobileMoneyReference,
+    mobileMoneyPhone: b.mobileMoneyPhone,
+    galleryId: b.galleryId,
+    galleryAccessKey: b.galleryAccessKey,
     createdAt: b.createdAt,
   };
 }
@@ -176,7 +281,10 @@ export function redirectToLoginIfUnauthorized(error: unknown): boolean {
   if (status === 401 || status === 403) {
     clearSession();
     if (typeof window !== 'undefined') {
-      window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
+      window.location.href = buildLoginUrl({
+        redirect: window.location.pathname,
+        admin: window.location.pathname.startsWith('/admin'),
+      });
     }
     return true;
   }

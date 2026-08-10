@@ -46,6 +46,7 @@ export async function submitBooking(data: {
   notes?: string;
   depositAmount: number;
   totalPrice: number;
+  preferredPaymentMethod?: string;
 }): Promise<BookingRecord> {
   const res = await apiClient.post('/bookings', {
     service_id: data.serviceId,
@@ -60,6 +61,7 @@ export async function submitBooking(data: {
     notes: data.notes,
     deposit_amount: data.depositAmount,
     total_price: data.totalPrice,
+    preferred_payment_method: data.preferredPaymentMethod,
   });
   return res.data?.data as BookingRecord;
 }
@@ -89,4 +91,17 @@ export async function getStripeSessionStatus(sessionId: string): Promise<{
     params: { session_id: sessionId },
   });
   return res.data;
+}
+
+export async function submitMobileMoneyPayment(data: {
+  bookingId: string;
+  payerPhone: string;
+  transactionReference: string;
+}): Promise<BookingRecord> {
+  const res = await apiClient.post('/bookings/mobile-money/submit', {
+    booking_id: data.bookingId,
+    payer_phone: data.payerPhone.trim(),
+    transaction_reference: data.transactionReference.trim(),
+  });
+  return res.data?.data as BookingRecord;
 }

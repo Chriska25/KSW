@@ -1,22 +1,26 @@
-import type { InvoiceRow } from '@/lib/admin-dashboard';
+import type { InvoiceRow } from '@/lib/invoice-utils';
+import { formatMoneyAmount, resolveStudioCurrency } from '@/lib/currency';
+import { resolveInvoiceLogoUrl, type InvoiceStudioInfo } from '@/lib/invoice-studio-info';
 
-export interface InvoiceStudioInfo {
-  studioName?: string;
-  address?: string;
-  phone?: string;
-  contactEmail?: string;
+export type { InvoiceStudioInfo } from '@/lib/invoice-studio-info';
+
+function escapeAttr(text: unknown): string {
+  return String(text ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
-function escapeHtml(text: string): string {
-  return text
+function escapeHtml(text: unknown): string {
+  return String(text ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 }
 
-function formatEuro(amount: number): string {
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount);
+function formatEuro(amount: unknown, currency?: string): string {
+  return formatMoneyAmount(amount, currency);
 }
 
 function statusLabel(status: InvoiceRow['status']): string {
@@ -24,17 +28,65 @@ function statusLabel(status: InvoiceRow['status']): string {
     case 'paid':
       return 'Payée intégralement';
     case 'partially_paid':
-      return 'Acompte réglé';
+      return 'Acompte réglé — solde en attente';
     default:
       return 'En attente de paiement';
   }
 }
 
-export function exportInvoiceToPdf(invoice: InvoiceRow, studio: InvoiceStudioInfo): void {
-  if (typeof window === 'undefined') return;
+function paymentLinesHtml(invoice: InvoiceRow, currency: string): string {
+  const lines = invoice.paymentLines || [];
+  if (lines.length === 0) {
+    return `<tr>
+      <td colspan="4" style="color:#888;">Aucun encaissement enregistré</td>
+    </tr>`;
+  }
+  return lines
+    .map(
+      (line) => `<tr>
+        <td>${escapeHtml(line.label)}</td>
+        <td>${formatEuro(line.amount, currency)}</td>
+        <td>${escapeHtml(line.method)}</td>
+        <td>${escapeHtml(line.paidAt || '—')}${line.reference ? `<br/><span style="font-size:11px;color:#666;">Réf. ${escapeHtml(line.reference)}</span>` : ''}</td>
+      </tr>`
+    )
+    .join('');
+}
 
-  const studioName = escapeHtml(studio.studioName || 'KSW STUDIO');
-  const html = `<!DOCTYPE html>
+function brandHeaderHtml(studio: InvoiceStudioInfo): string {
+  const studioNameRaw = studio.studioName || 'KSW STUDIO';
+  const studioName = escapeHtml(studioNameRaw);
+  const nameParts = studioNameRaw.split(' ');
+  const subtitle = escapeHtml(studio.studioSubtitle || 'Haute Photographie & Production');
+  const logoSrc =
+    studio.showLogoOnInvoice !== false && studio.invoiceLogoUrl
+      ? resolveInvoiceLogoUrl(studio.invoiceLogoUrl)
+      : undefined;
+
+  const textBrand = `<div class="brand">${escapeHtml(nameParts[0] || 'KSW')} <span>${escapeHtml(nameParts.slice(1).join(' ') || 'STUDIO')}</span></div>
+      <div style="font-size:12px;color:#666;margin-top:4px;">${subtitle}</div>`;
+
+  if (logoSrc) {
+    return `<div class="brand-block">
+      <img src="${escapeAttr(logoSrc)}" alt="${studioName}" class="logo" />
+      <div>${textBrand}</div>
+    </div>`;
+  }
+
+  return `<div>${textBrand}</div>`;
+}
+
+function buildInvoiceHtml(invoice: InvoiceRow, studio: InvoiceStudioInfo): string {
+  const currency = resolveStudioCurrency(invoice.currency || studio.currency);
+  const studioNameRaw = studio.studioName || 'KSW STUDIO';
+  const studioName = escapeHtml(studioNameRaw);
+  const remaining =
+    invoice.remainingAmount ?? Math.max(0, (Number(invoice.totalAmount) || 0) - (Number(invoice.paidAmount) || 0));
+  const paymentSummary = escapeHtml(invoice.paymentSummary || invoice.paymentMethod || 'En attente');
+  const sessionDate = escapeHtml(invoice.sessionDate || invoice.dueDate || '—');
+  const sessionTime = invoice.sessionTime ? ` à ${escapeHtml(invoice.sessionTime)}` : '';
+
+  return `<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
@@ -42,7 +94,9 @@ export function exportInvoiceToPdf(invoice: InvoiceRow, studio: InvoiceStudioInf
   <style>
     * { box-sizing: border-box; }
     body { font-family: Georgia, 'Times New Roman', serif; color: #111; margin: 0; padding: 40px; }
-    .header { display: flex; justify-content: space-between; border-bottom: 2px solid #d4af37; padding-bottom: 20px; margin-bottom: 32px; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #d4af37; padding-bottom: 20px; margin-bottom: 32px; }
+    .brand-block { display: flex; align-items: center; gap: 16px; }
+    .logo { max-height: 72px; max-width: 200px; object-fit: contain; display: block; }
     .brand { font-size: 24px; font-weight: bold; letter-spacing: 0.08em; }
     .brand span { color: #b8860b; }
     .meta { text-align: right; font-size: 13px; line-height: 1.6; color: #444; }
@@ -54,19 +108,17 @@ export function exportInvoiceToPdf(invoice: InvoiceRow, studio: InvoiceStudioInf
     table { width: 100%; border-collapse: collapse; margin: 24px 0; }
     th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e5e5e5; font-size: 14px; }
     th { background: #fafafa; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #666; }
-    .totals { margin-left: auto; width: 280px; }
+    .totals { margin-left: auto; width: 320px; }
     .totals div { display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; }
     .totals .grand { font-size: 18px; font-weight: bold; border-top: 2px solid #d4af37; padding-top: 12px; margin-top: 8px; }
+    .summary { margin-top: 16px; padding: 12px 16px; background: #fffbeb; border: 1px solid #f0d878; border-radius: 8px; font-size: 13px; }
     footer { margin-top: 48px; font-size: 11px; color: #888; border-top: 1px solid #eee; padding-top: 16px; }
     @media print { body { padding: 24px; } }
   </style>
 </head>
 <body>
   <div class="header">
-    <div>
-      <div class="brand">${studioName.split(' ')[0] || 'KSW'} <span>${studioName.split(' ').slice(1).join(' ') || 'STUDIO'}</span></div>
-      <div style="font-size:12px;color:#666;margin-top:4px;">Haute Photographie & Production</div>
-    </div>
+    ${brandHeaderHtml(studio)}
     <div class="meta">
       ${studio.address ? `<div>${escapeHtml(studio.address)}</div>` : ''}
       ${studio.phone ? `<div>${escapeHtml(studio.phone)}</div>` : ''}
@@ -76,6 +128,7 @@ export function exportInvoiceToPdf(invoice: InvoiceRow, studio: InvoiceStudioInf
 
   <h1>Facture ${escapeHtml(invoice.number)}</h1>
   <div class="badge">${statusLabel(invoice.status)}</div>
+  ${invoice.reference ? `<div style="font-size:12px;color:#666;margin-top:8px;">Réf. réservation : ${escapeHtml(invoice.reference)}</div>` : ''}
 
   <div class="grid" style="margin-top:24px;">
     <div class="box">
@@ -83,9 +136,10 @@ export function exportInvoiceToPdf(invoice: InvoiceRow, studio: InvoiceStudioInf
       <strong>${escapeHtml(invoice.clientName)}</strong>
     </div>
     <div class="box">
-      <h3>Dates</h3>
-      <div>Émission : ${escapeHtml(invoice.issueDate)}</div>
-      <div>Échéance séance : ${escapeHtml(invoice.dueDate)}</div>
+      <h3>Séance</h3>
+      <div>Émission : ${escapeHtml(invoice.issueDate || '—')}</div>
+      <div>Date séance : ${sessionDate}${sessionTime}</div>
+      ${invoice.location ? `<div>Lieu : ${escapeHtml(invoice.location)}</div>` : ''}
     </div>
   </div>
 
@@ -94,42 +148,92 @@ export function exportInvoiceToPdf(invoice: InvoiceRow, studio: InvoiceStudioInf
       <tr>
         <th>Prestation</th>
         <th>Montant TTC</th>
-        <th>Encaissé</th>
-        <th>Mode</th>
+        <th>Acompte prévu</th>
+        <th>Statut</th>
       </tr>
     </thead>
     <tbody>
       <tr>
         <td>${escapeHtml(invoice.serviceTitle)}</td>
-        <td>${formatEuro(invoice.totalAmount)}</td>
-        <td>${formatEuro(invoice.paidAmount)}</td>
-        <td>${escapeHtml(invoice.paymentMethod)}</td>
+        <td>${formatEuro(invoice.totalAmount, currency)}</td>
+        <td>${formatEuro(invoice.depositAmount ?? 0, currency)}</td>
+        <td>${statusLabel(invoice.status)}</td>
       </tr>
     </tbody>
   </table>
 
+  <h2 style="font-size:16px;margin:32px 0 12px;">Détail des encaissements</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Libellé</th>
+        <th>Montant</th>
+        <th>Mode de paiement</th>
+        <th>Date / Référence</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${paymentLinesHtml(invoice, currency)}
+    </tbody>
+  </table>
+
+  <div class="summary">
+    <strong>Modes de règlement :</strong> ${paymentSummary}
+  </div>
+
   <div class="totals">
-    <div><span>Total TTC</span><strong>${formatEuro(invoice.totalAmount)}</strong></div>
-    <div><span>Montant réglé</span><strong>${formatEuro(invoice.paidAmount)}</strong></div>
-    <div class="grand"><span>Solde restant</span><strong>${formatEuro(Math.max(0, invoice.totalAmount - invoice.paidAmount))}</strong></div>
+    <div><span>Total TTC</span><strong>${formatEuro(invoice.totalAmount, currency)}</strong></div>
+    <div><span>Total encaissé</span><strong>${formatEuro(invoice.paidAmount, currency)}</strong></div>
+    <div class="grand"><span>Solde restant</span><strong>${formatEuro(remaining, currency)}</strong></div>
   </div>
 
   <footer>
     Document généré le ${new Date().toLocaleDateString('fr-FR')} — ${studioName}.
     TVA non applicable, art. 293 B du CGI (prestataire photographique).
   </footer>
-  <script>window.onload = function() { window.print(); };</script>
+  <script>
+    window.addEventListener('load', function () {
+      setTimeout(function () { window.print(); }, 300);
+    });
+  </script>
 </body>
 </html>`;
+}
 
-  const win = window.open('', '_blank', 'noopener,noreferrer,width=900,height=700');
-  if (!win) {
-    alert('Autorisez les pop-ups pour télécharger la facture PDF.');
-    return;
+function openPrintWindow(html: string): boolean {
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const win = window.open(url, '_blank');
+
+  if (win) {
+    win.addEventListener('load', () => URL.revokeObjectURL(url), { once: true });
+    setTimeout(() => URL.revokeObjectURL(url), 120_000);
+    return true;
   }
-  win.document.open();
-  win.document.write(html);
-  win.document.close();
+
+  const fallback = window.open('', '_blank');
+  if (!fallback) return false;
+
+  fallback.document.open();
+  fallback.document.write(html);
+  fallback.document.close();
+  URL.revokeObjectURL(url);
+  return true;
+}
+
+export function exportInvoiceToPdf(invoice: InvoiceRow, studio: InvoiceStudioInfo): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    const html = buildInvoiceHtml(invoice, studio);
+    const opened = openPrintWindow(html);
+    if (!opened) {
+      alert('Autorisez les pop-ups pour ouvrir et imprimer la facture.');
+    }
+  } catch (error) {
+    console.error('Erreur génération facture:', error);
+    alert('Impossible de générer la facture. Vérifiez les données de la réservation.');
+  }
 }
 
 export function exportAllInvoicesToPdf(invoices: InvoiceRow[], studio: InvoiceStudioInfo): void {

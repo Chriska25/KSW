@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import {
   TrendingUp,
@@ -12,12 +12,15 @@ import {
   Eye,
   Globe,
   MapPin,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useSettings } from '@/context/settings-context';
 import { LoadingState } from '@/components/common/loading-state';
+import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import {
   fetchDashboardData,
   exportBookingsCsv,
@@ -25,12 +28,15 @@ import {
 } from '@/lib/admin-dashboard';
 import type { ApiBooking } from '@/lib/admin-crm-api';
 import { getApiErrorMessage } from '@/lib/api-error';
-import { fetchVisitAnalytics, type VisitAnalyticsSummary } from '@/lib/visit-analytics';
+import { fetchVisitAnalytics, type VisitAnalyticsSummary, type ConnectionLogEntry } from '@/lib/visit-analytics';
+import { formatClientPath } from '@/lib/admin-clients-api';
 
 const AnalyticsCharts = dynamic(() => import('@/components/admin/analytics-charts'), {
   ssr: false,
   loading: () => <div className="h-72 animate-pulse rounded-xl bg-zinc-900/40" />,
 });
+
+const CONNECTIONS_PAGE_SIZE = 100;
 
 export default function AdminAnalyticsPage() {
   const { formatPrice, currencySymbol } = useSettings();
@@ -40,6 +46,8 @@ export default function AdminAnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState('');
+  const [connectionFilter, setConnectionFilter] = useState<'all' | 'public' | 'client'>('all');
+  const [connectionPage, setConnectionPage] = useState(1);
 
   const load = useCallback(async () => {
     setError('');
@@ -62,6 +70,49 @@ export default function AdminAnalyticsPage() {
     load();
   }, [load]);
 
+  const allConnections = useMemo(() => {
+    if (!visits) return [] as ConnectionLogEntry[];
+    if (visits.allConnections?.length) return visits.allConnections;
+    return (visits.recentVisits ?? []).map((visit) => ({
+      id: visit.id,
+      kind: 'public' as const,
+      label: 'Visite site public',
+      path: visit.path,
+      ip: visit.ip,
+      city: visit.city,
+      country: visit.country,
+      region: visit.region,
+      countryCode: visit.countryCode,
+      userName: '',
+      email: '',
+      sessionId: visit.sessionId,
+      referrer: visit.referrer,
+      createdAt: visit.createdAt,
+    }));
+  }, [visits]);
+
+  const filteredConnections = useMemo(() => {
+    if (connectionFilter === 'all') return allConnections;
+    return allConnections.filter((entry) => entry.kind === connectionFilter);
+  }, [allConnections, connectionFilter]);
+
+  const connectionPageCount = Math.max(1, Math.ceil(filteredConnections.length / CONNECTIONS_PAGE_SIZE));
+
+  const paginatedConnections = useMemo(() => {
+    const start = (connectionPage - 1) * CONNECTIONS_PAGE_SIZE;
+    return filteredConnections.slice(start, start + CONNECTIONS_PAGE_SIZE);
+  }, [filteredConnections, connectionPage]);
+
+  useEffect(() => {
+    setConnectionPage(1);
+  }, [connectionFilter]);
+
+  useEffect(() => {
+    if (connectionPage > connectionPageCount) {
+      setConnectionPage(connectionPageCount);
+    }
+  }, [connectionPage, connectionPageCount]);
+
   const handleExport = () => {
     setExporting(true);
     exportBookingsCsv(bookings);
@@ -83,26 +134,23 @@ export default function AdminAnalyticsPage() {
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-white">
-            Statistiques & <span className="gold-gradient-text">Analytics</span>
-          </h1>
-          <p className="text-zinc-400 text-sm mt-1">
-            Trafic visiteurs du site public + KPIs réservations et CRM.
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleExport}
-          disabled={exporting || bookings.length === 0}
-          className="space-x-2"
-        >
-          <FileSpreadsheet className="h-4 w-4 text-emerald-400" />
-          <span>{exporting ? 'Export…' : 'Exporter CSV'}</span>
-        </Button>
-      </div>
+      <AdminPageHeader
+        title="Statistiques &"
+        accent="Analytics"
+        description="Trafic visiteurs du site public + KPIs réservations et CRM."
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
+            disabled={exporting || bookings.length === 0}
+            className="space-x-2"
+          >
+            <FileSpreadsheet className="h-4 w-4 text-emerald-400" />
+            <span>{exporting ? 'Export…' : 'Exporter CSV'}</span>
+          </Button>
+        }
+      />
 
       {visits && (
         <>
@@ -226,44 +274,129 @@ export default function AdminAnalyticsPage() {
 
           <Card className="glass-panel p-6 space-y-4">
             <CardHeader className="p-0">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-amber-400" />
-                Visites récentes — IP &amp; localisation
-              </CardTitle>
-              <CardDescription>
-                Dernières pages consultées avec adresse IP, ville et pays du visiteur.
-              </CardDescription>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <MapPin className="h-5 w-5 text-amber-400" />
+                    Toutes les connexions — IP &amp; localisation
+                  </CardTitle>
+                  <CardDescription>
+                    Liste complète des visites du site public et des connexions clients ({filteredConnections.length} entrée{filteredConnections.length > 1 ? 's' : ''}, {CONNECTIONS_PAGE_SIZE} par page).
+                  </CardDescription>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {([
+                    ['all', 'Toutes'],
+                    ['public', 'Site public'],
+                    ['client', 'Clients'],
+                  ] as const).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => {
+                        setConnectionFilter(value);
+                        setConnectionPage(1);
+                      }}
+                      className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-colors ${
+                        connectionFilter === value
+                          ? 'border-amber-400/70 bg-amber-400/10 text-amber-300'
+                          : 'border-zinc-700 text-zinc-400 hover:border-zinc-600'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </CardHeader>
-            <CardContent className="p-0 pt-2 overflow-x-auto">
-              {(visits.recentVisits ?? []).length === 0 ? (
-                <p className="text-zinc-500 text-sm text-center py-8">Aucune visite récente.</p>
+            <CardContent className="p-0 pt-2 overflow-x-auto max-h-[70vh] overflow-y-auto">
+              {filteredConnections.length === 0 ? (
+                <p className="text-zinc-500 text-sm text-center py-8">Aucune connexion enregistrée.</p>
               ) : (
                 <table className="w-full text-left text-xs text-zinc-300">
-                  <thead className="text-zinc-500 uppercase tracking-wide border-b border-zinc-800">
+                  <thead className="text-zinc-500 uppercase tracking-wide border-b border-zinc-800 sticky top-0 bg-zinc-950/95 backdrop-blur-sm z-10">
                     <tr>
                       <th className="py-2 pr-4">Date</th>
-                      <th className="py-2 pr-4">Page</th>
+                      <th className="py-2 pr-4">Type</th>
+                      <th className="py-2 pr-4">Utilisateur</th>
+                      <th className="py-2 pr-4">Page / action</th>
                       <th className="py-2 pr-4">IP</th>
                       <th className="py-2 pr-4">Ville</th>
                       <th className="py-2 pr-4">Pays</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-800/80">
-                    {(visits.recentVisits ?? []).map((visit) => (
-                      <tr key={visit.id} className="hover:bg-zinc-900/40">
-                        <td className="py-2.5 pr-4 whitespace-nowrap text-zinc-500">{visit.createdAt}</td>
+                    {paginatedConnections.map((entry) => (
+                      <tr key={entry.id} className="hover:bg-zinc-900/40">
+                        <td className="py-2.5 pr-4 whitespace-nowrap text-zinc-500">{entry.createdAt}</td>
                         <td className="py-2.5 pr-4">
-                          <code className="text-amber-400/90">{visit.path}</code>
+                          <Badge variant={entry.kind === 'client' ? 'gold' : 'outline'} className="text-[10px]">
+                            {entry.kind === 'client' ? 'Client' : 'Public'}
+                          </Badge>
                         </td>
-                        <td className="py-2.5 pr-4 font-mono text-zinc-400">{visit.ip}</td>
-                        <td className="py-2.5 pr-4">{visit.city}{visit.region ? ` (${visit.region})` : ''}</td>
-                        <td className="py-2.5 pr-4">{visit.country}</td>
+                        <td className="py-2.5 pr-4">
+                          {entry.kind === 'client' ? (
+                            <div className="min-w-[120px]">
+                              <p className="text-zinc-200">{entry.userName || '—'}</p>
+                              {entry.email && <p className="text-zinc-500 text-[10px] truncate max-w-[180px]">{entry.email}</p>}
+                            </div>
+                          ) : (
+                            <span className="text-zinc-600">Visiteur anonyme</span>
+                          )}
+                        </td>
+                        <td className="py-2.5 pr-4">
+                          <div>
+                            <p className="text-zinc-400 text-[10px] mb-0.5">{entry.label}</p>
+                            <code className="text-amber-400/90">
+                              {entry.kind === 'client' ? formatClientPath(entry.path) : entry.path}
+                            </code>
+                          </div>
+                        </td>
+                        <td className="py-2.5 pr-4 font-mono text-zinc-400">{entry.ip || '—'}</td>
+                        <td className="py-2.5 pr-4">
+                          {entry.city}
+                          {entry.region ? ` (${entry.region})` : ''}
+                        </td>
+                        <td className="py-2.5 pr-4">{entry.country}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               )}
             </CardContent>
+            {filteredConnections.length > 0 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-zinc-800">
+                <p className="text-zinc-500 text-xs">
+                  Page {connectionPage} sur {connectionPageCount}
+                  {' · '}
+                  {(connectionPage - 1) * CONNECTIONS_PAGE_SIZE + 1}–
+                  {Math.min(connectionPage * CONNECTIONS_PAGE_SIZE, filteredConnections.length)} sur{' '}
+                  {filteredConnections.length}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={connectionPage <= 1}
+                    onClick={() => setConnectionPage((p) => Math.max(1, p - 1))}
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-1" />
+                    Précédent
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={connectionPage >= connectionPageCount}
+                    onClick={() => setConnectionPage((p) => Math.min(connectionPageCount, p + 1))}
+                  >
+                    Suivant
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </Card>
         </>
       )}

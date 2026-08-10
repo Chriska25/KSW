@@ -2,13 +2,18 @@
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import apiClient from '@/lib/api-client';
+import { onVisibleInterval } from '@/lib/visible-interval';
 import type { ServiceItem } from '@/lib/service-types';
 
 interface ServicesContextType {
   services: ServiceItem[];
+  seedServices: (items: ServiceItem[]) => void;
 }
 
-const ServicesContext = createContext<ServicesContextType>({ services: [] });
+const ServicesContext = createContext<ServicesContextType>({
+  services: [],
+  seedServices: () => {},
+});
 
 interface ServicesProviderProps {
   children: React.ReactNode;
@@ -21,17 +26,20 @@ export function ServicesProvider({ children, initialServices = [] }: ServicesPro
   const [services, setServices] = useState<ServiceItem[]>(initialServices);
   const hasInitialData = initialServices.length > 0;
 
+  const seedServices = useCallback((items: ServiceItem[]) => {
+    if (!items.length) return;
+    setServices(items);
+  }, []);
+
   const fetchServices = useCallback(async () => {
     try {
-      const res = await apiClient.get('/services', {
-        headers: { 'Cache-Control': 'no-cache' },
-      });
+      const res = await apiClient.get('/services');
       if (res.data && Array.isArray(res.data.data)) {
         const active = res.data.data.filter((s: ServiceItem) => s.isActive !== false);
         setServices(active);
       }
-    } catch (e) {
-      console.error('Erreur synchronisation prestations:', e);
+    } catch {
+      // Silencieux — prestations SSR déjà injectées depuis le layout
     }
   }, []);
 
@@ -39,13 +47,17 @@ export function ServicesProvider({ children, initialServices = [] }: ServicesPro
     if (!hasInitialData) {
       fetchServices();
     }
-    const interval = setInterval(fetchServices, SYNC_INTERVAL_MS);
-    return () => clearInterval(interval);
+    const clearInterval = onVisibleInterval(fetchServices, SYNC_INTERVAL_MS);
+    return () => clearInterval();
   }, [fetchServices, hasInitialData]);
 
-  const value = useMemo(() => ({ services }), [services]);
+  const value = useMemo(() => ({ services, seedServices }), [services, seedServices]);
 
   return <ServicesContext.Provider value={value}>{children}</ServicesContext.Provider>;
 }
 
 export const useServices = () => useContext(ServicesContext);
+
+export function useServicesSeed() {
+  return useContext(ServicesContext).seedServices;
+}

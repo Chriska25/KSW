@@ -92,6 +92,7 @@ const nextConfig: NextConfig = {
   // Sans cela Next.js bloque les chunks JS (403) → page sans interactivité
   allowedDevOrigins: getDevAllowedOrigins(),
   experimental: {
+    optimizePackageImports: ['lucide-react', 'recharts'],
     serverActions: {
       allowedOrigins: getDevAllowedOrigins(),
     },

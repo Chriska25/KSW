@@ -7,6 +7,7 @@ from functools import lru_cache
 from typing import Dict, Optional, Tuple
 from urllib.parse import urlparse
 
+import bcrypt
 from fastapi import HTTPException
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
@@ -41,7 +42,8 @@ def validate_jwt_secret_at_startup() -> None:
 
 
 def hash_password(plain: str) -> str:
-    return pwd_context.hash(plain)
+    """Hash bcrypt direct — compatible bcrypt 4.x (passlib peut planter au init)."""
+    return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password_hash(stored: str, plain: str) -> bool:
@@ -49,6 +51,11 @@ def verify_password_hash(stored: str, plain: str) -> bool:
         return False
     if re.fullmatch(r"[a-f0-9]{64}", stored or ""):
         return hashlib.sha256(plain.encode("utf-8")).hexdigest() == stored
+    if stored.startswith("$2"):
+        try:
+            return bcrypt.checkpw(plain.encode("utf-8"), stored.encode("utf-8"))
+        except Exception:
+            return False
     try:
         return pwd_context.verify(plain, stored)
     except Exception:
@@ -85,6 +92,8 @@ def is_origin_allowed(origin: Optional[str]) -> bool:
     if is_development():
         host = (urlparse(clean).hostname or "").lower()
         if host in {"localhost", "127.0.0.1"}:
+            return True
+        if host.endswith(".ngrok-free.app") or host.endswith(".ngrok-free.dev") or host.endswith(".ngrok.io") or host.endswith(".loca.lt"):
             return True
         if host.startswith("10.") or host.startswith("192.168.") or re.match(r"172\.(1[6-9]|2\d|3[01])\.", host):
             return True
@@ -161,6 +170,18 @@ def validate_user_role_change(actor_role: str, target_role: str) -> None:
         raise HTTPException(status_code=400, detail="Rôle utilisateur invalide.")
     if target in ADMIN_ONLY_ASSIGN_ROLES and actor != "admin":
         raise HTTPException(status_code=403, detail="Seul un administrateur peut attribuer ce rôle.")
+
+
+def is_empty_secret_value(value: object) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, str) and not value.strip():
+        return True
+    return False
+
+
+def should_preserve_secret_on_update(key: str, value: object) -> bool:
+    return key in SECRET_SETTING_KEYS and is_empty_secret_value(value)
 
 
 def redact_settings_payload(data: Dict[str, object]) -> Dict[str, object]:

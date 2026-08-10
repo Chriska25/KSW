@@ -16,6 +16,19 @@ def seed_database(db: Session):
             "contactEmail": "contact@kswstudio.fr",
             "phone": "+33 1 42 68 00 00",
             "address": "12 Rue du Faubourg Saint-Honoré, 75008 Paris",
+            "studioMapLat": 48.868285,
+            "studioMapLng": 2.317581,
+            "studioMapZoom": 16,
+            "socialLinks": {
+                "instagram": "https://instagram.com/kswstudio",
+                "facebook": "https://facebook.com/kswstudio",
+                "tiktok": "",
+                "youtube": "",
+                "linkedin": "",
+                "pinterest": "",
+                "x": "",
+                "whatsapp": "",
+            },
             "currency": "EUR (€)",
             "timezone": "Europe/Paris",
             "depositRate": "30",
@@ -107,6 +120,19 @@ def seed_database(db: Session):
                 photos_count=30,
                 cover_image="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=600&auto=format&fit=crop",
                 is_active=True
+            ),
+            Service(
+                id="4",
+                title="Invitations électroniques Premium",
+                category="Événement",
+                price=149.0,
+                deposit_percentage=30,
+                duration_minutes=60,
+                photos_count=6,
+                cover_image="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=600&auto=format&fit=crop",
+                is_active=True,
+                seo_title="Invitations électroniques — lien RSVP & partage",
+                seo_description="Invitation digitale sur-mesure : page publique, RSVP invités, templates premium et statistiques en temps réel.",
             ),
         ]
         for s in services:
@@ -358,7 +384,7 @@ DEFAULT_FAQ_ITEMS = [
     {
         'id': 'faq-4',
         'question': "Quels sont les modes de paiement acceptés pour l'acompte ?",
-        'answer': "Nous acceptons le règlement de l'acompte directement en ligne par carte bancaire via Stripe sécurisé, PayPal ou par virement bancaire.",
+        'answer': "Nous acceptons le règlement de l'acompte par carte bancaire (Stripe), Mobile Money (Orange Money, MTN, Wave…), PayPal ou virement bancaire.",
         'order': 3,
         'isPublished': True,
     },

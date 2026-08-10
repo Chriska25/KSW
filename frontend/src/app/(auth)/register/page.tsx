@@ -1,16 +1,27 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/use-auth';
+import { safeRedirect } from '@/lib/safe-redirect';
 
 export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="text-zinc-400 text-sm text-center py-8">Chargement…</div>}>
+      <RegisterPageContent />
+    </Suspense>
+  );
+}
+
+function RegisterPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get('redirect');
   const { register, loading, error } = useAuth();
   const [formData, setFormData] = useState({
     firstName: '',
@@ -32,7 +43,7 @@ export default function RegisterPage() {
         );
         return;
       }
-      router.push('/client/dashboard');
+      router.push(safeRedirect(redirect, '/client/dashboard'));
     } catch {
       // Handled in hook
     }
@@ -111,7 +122,10 @@ export default function RegisterPage() {
 
           <div className="pt-4 border-t border-zinc-800 text-center text-xs text-zinc-400">
             Déjà un compte ?{' '}
-            <Link href="/login" className="text-amber-400 font-semibold hover:underline">
+            <Link
+              href={redirect ? `/login?redirect=${encodeURIComponent(redirect)}` : '/login'}
+              className="text-amber-400 font-semibold hover:underline"
+            >
               Se connecter
             </Link>
           </div>

@@ -15,8 +15,27 @@ function Verify2FAForm() {
   const searchParams = useSearchParams();
   const userId = searchParams.get('userId') || '';
   const redirect = searchParams.get('redirect');
-  const { verify2FA, loading, error } = useAuth();
+  const { verify2FA, resend2FA, loading, error, clearError } = useAuth();
   const [code, setCode] = useState('');
+  const [resendMessage, setResendMessage] = useState<string | null>(null);
+  const [deliveryEmail, setDeliveryEmail] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const stored =
+      sessionStorage.getItem('studio_two_fa_email') ||
+      (() => {
+        try {
+          const raw = sessionStorage.getItem('studio_pending_2fa_user');
+          if (!raw) return null;
+          const parsed = JSON.parse(raw) as { email?: string };
+          return parsed.email || null;
+        } catch {
+          return null;
+        }
+      })();
+    setDeliveryEmail(stored);
+  }, []);
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,6 +48,18 @@ function Verify2FAForm() {
       } else {
         router.replace(safeRedirect(redirect, '/client/dashboard'));
       }
+    } catch {
+      // Erreur gérée dans le hook
+    }
+  };
+
+  const handleResend = async () => {
+    if (!userId) return;
+    setResendMessage(null);
+    clearError();
+    try {
+      const message = await resend2FA(userId);
+      setResendMessage(message || 'Nouveau code envoyé par email.');
     } catch {
       // Erreur gérée dans le hook
     }
@@ -53,7 +84,15 @@ function Verify2FAForm() {
         </div>
         <CardTitle className="text-2xl font-bold">Double authentification</CardTitle>
         <CardDescription>
-          Entrez le code à 6 chiffres reçu ou affiché en console serveur (dev : 123456).
+          {deliveryEmail ? (
+            <>
+              Entrez le code à 6 chiffres envoyé à{' '}
+              <strong className="text-amber-400">{deliveryEmail}</strong> (vérifiez aussi les spams).
+            </>
+          ) : (
+            <>Entrez le code à 6 chiffres envoyé à votre adresse email.</>
+          )}{' '}
+          En développement local, consultez la console Docker ou utilisez <strong>123456</strong>.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -61,6 +100,12 @@ function Verify2FAForm() {
           {error && (
             <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs">
               {error}
+            </div>
+          )}
+
+          {resendMessage && (
+            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs">
+              {resendMessage}
             </div>
           )}
 
@@ -77,6 +122,17 @@ function Verify2FAForm() {
           <Button type="submit" variant="gold" size="lg" className="w-full justify-center" disabled={loading}>
             {loading ? 'Vérification…' : 'Valider le code'}
             {!loading && <ArrowRight className="h-4 w-4 ml-2" />}
+          </Button>
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="w-full text-zinc-400 hover:text-amber-400"
+            disabled={loading}
+            onClick={handleResend}
+          >
+            Renvoyer le code par email
           </Button>
         </form>
       </CardContent>

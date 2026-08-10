@@ -39,6 +39,7 @@ def _describe_admin_action(method: str, path: str) -> str:
         ("GET", "analytics/visits"): "Consultation analytics visites",
         ("GET", "search"): "Recherche admin",
         ("GET", "backup/export"): "Export sauvegarde",
+        ("POST", "backup/restore"): "Restauration sauvegarde JSON",
         ("POST", "settings"): "Modification des paramètres studio",
         ("POST", "sync-from-local"): "Synchronisation locale → serveur",
         ("POST", "purge-reset"): "Réinitialisation système",

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { trackPageVisit } from '@/lib/visit-analytics';
+import { runWhenIdle } from '@/lib/run-when-idle';
 
 /** Enregistre une visite à chaque navigation sur le site public. */
 export function VisitTracker() {
@@ -12,8 +13,10 @@ export function VisitTracker() {
   useEffect(() => {
     if (!pathname || pathname === lastPath.current) return;
     lastPath.current = pathname;
-    trackPageVisit(pathname).catch(() => {
-      // silencieux — ne pas bloquer la navigation
+    runWhenIdle(() => {
+      trackPageVisit(pathname).catch(() => {
+        // silencieux — ne pas bloquer la navigation
+      });
     });
   }, [pathname]);
 

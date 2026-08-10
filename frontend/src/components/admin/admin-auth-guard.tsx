@@ -9,6 +9,7 @@ import { canSkipAuthVerify, markAuthVerified } from '@/lib/auth-verify-cache';
 import { LoadingState } from '@/components/common/loading-state';
 import { Button } from '@/components/ui/button';
 import { getApiErrorMessage, isAuthApiError } from '@/lib/api-error';
+import { buildLoginUrl } from '@/lib/auth-login-url';
 
 export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -27,7 +28,7 @@ export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
 
     const localUser = getSession();
     if (!localUser || !isAdminUser(localUser)) {
-      router.replace(`/login?redirect=${encodeURIComponent(pathnameRef.current || '/admin/dashboard')}`);
+      router.replace(buildLoginUrl({ redirect: pathnameRef.current || '/admin/dashboard', admin: true }));
       return;
     }
 
@@ -43,7 +44,7 @@ export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
       if (!user || !isAdminUser(user)) {
         clearSession();
         setDenied(true);
-        router.replace(`/login?redirect=${encodeURIComponent(pathnameRef.current || '/admin/dashboard')}`);
+        router.replace(buildLoginUrl({ redirect: pathnameRef.current || '/admin/dashboard', admin: true }));
         return;
       }
       persistSession(localStorage.getItem('studio_token') || '', user);
@@ -53,7 +54,7 @@ export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
       if (isAuthApiError(err)) {
         clearSession();
         setDenied(true);
-        router.replace(`/login?redirect=${encodeURIComponent(pathnameRef.current || '/admin/dashboard')}`);
+        router.replace(buildLoginUrl({ redirect: pathnameRef.current || '/admin/dashboard', admin: true }));
         return;
       }
       if (canSkipAuthVerify(isAdminUser)) {

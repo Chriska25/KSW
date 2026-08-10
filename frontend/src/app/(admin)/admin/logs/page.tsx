@@ -18,6 +18,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { LoadingState } from '@/components/common/loading-state';
+import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { useAdminToast } from '@/components/admin/admin-toast';
 import {
   fetchAdminActivityLogs,
@@ -108,41 +109,38 @@ export default function AdminLogsPage() {
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-white flex items-center gap-3">
-            <ScrollText className="h-8 w-8 text-amber-400" />
-            Journal <span className="gold-gradient-text">d&apos;activité</span>
-          </h1>
-          <p className="text-zinc-400 text-sm mt-1">
-            Historique complet des actions admin (fichier log + base) et événements métier (réservations, contact, paiements).
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleExport}
-            disabled={exporting}
-            className="space-x-2"
-          >
-            <Download className={`h-4 w-4 ${exporting ? 'animate-pulse' : ''}`} />
-            <span>{exporting ? 'Export…' : 'Télécharger .log'}</span>
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => load(true)}
-            disabled={refreshing}
-            className="space-x-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-            <span>Actualiser</span>
-          </Button>
-        </div>
-      </div>
+      <AdminPageHeader
+        title="Journal"
+        accent="d'activité"
+        description="Historique complet des actions admin (fichier log + base) et événements métier (réservations, contact, paiements)."
+        icon={ScrollText}
+        actions={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleExport}
+              disabled={exporting}
+              className="space-x-2"
+            >
+              <Download className={`h-4 w-4 ${exporting ? 'animate-pulse' : ''}`} />
+              <span>{exporting ? 'Export…' : 'Télécharger .log'}</span>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => load(true)}
+              disabled={refreshing}
+              className="space-x-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              <span>Actualiser</span>
+            </Button>
+          </>
+        }
+      />
 
       <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/5 px-4 py-3 text-xs text-zinc-300">
         Fichier persistant : <code className="text-emerald-300">backend/logs/admin-activity.log</code> — une ligne JSON par action admin.

@@ -2,8 +2,9 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Camera, Globe, Share2, Mail, Phone, MapPin, Award } from 'lucide-react';
+import { Mail, Phone, MapPin, Award } from 'lucide-react';
 import { StudioLogo } from '@/components/brand/studio-logo';
+import { SocialLinksRow } from '@/components/common/social-links-row';
 import { useSettings } from '@/context/settings-context';
 
 export function FooterSection() {
@@ -19,24 +20,7 @@ export function FooterSection() {
             {settings.studioDescription ||
               "Studio photographique d'art spécialisé dans le mariage d'exception, le portrait de caractère et le reportage corporate haut de gamme en France et à l'international."}
           </p>
-          <div className="flex items-center space-x-3 pt-2">
-            <a
-              href="https://instagram.com"
-              target="_blank"
-              rel="noreferrer"
-              className="h-9 w-9 rounded-lg glass-panel flex items-center justify-center text-zinc-300 hover:text-amber-400 hover:border-amber-400/50 transition-colors"
-            >
-              <Globe className="h-4 w-4" />
-            </a>
-            <a
-              href="https://facebook.com"
-              target="_blank"
-              rel="noreferrer"
-              className="h-9 w-9 rounded-lg glass-panel flex items-center justify-center text-zinc-300 hover:text-amber-400 hover:border-amber-400/50 transition-colors"
-            >
-              <Share2 className="h-4 w-4" />
-            </a>
-          </div>
+          <SocialLinksRow className="pt-2" showLabel />
         </div>
 
         {/* Col 2: Navigation rapide */}
@@ -132,14 +116,14 @@ export function FooterSection() {
           © {new Date().getFullYear()} {settings.studioName || 'KSW STUDIO'} Haute Photographie. Tous droits réservés.
         </div>
         <div className="flex items-center space-x-6">
-          <Link href="/contact" className="hover:text-zinc-300">
+          <Link href="/legal" className="hover:text-zinc-300">
             Mentions Légales
           </Link>
-          <Link href="/contact" className="hover:text-zinc-300">
+          <Link href="/privacy" className="hover:text-zinc-300">
             Politique de Confidentialité
           </Link>
           <Link href="/contact" className="hover:text-zinc-300">
-            CGV & Droit à l'Image
+            CGV & Droit à l&apos;Image
           </Link>
         </div>
       </div>

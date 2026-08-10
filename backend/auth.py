@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import User
 from security import verify_password_hash, is_development as security_is_dev
+from superuser import is_superuser
 
 JWT_SECRET = os.getenv("JWT_SECRET_KEY", "ksw-dev-secret-change-in-production")
 JWT_ALGORITHM = "HS256"
@@ -20,8 +21,9 @@ PRE_2FA_TOKEN_MINUTES = 10
 ADMIN_ROLES = {"admin", "photographer", "assistant"}
 STAFF_ROLES = {"admin", "photographer", "assistant"}
 
+from pending_auth_store import clear_2fa_code, consume_2fa_code, store_2fa_code
+
 _bearer = HTTPBearer(auto_error=False)
-_pending_2fa: Dict[str, Dict[str, Any]] = {}
 _pending_password_reset: Dict[str, Dict[str, Any]] = {}
 RESET_TOKEN_HOURS = 1
 
@@ -32,25 +34,38 @@ def is_development() -> bool:
 
 def _user_payload(user: User) -> Dict[str, Any]:
     role = user.role or "client"
-    return {
+    payload = {
         "id": user.id,
         "name": user.name,
+        "firstName": user.first_name or "",
+        "lastName": user.last_name or "",
         "email": user.email,
+        "phone": getattr(user, "phone", None) or "",
+        "avatarUrl": getattr(user, "avatar_url", None) or "",
         "role": role,
         "status": user.status or "active",
         "roles": [{"name": role}],
     }
+    if is_superuser(user):
+        payload["isSuperuser"] = True
+    return payload
 
 
-def create_access_token(user: User, *, two_fa_verified: bool = True) -> str:
+def create_access_token(
+    user: User,
+    *,
+    two_fa_verified: bool = True,
+    hours: Optional[int] = None,
+) -> str:
     role = user.role or "client"
     requires_2fa = role in STAFF_ROLES
+    token_hours = hours if hours is not None else ACCESS_TOKEN_HOURS
     payload = {
         "sub": user.id,
         "email": user.email,
         "role": role,
         "2fa_verified": two_fa_verified or not requires_2fa,
-        "exp": datetime.utcnow() + timedelta(hours=ACCESS_TOKEN_HOURS),
+        "exp": datetime.utcnow() + timedelta(hours=max(1, token_hours)),
         "iat": datetime.utcnow(),
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
@@ -75,10 +90,7 @@ def decode_token(token: str) -> Dict[str, Any]:
 
 def issue_2fa_code(user_id: str) -> str:
     code = f"{secrets.randbelow(900000) + 100000:06d}"
-    _pending_2fa[user_id] = {
-        "code": code,
-        "expires": datetime.utcnow() + timedelta(minutes=PRE_2FA_TOKEN_MINUTES),
-    }
+    store_2fa_code(user_id, code, minutes=PRE_2FA_TOKEN_MINUTES)
     if is_development():
         print(f"[DEV 2FA] Code pour {user_id}: {code} (123456 accepté en dev)")
     return code
@@ -112,19 +124,9 @@ def consume_password_reset_token(token: str) -> Optional[str]:
 def verify_2fa_code(user_id: str, code: str) -> bool:
     clean = (code or "").strip()
     if is_development() and clean == "123456":
-        _pending_2fa.pop(user_id, None)
+        clear_2fa_code(user_id)
         return True
-
-    pending = _pending_2fa.get(user_id)
-    if not pending:
-        return False
-    if datetime.utcnow() > pending["expires"]:
-        _pending_2fa.pop(user_id, None)
-        return False
-    if pending["code"] != clean:
-        return False
-    _pending_2fa.pop(user_id, None)
-    return True
+    return consume_2fa_code(user_id, clean)
 
 
 def verify_password(user: User, password: str) -> bool:
@@ -190,6 +192,15 @@ def require_admin_user(current_user: User = Depends(get_current_user)) -> User:
 def require_super_admin(current_user: User = Depends(get_current_user)) -> User:
     if (current_user.role or "client") != "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Accès réservé à l'administrateur principal.")
+    return current_user
+
+
+def require_superuser(current_user: User = Depends(get_current_user)) -> User:
+    if not is_superuser(current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Action réservée au super administrateur système.",
+        )
     return current_user
 
 

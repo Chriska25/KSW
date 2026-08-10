@@ -17,6 +17,8 @@ function loginRedirect(request: NextRequest, pathname: string, admin = false): N
   return NextResponse.redirect(loginUrl);
 }
 
+import { isGalleryKeyAccessPath } from '@/lib/gallery-access-path';
+
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -30,7 +32,7 @@ export function proxy(request: NextRequest) {
     }
   }
 
-  const isGalleryViewer = /^\/client\/galeries\/[^/]+/.test(pathname);
+  const isGalleryViewer = isGalleryKeyAccessPath(pathname);
 
   if (pathname.startsWith('/client') && !isGalleryViewer) {
     if (!hasAuthToken(request)) {

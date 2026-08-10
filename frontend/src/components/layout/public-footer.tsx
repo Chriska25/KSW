@@ -2,8 +2,9 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { MapPin, Phone, Mail, Award, Globe, Share2 } from 'lucide-react';
+import { MapPin, Phone, Mail, Award } from 'lucide-react';
 import { StudioLogo } from '@/components/brand/studio-logo';
+import { SocialLinksRow } from '@/components/common/social-links-row';
 import { useSettings } from '@/context/settings-context';
 
 export function PublicFooter() {
@@ -20,22 +21,7 @@ export function PublicFooter() {
               {settings.studioDescription ||
                 "Studio photographique d'art spécialisé dans le mariage d'exception, le portrait de caractère et le reportage corporate haut de gamme en France et à l'international."}
             </p>
-            <div className="flex items-center space-x-3 pt-2">
-              <button
-                type="button"
-                aria-label="Langue"
-                className="h-9 w-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-300 hover:text-amber-400 hover:border-zinc-700 transition-all cursor-pointer"
-              >
-                <Globe className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                aria-label="Partager"
-                className="h-9 w-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-300 hover:text-amber-400 hover:border-zinc-700 transition-all cursor-pointer"
-              >
-                <Share2 className="h-4 w-4" />
-              </button>
-            </div>
+            <SocialLinksRow className="pt-2" showLabel />
           </div>
 
           {/* Column 2: Navigation */}

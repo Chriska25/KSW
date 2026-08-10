@@ -16,6 +16,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useSettings } from '@/context/settings-context';
 import { LoadingState } from '@/components/common/loading-state';
+import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { fetchDashboardData, type DashboardStats } from '@/lib/admin-dashboard';
 import { fetchVisitAnalytics } from '@/lib/visit-analytics';
 import { getApiErrorMessage } from '@/lib/api-error';
@@ -66,24 +67,21 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-white">
-            Tableau de Bord <span className="gold-gradient-text">Studio</span>
-          </h1>
-          <p className="text-zinc-400 text-sm mt-1">
-            Données live depuis réservations, paiements Stripe et CRM ({currencySymbol}).
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" onClick={load}>
-            Actualiser
-          </Button>
-          <Link href="/admin/reservations">
-            <Button variant="gold" size="sm">Voir réservations</Button>
-          </Link>
-        </div>
-      </div>
+      <AdminPageHeader
+        title="Tableau de bord"
+        accent="Studio"
+        description={`Données live depuis réservations, paiements Stripe et CRM (${currencySymbol}).`}
+        actions={
+          <>
+            <Button variant="outline" size="sm" onClick={load}>
+              Actualiser
+            </Button>
+            <Link href="/admin/reservations">
+              <Button variant="gold" size="sm">Voir réservations</Button>
+            </Link>
+          </>
+        }
+      />
 
       {error && (
         <p className="text-amber-400 text-xs rounded-xl border border-amber-400/30 bg-amber-400/5 px-4 py-3">{error}</p>

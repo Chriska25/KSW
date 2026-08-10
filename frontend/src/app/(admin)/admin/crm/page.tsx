@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useSettings } from '@/context/settings-context';
 import { LoadingState } from '@/components/common/loading-state';
+import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import {
   buildCrmClients,
   fetchAdminBookings,
@@ -67,19 +68,16 @@ export default function AdminCrmPage() {
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-white">
-            CRM & <span className="gold-gradient-text">Fiches Clients</span>
-          </h1>
-          <p className="text-zinc-400 text-sm mt-1">
-            Clients agrégés depuis les réservations et messages de contact.
-          </p>
-        </div>
-        <Button variant="outline" size="sm" onClick={loadData}>
-          Actualiser
-        </Button>
-      </div>
+      <AdminPageHeader
+        title="CRM &"
+        accent="Fiches Clients"
+        description="Clients agrégés depuis les réservations et messages de contact."
+        actions={
+          <Button variant="outline" size="sm" onClick={loadData}>
+            Actualiser
+          </Button>
+        }
+      />
 
       {loadError && (
         <p className="text-rose-400 text-sm rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3">

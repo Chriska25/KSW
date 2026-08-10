@@ -1,5 +1,6 @@
 import apiClient from '@/lib/api-client';
-import type { InvoiceRow } from '@/lib/admin-dashboard';
+import type { InvoiceRow } from '@/lib/invoice-utils';
+import { normalizeInvoiceRow } from '@/lib/invoice-utils';
 
 export interface ClientBooking {
   id: string;
@@ -46,20 +47,7 @@ function normalizeBooking(raw: Record<string, unknown>): ClientBooking {
 }
 
 function normalizeInvoice(raw: Record<string, unknown>): InvoiceRow {
-  return {
-    id: String(raw.id || ''),
-    number: String(raw.number || ''),
-    clientName: String(raw.clientName || ''),
-    serviceTitle: String(raw.serviceTitle || ''),
-    issueDate: String(raw.issueDate || ''),
-    dueDate: String(raw.dueDate || ''),
-    totalAmount: Number(raw.totalAmount || 0),
-    paidAmount: Number(raw.paidAmount || 0),
-    status: (raw.status as InvoiceRow['status']) || 'unpaid',
-    paymentMethod: (raw.paymentMethod === 'Stripe (Carte)' || raw.paymentMethod === 'PayPal' || raw.paymentMethod === 'Virement'
-      ? raw.paymentMethod
-      : 'Virement') as InvoiceRow['paymentMethod'],
-  };
+  return normalizeInvoiceRow(raw);
 }
 
 export async function fetchClientBookings(): Promise<ClientBooking[]> {
@@ -88,10 +76,8 @@ export async function fetchClientInvoices(): Promise<{
 }
 
 export async function changeClientPassword(currentPassword: string, newPassword: string): Promise<void> {
-  await apiClient.post('/client/profile/password', {
-    current_password: currentPassword,
-    new_password: newPassword,
-  });
+  const { changeUserPassword } = await import('@/lib/profile-api');
+  await changeUserPassword(currentPassword, newPassword);
 }
 
 export function parseBookingDate(value?: string): Date | null {
@@ -119,6 +105,7 @@ export function getUpcomingBooking(bookings: ClientBooking[]): ClientBooking | n
 
 export function bookingStatusLabel(status?: string, paymentStatus?: string): string {
   if (paymentStatus === 'paid') return 'Acompte réglé';
+  if (paymentStatus === 'mobile_money_pending') return 'Mobile Money en attente';
   if (status === 'confirmed') return 'Confirmée';
   if (status === 'cancelled') return 'Annulée';
   if (status === 'pending') return 'En attente';
@@ -130,6 +117,7 @@ export function bookingStatusVariant(
   paymentStatus?: string
 ): 'success' | 'warning' | 'outline' | 'gold' {
   if (paymentStatus === 'paid') return 'success';
+  if (paymentStatus === 'mobile_money_pending') return 'gold';
   if (status === 'confirmed') return 'gold';
   if (status === 'cancelled') return 'outline';
   return 'warning';

@@ -6,15 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { LoadingState } from '@/components/common/loading-state';
+import { ClientPageHeader } from '@/components/client/client-page-header';
 import { useSettings } from '@/context/settings-context';
 import { fetchClientInvoices } from '@/lib/client-api';
 import { exportInvoiceToPdf } from '@/lib/invoice-pdf';
+import { buildInvoiceStudioInfo } from '@/lib/invoice-studio-info';
 import type { InvoiceRow } from '@/lib/admin-dashboard';
 import { getApiErrorMessage } from '@/lib/api-error';
-
-function formatEuro(amount: number) {
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount);
-}
+import { formatMoneyAmount, resolveStudioCurrency } from '@/lib/currency';
 
 function statusLabel(status: InvoiceRow['status']) {
   switch (status) {
@@ -38,7 +37,7 @@ export default function ClientDocumentsPage() {
 }
 
 function ClientDocumentsContent() {
-  const { settings } = useSettings();
+  const { settings, formatPrice } = useSettings();
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
   const [summary, setSummary] = useState({ totalInvoiced: 0, totalPaid: 0, remaining: 0 });
   const [loading, setLoading] = useState(true);
@@ -63,10 +62,8 @@ function ClientDocumentsContent() {
 
   const handlePdf = (invoice: InvoiceRow) => {
     exportInvoiceToPdf(invoice, {
-      studioName: settings.studioName,
-      address: settings.address,
-      phone: settings.phone,
-      contactEmail: settings.contactEmail,
+      ...buildInvoiceStudioInfo(settings),
+      currency: resolveStudioCurrency(invoice.currency || settings.currency),
     });
   };
 
@@ -76,33 +73,30 @@ function ClientDocumentsContent() {
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-white flex items-center gap-2">
-          <FileSpreadsheet className="h-7 w-7 text-amber-400" />
-          Devis & <span className="gold-gradient-text">Factures</span>
-        </h1>
-        <p className="text-zinc-400 text-sm mt-1">
-          Consultez et téléchargez vos documents liés à vos réservations.
-        </p>
-      </div>
+      <ClientPageHeader
+        title="Devis &"
+        accent="Factures"
+        description="Consultez et téléchargez vos documents liés à vos réservations."
+        icon={FileSpreadsheet}
+      />
 
       <div className="grid sm:grid-cols-3 gap-4">
         <Card className="glass-panel">
           <CardContent className="pt-5 pb-5">
             <p className="text-[11px] text-zinc-500">Total facturé</p>
-            <p className="text-xl font-bold text-white mt-1">{formatEuro(summary.totalInvoiced)}</p>
+            <p className="text-xl font-bold text-white mt-1">{formatPrice(summary.totalInvoiced)}</p>
           </CardContent>
         </Card>
         <Card className="glass-panel">
           <CardContent className="pt-5 pb-5">
             <p className="text-[11px] text-zinc-500">Montant réglé</p>
-            <p className="text-xl font-bold text-emerald-400 mt-1">{formatEuro(summary.totalPaid)}</p>
+            <p className="text-xl font-bold text-emerald-400 mt-1">{formatPrice(summary.totalPaid)}</p>
           </CardContent>
         </Card>
         <Card className="glass-panel">
           <CardContent className="pt-5 pb-5">
             <p className="text-[11px] text-zinc-500">Solde restant</p>
-            <p className="text-xl font-bold text-amber-400 mt-1">{formatEuro(summary.remaining)}</p>
+            <p className="text-xl font-bold text-amber-400 mt-1">{formatPrice(summary.remaining)}</p>
           </CardContent>
         </Card>
       </div>
@@ -144,7 +138,7 @@ function ClientDocumentsContent() {
                 <div className="flex items-center gap-4 shrink-0">
                   <div className="text-right text-xs">
                     <p className="text-zinc-500">Total</p>
-                    <p className="font-bold text-white">{formatEuro(inv.totalAmount)}</p>
+                    <p className="font-bold text-white">{formatMoneyAmount(inv.totalAmount, resolveStudioCurrency(inv.currency || settings.currency))}</p>
                   </div>
                   <Button variant="outline" size="sm" onClick={() => handlePdf(inv)} className="text-xs space-x-1.5">
                     <FileDown className="h-3.5 w-3.5" />

@@ -19,7 +19,7 @@ export function isAllowedStripeCheckoutUrl(url: string): boolean {
   }
 }
 
-const SECRET_SETTING_KEYS = ['stripeSecretKey', 'stripeWebhookSecret', 'smtpPassword'] as const;
+export const SECRET_SETTING_KEYS = ['stripeSecretKey', 'stripeWebhookSecret', 'smtpPassword'] as const;
 
 export function stripSecretsFromSettings<T extends Record<string, unknown>>(settings: T): T {
   const copy = { ...settings };

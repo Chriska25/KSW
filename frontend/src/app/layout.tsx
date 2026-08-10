@@ -3,7 +3,9 @@ import './globals.css';
 import { JsonLdSchema } from '@/components/seo/json-ld';
 import { AppProviders } from '@/components/providers/app-providers';
 import { themeInitScript } from '@/lib/theme-script';
-import { fetchSettingsServer, fetchGalleriesServer, fetchServicesServer } from '@/lib/server-fetch';
+import { fetchSettingsServer } from '@/lib/server-fetch';
+
+export const revalidate = 30;
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await fetchSettingsServer();
@@ -66,6 +68,11 @@ export async function generateMetadata(): Promise<Metadata> {
         'max-snippet': -1,
       },
     },
+    icons: {
+      icon: [{ url: '/icon.svg', type: 'image/svg+xml' }],
+      apple: [{ url: '/apple-icon', sizes: '180x180', type: 'image/png' }],
+      shortcut: [{ url: '/icon.svg', type: 'image/svg+xml' }],
+    },
   };
 }
 
@@ -74,24 +81,16 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [initialSettings, initialGalleries, initialServices] = await Promise.all([
-    fetchSettingsServer(),
-    fetchGalleriesServer(),
-    fetchServicesServer(),
-  ]);
+  const initialSettings = await fetchSettingsServer();
 
   return (
     <html lang="fr" className="h-full antialiased" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
-        <JsonLdSchema />
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} suppressHydrationWarning />
       </head>
       <body className="min-h-full flex flex-col bg-zinc-950 text-zinc-100 font-sans transition-colors duration-200">
-        <AppProviders
-          initialSettings={initialSettings}
-          initialGalleries={initialGalleries}
-          initialServices={initialServices}
-        >
+        <JsonLdSchema settings={initialSettings} />
+        <AppProviders initialSettings={initialSettings}>
           {children}
         </AppProviders>
       </body>
