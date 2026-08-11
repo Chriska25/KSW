@@ -8,6 +8,8 @@ import json
 import os
 import uuid
 from typing import Any, Dict, Optional, Tuple
+from urllib.parse import urlparse
+from urllib.request import urlopen
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -17,7 +19,15 @@ DEFAULT_MEDIA_SETTINGS: Dict[str, Any] = {
     "watermarkText": "Épreuve sécurisée",
     "watermarkPosition": "bottom_center",
     "watermarkOpacity": 40,
+    "watermarkShowText": True,
+    "watermarkLogoEnabled": False,
+    "watermarkLogoUrl": "",
+    "watermarkLogoPosition": "bottom_right",
+    "watermarkLogoSize": 18,
+    "watermarkLogoOpacity": 40,
+    "invoiceLogoUrl": "",
     "webpQuality": 85,
+    "hdWebpQuality": 98,
 }
 
 MEDIA_SETTING_KEYS = frozenset(DEFAULT_MEDIA_SETTINGS.keys())
@@ -34,15 +44,37 @@ def load_media_settings(db) -> Dict[str, Any]:
     from models import Setting
 
     settings = dict(DEFAULT_MEDIA_SETTINGS)
-    rows = db.query(Setting).all()
+    rows = db.query(Setting).filter(Setting.key.in_(MEDIA_SETTING_KEYS)).all()
     for row in rows:
-        if row.key not in MEDIA_SETTING_KEYS:
-            continue
         try:
             settings[row.key] = json.loads(row.value)
         except Exception:
             settings[row.key] = row.value
-    return settings
+    return normalize_media_settings(settings)
+
+
+def normalize_media_settings(settings: Dict[str, Any]) -> Dict[str, Any]:
+    """Normalise types — aligné sur les paramètres admin (filigrane)."""
+    out = dict(DEFAULT_MEDIA_SETTINGS)
+    for key in MEDIA_SETTING_KEYS:
+        if key in settings and settings[key] not in (None, ""):
+            out[key] = settings[key]
+
+    out["studioNameFirstPart"] = str(out.get("studioNameFirstPart") or "KSW").strip()
+    out["studioNameSecondPart"] = str(out.get("studioNameSecondPart") or "STUDIO").strip()
+    out["watermarkText"] = str(out.get("watermarkText") or "Épreuve sécurisée").strip()
+    out["watermarkPosition"] = str(out.get("watermarkPosition") or "bottom_center").strip()
+    out["watermarkLogoUrl"] = str(out.get("watermarkLogoUrl") or "").strip()
+    out["watermarkLogoPosition"] = str(out.get("watermarkLogoPosition") or "bottom_right").strip()
+    out["invoiceLogoUrl"] = str(out.get("invoiceLogoUrl") or "").strip()
+    out["watermarkShowText"] = _truthy(out.get("watermarkShowText", True))
+    out["watermarkLogoEnabled"] = _truthy(out.get("watermarkLogoEnabled"))
+    out["watermarkOpacity"] = _safe_int(out.get("watermarkOpacity"), 40)
+    out["watermarkLogoOpacity"] = _safe_int(out.get("watermarkLogoOpacity"), 40)
+    out["watermarkLogoSize"] = _safe_int(out.get("watermarkLogoSize"), 18)
+    out["webpQuality"] = _safe_int(out.get("webpQuality"), 85)
+    out["hdWebpQuality"] = _safe_int(out.get("hdWebpQuality"), 98)
+    return out
 
 
 def build_watermark_label(settings: Dict[str, Any]) -> str:
@@ -125,6 +157,18 @@ def _apply_pill_watermark(
     elif position == "bottom_right":
         x1 = w - pill_w - margin
         y1 = h - pill_h - margin
+    elif position == "bottom_left":
+        x1 = margin
+        y1 = h - pill_h - margin
+    elif position == "top_left":
+        x1 = margin
+        y1 = margin
+    elif position == "top_center":
+        x1 = (w - pill_w) // 2
+        y1 = margin
+    elif position == "top_right":
+        x1 = w - pill_w - margin
+        y1 = margin
     else:  # bottom_center (défaut)
         x1 = (w - pill_w) // 2
         y1 = h - pill_h - margin
@@ -151,45 +195,320 @@ def _apply_diagonal_text(overlay: Image.Image, text: str, font, alpha: int) -> N
             overlay.paste(rotated, (x, y), rotated)
 
 
-def apply_watermark(image: Image.Image, settings: Dict[str, Any]) -> Image.Image:
-    text = build_watermark_label(settings)
-    if not text.strip():
-        return image.convert("RGB") if image.mode != "RGB" else image
+def _truthy(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
 
-    position = str(settings.get("watermarkPosition") or "bottom_center")
-    opacity = _safe_int(settings.get("watermarkOpacity"), 40)
-    text_alpha = max(0, min(255, int(255 * opacity / 100)))
+
+def _resolve_logo_url(settings: Dict[str, Any]) -> str:
+    logo_url = str(settings.get("watermarkLogoUrl") or "").strip()
+    if logo_url:
+        return logo_url
+    return str(settings.get("invoiceLogoUrl") or "").strip()
+
+
+def _load_logo_image(logo_url: str, upload_dir: str) -> Optional[Image.Image]:
+    if not logo_url:
+        return None
+
+    try:
+        if logo_url.startswith("/uploads/"):
+            file_path = os.path.join(upload_dir, os.path.basename(logo_url))
+            if not os.path.isfile(file_path):
+                return None
+            with Image.open(file_path) as img:
+                return img.convert("RGBA")
+
+        parsed = urlparse(logo_url)
+        if parsed.scheme in {"http", "https"}:
+            with urlopen(logo_url, timeout=8) as response:
+                data = response.read()
+            with Image.open(io.BytesIO(data)) as img:
+                return img.convert("RGBA")
+    except Exception as exc:
+        print(f"Erreur chargement logo filigrane: {exc}")
+    return None
+
+
+def _compute_logo_position(
+    canvas_w: int,
+    canvas_h: int,
+    logo_w: int,
+    logo_h: int,
+    position: str,
+    margin: int,
+) -> Tuple[int, int]:
+    if position == "top_left":
+        return margin, margin
+    if position == "top_center":
+        return (canvas_w - logo_w) // 2, margin
+    if position == "top_right":
+        return canvas_w - logo_w - margin, margin
+    if position == "center":
+        return (canvas_w - logo_w) // 2, (canvas_h - logo_h) // 2
+    if position == "bottom_left":
+        return margin, canvas_h - logo_h - margin
+    if position == "bottom_right":
+        return canvas_w - logo_w - margin, canvas_h - logo_h - margin
+    return (canvas_w - logo_w) // 2, canvas_h - logo_h - margin
+
+
+def _apply_logo_watermark(
+    overlay: Image.Image,
+    settings: Dict[str, Any],
+    upload_dir: str,
+) -> None:
+    if not _truthy(settings.get("watermarkLogoEnabled")):
+        return
+
+    logo_url = _resolve_logo_url(settings)
+    logo = _load_logo_image(logo_url, upload_dir)
+    if logo is None:
+        return
+
+    canvas_w, canvas_h = overlay.size
+    size_pct = max(5, min(50, _safe_int(settings.get("watermarkLogoSize"), 18)))
+    target_w = max(24, int(canvas_w * size_pct / 100))
+    ratio = target_w / max(logo.width, 1)
+    target_h = max(1, int(logo.height * ratio))
+    logo = logo.resize((target_w, target_h), Image.Resampling.LANCZOS)
+
+    opacity = _safe_int(settings.get("watermarkLogoOpacity"), 40)
+    alpha_value = max(0, min(255, int(255 * opacity / 100)))
+    if logo.mode != "RGBA":
+        logo = logo.convert("RGBA")
+    red, green, blue, alpha = logo.split()
+    alpha = alpha.point(lambda pixel: int(pixel * alpha_value / 255))
+    logo = Image.merge("RGBA", (red, green, blue, alpha))
+
+    position = str(settings.get("watermarkLogoPosition") or "bottom_right")
+    margin = max(16, min(canvas_w, canvas_h) // 40)
+    x, y = _compute_logo_position(canvas_w, canvas_h, target_w, target_h, position, margin)
+    overlay.paste(logo, (x, y), logo)
+
+
+def apply_watermark(image: Image.Image, settings: Dict[str, Any], upload_dir: str = "") -> Image.Image:
+    media = normalize_media_settings(settings)
+    show_text = media.get("watermarkShowText", True)
+    if isinstance(show_text, str):
+        show_text = _truthy(show_text)
+
+    text = build_watermark_label(media) if show_text else ""
+    logo_enabled = _truthy(media.get("watermarkLogoEnabled")) and bool(_resolve_logo_url(media))
+
+    if not text.strip() and not logo_enabled:
+        return image.convert("RGB") if image.mode != "RGB" else image
 
     rgba = image.convert("RGBA")
     overlay = Image.new("RGBA", rgba.size, (0, 0, 0, 0))
-    font_size = max(12, min(rgba.width, rgba.height) // 48)
-    font = _load_font(font_size)
 
-    if position == "diagonal":
-        _apply_diagonal_text(overlay, text, font, text_alpha)
-    else:
-        _apply_pill_watermark(overlay, text, font, text_alpha, position)
+    if text.strip():
+        position = str(media.get("watermarkPosition") or "bottom_center")
+        opacity = _safe_int(media.get("watermarkOpacity"), 40)
+        text_alpha = max(0, min(255, int(255 * opacity / 100)))
+        font_size = max(12, min(rgba.width, rgba.height) // 48)
+        font = _load_font(font_size)
+
+        if position == "diagonal":
+            _apply_diagonal_text(overlay, text, font, text_alpha)
+        else:
+            _apply_pill_watermark(overlay, text, font, text_alpha, position)
+
+    if logo_enabled and upload_dir:
+        _apply_logo_watermark(overlay, media, upload_dir)
 
     merged = Image.alpha_composite(rgba, overlay)
     return merged.convert("RGB")
+
+
+THUMB_MAX_WIDTH = 640
+
+
+def thumb_filename_for(filename: str) -> str:
+    base, ext = os.path.splitext(filename)
+    if base.endswith("_thumb"):
+        return filename
+    return f"{base}_thumb{ext or '.webp'}"
+
+
+def thumb_url_for(url: str) -> Optional[str]:
+    if not url or not str(url).startswith("/uploads/"):
+        return None
+    filename = str(url).replace("/uploads/", "", 1)
+    return f"/uploads/{thumb_filename_for(filename)}"
+
+
+def save_thumbnail_from_image(image: Image.Image, upload_dir: str, source_filename: str) -> str:
+    thumb = image.copy()
+    if thumb.mode not in {"RGB", "RGBA"}:
+        thumb = thumb.convert("RGB")
+    if thumb.width > THUMB_MAX_WIDTH:
+        ratio = THUMB_MAX_WIDTH / thumb.width
+        new_h = max(1, int(thumb.height * ratio))
+        thumb = thumb.resize((THUMB_MAX_WIDTH, new_h), Image.Resampling.LANCZOS)
+    if thumb.mode == "RGBA":
+        thumb = thumb.convert("RGB")
+
+    thumb_name = thumb_filename_for(source_filename)
+    thumb_path = os.path.join(upload_dir, thumb_name)
+    thumb.save(thumb_path, "WEBP", quality=72, method=4)
+    return f"/uploads/{thumb_name}"
+
+
+def ensure_thumbnail_file(url: str, upload_dir: str) -> Optional[str]:
+    """Génère la miniature si absente ; retourne l'URL thumb ou None."""
+    if not url or not str(url).startswith("/uploads/"):
+        return None
+    filename = str(url).replace("/uploads/", "", 1)
+    thumb_name = thumb_filename_for(filename)
+    thumb_path = os.path.join(upload_dir, thumb_name)
+    if os.path.isfile(thumb_path):
+        return f"/uploads/{thumb_name}"
+
+    source_path = os.path.join(upload_dir, filename)
+    if not os.path.isfile(source_path):
+        return None
+
+    try:
+        with Image.open(source_path) as img:
+            img.load()
+            return save_thumbnail_from_image(img, upload_dir, filename)
+    except Exception as exc:
+        print(f"Erreur miniature {url}: {exc}")
+        return None
+
+
+def resolve_photo_thumb_url(
+    url: Optional[str],
+    thumb_url: Optional[str] = None,
+    upload_dir: str = "",
+) -> Optional[str]:
+    """Retourne thumbUrl si le fichier existe (sans génération synchrone)."""
+    candidates: list[str] = []
+    if thumb_url and str(thumb_url).startswith("/uploads/"):
+        candidates.append(str(thumb_url))
+    predicted = thumb_url_for(str(url or ""))
+    if predicted:
+        candidates.append(predicted)
+
+    if not upload_dir:
+        return candidates[0] if candidates else None
+
+    for candidate in candidates:
+        filename = candidate.replace("/uploads/", "", 1)
+        if os.path.isfile(os.path.join(upload_dir, filename)):
+            return candidate
+    return None
+
+
+def save_raw_image_bytes(data: bytes, upload_dir: str) -> Tuple[str, int]:
+    """Enregistre une image sans filigrane (logo filigrane, assets admin)."""
+    with Image.open(io.BytesIO(data)) as img:
+        img.load()
+        has_alpha = img.mode in {"RGBA", "LA"} or "transparency" in img.info
+        if has_alpha:
+            img = img.convert("RGBA")
+            filename = f"{uuid.uuid4()}.png"
+            output_path = os.path.join(upload_dir, filename)
+            img.save(output_path, "PNG")
+        else:
+            img = img.convert("RGB")
+            filename = f"{uuid.uuid4()}.webp"
+            output_path = os.path.join(upload_dir, filename)
+            img.save(output_path, "WEBP", quality=92, method=4)
+
+    return f"/uploads/{filename}", os.path.getsize(output_path)
 
 
 def process_image_bytes(
     data: bytes,
     settings: Dict[str, Any],
     upload_dir: str,
-) -> Tuple[str, int]:
-    quality = max(1, min(100, _safe_int(settings.get("webpQuality"), 85)))
+) -> Tuple[str, int, str, str]:
+    """Enregistre original HD + version filigranée + miniature."""
+    media = normalize_media_settings(settings)
+    hd_quality = max(1, min(100, _safe_int(media.get("hdWebpQuality"), 98)))
 
     with Image.open(io.BytesIO(data)) as img:
         img.load()
-        processed = apply_watermark(img, settings)
+        file_id = str(uuid.uuid4())
 
-        filename = f"{uuid.uuid4()}.webp"
+        rgb = img.convert("RGBA") if img.mode in {"RGBA", "LA"} else img.convert("RGB")
+        if rgb.mode == "RGBA":
+            flat = Image.new("RGB", rgb.size, (255, 255, 255))
+            flat.paste(rgb, mask=rgb.split()[3])
+            rgb = flat
+
+        original_filename = f"{file_id}_original.webp"
+        original_path = os.path.join(upload_dir, original_filename)
+        rgb.save(original_path, "WEBP", quality=hd_quality, method=6)
+        original_url = f"/uploads/{original_filename}"
+
+        processed = apply_watermark(img, media, upload_dir)
+        filename = f"{file_id}.webp"
         output_path = os.path.join(upload_dir, filename)
-        processed.save(output_path, "WEBP", quality=quality, method=4)
+        processed.save(output_path, "WEBP", quality=hd_quality, method=6)
+        thumb_url = save_thumbnail_from_image(processed, upload_dir, filename)
 
-    return f"/uploads/{filename}", os.path.getsize(output_path)
+    return f"/uploads/{filename}", os.path.getsize(output_path), thumb_url, original_url
+
+
+def apply_watermark_to_bytes(
+    data: bytes,
+    settings: Dict[str, Any],
+    upload_dir: str,
+    *,
+    output_format: str = "WEBP",
+    quality: Optional[int] = None,
+) -> bytes:
+    """Applique le filigrane studio (paramètres admin) sur des bytes image."""
+    media = normalize_media_settings(settings)
+    hd_quality = quality if quality is not None else _safe_int(media.get("hdWebpQuality"), 98)
+
+    with Image.open(io.BytesIO(data)) as img:
+        img.load()
+        processed = apply_watermark(img, media, upload_dir)
+        buf = io.BytesIO()
+        fmt = (output_format or "WEBP").upper()
+        if fmt == "JPEG":
+            processed.save(buf, "JPEG", quality=hd_quality, optimize=True)
+        else:
+            processed.save(buf, "WEBP", quality=hd_quality, method=6)
+        return buf.getvalue()
+
+
+def delivery_source_url(photo: Optional[Dict[str, Any]]) -> str:
+    """Source sans filigrane si disponible — pour appliquer les paramètres courants."""
+    if not photo:
+        return ""
+    return str(photo.get("originalUrl") or photo.get("hdUrl") or photo.get("url") or "")
+
+
+def should_apply_watermark_at_delivery(photo: Optional[Dict[str, Any]], source_url: str) -> bool:
+    """Ré-applique le filigrane avec les paramètres admin actuels."""
+    if photo and str(photo.get("originalUrl") or "").strip():
+        return True
+    raw = str(source_url or "").strip()
+    if raw.startswith(("http://", "https://")):
+        return True
+    return False
+
+
+def infer_original_url_from_hd(url: str, upload_dir: str) -> Optional[str]:
+    """Retrouve `{uuid}_original.webp` à partir de `{uuid}.webp` sur disque."""
+    if not url or not str(url).startswith("/uploads/"):
+        return None
+    filename = str(url).replace("/uploads/", "", 1)
+    if "_original" in filename:
+        return f"/uploads/{filename}"
+    stem, ext = os.path.splitext(filename)
+    candidate = f"{stem}_original{ext or '.webp'}"
+    if os.path.isfile(os.path.join(upload_dir, candidate)):
+        return f"/uploads/{candidate}"
+    return None
 
 
 def process_base64_data_url(
@@ -202,7 +521,7 @@ def process_base64_data_url(
     try:
         _, encoded = data_url.split(",", 1)
         raw = base64.b64decode(encoded)
-        url, _ = process_image_bytes(raw, settings, upload_dir)
+        url, _, _, _ = process_image_bytes(raw, settings, upload_dir)
         return url
     except Exception as exc:
         print(f"Erreur traitement base64: {exc}")

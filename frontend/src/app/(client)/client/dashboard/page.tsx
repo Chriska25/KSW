@@ -1,153 +1,168 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  Calendar,
-  Download,
   FolderHeart,
-  ExternalLink,
-  Lock,
-  CheckCircle2,
-  Copy,
-  ImageIcon,
+  CalendarDays,
+  FileSpreadsheet,
   Bell,
+  KeyRound,
+  ArrowRight,
+  Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { LoadingState } from '@/components/common/loading-state';
+import { ClientGalleriesList } from '@/components/client/client-galleries-list';
 import { useSettings } from '@/context/settings-context';
-import { ClientAuthGuard } from '@/components/client/client-auth-guard';
 import { getClientSession, normalizeClientEmail } from '@/lib/client-session';
-import { fetchClientGalleries, downloadGalleryPhotos } from '@/lib/gallery-client';
+import { fetchClientGalleries } from '@/lib/gallery-client';
 import { fetchClientNotifications } from '@/lib/client-notifications';
-import { DEFAULT_GALLERY_COVER } from '@/lib/gallery-defaults';
+import {
+  fetchClientBookings,
+  getUpcomingBooking,
+  bookingStatusLabel,
+  bookingStatusVariant,
+} from '@/lib/client-api';
 import type { GalleryAdminItem } from '@/lib/gallery-types';
 import type { AuthUser } from '@/hooks/use-auth';
-import { LoadingState } from '@/components/common/loading-state';
+import type { ClientBooking } from '@/lib/client-api';
+import { getApiErrorMessage } from '@/lib/api-error';
 
 export default function ClientDashboardPage() {
-  return (
-    <ClientAuthGuard>
-      <ClientDashboardContent />
-    </ClientAuthGuard>
-  );
+  return <ClientDashboardContent />;
 }
 
 function ClientDashboardContent() {
   const { settings } = useSettings();
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [clientGalleries, setClientGalleries] = useState<GalleryAdminItem[]>([]);
+  const [bookings, setBookings] = useState<ClientBooking[]>([]);
   const [loading, setLoading] = useState(true);
-  const [downloadMsg, setDownloadMsg] = useState<string | null>(null);
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState('');
   const [notifPreview, setNotifPreview] = useState<{ unread: number; latest?: string }>({ unread: 0 });
 
-  useEffect(() => {
-    const user = getClientSession();
-    setCurrentUser(user);
-
-    const load = async () => {
-      if (!user) return;
-      try {
-        const fromApi = await fetchClientGalleries();
-        setClientGalleries(fromApi);
-      } catch {
-        setClientGalleries([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-    fetchClientNotifications()
-      .then((r) =>
-        setNotifPreview({
-          unread: r.unreadCount,
-          latest: r.data[0]?.title,
-        })
-      )
-      .catch(() => {});
+  const load = useCallback(async () => {
+    setLoadError('');
+    try {
+      const [galleries, bookingList, notifs] = await Promise.all([
+        fetchClientGalleries(),
+        fetchClientBookings().catch(() => []),
+        fetchClientNotifications().catch(() => ({ data: [], unreadCount: 0 })),
+      ]);
+      setClientGalleries(galleries);
+      setBookings(bookingList);
+      setNotifPreview({
+        unread: notifs.unreadCount,
+        latest: notifs.data[0]?.title,
+      });
+    } catch (err: unknown) {
+      setLoadError(getApiErrorMessage(err, 'Impossible de charger votre espace client.'));
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const handleCopyKey = async (key: string) => {
-    try {
-      await navigator.clipboard.writeText(key);
-      setCopiedKey(key);
-      setTimeout(() => setCopiedKey(null), 2000);
-    } catch {
-      // ignore
-    }
-  };
-
-  const handleDownloadGallery = async (gal: GalleryAdminItem) => {
-    const photos = gal.photos || [];
-    if (photos.length === 0) return;
-    setDownloadMsg(`Téléchargement de ${photos.length} photo(s)…`);
-    try {
-      await downloadGalleryPhotos(photos);
-      setDownloadMsg('Téléchargements lancés dans votre navigateur.');
-    } catch {
-      setDownloadMsg('Erreur lors du téléchargement.');
-    }
-    setTimeout(() => setDownloadMsg(null), 4000);
-  };
+  useEffect(() => {
+    setCurrentUser(getClientSession());
+    load();
+  }, [load]);
 
   if (!currentUser) return null;
 
   const totalPhotos = clientGalleries.reduce((acc, g) => acc + (g.photos?.length || 0), 0);
+  const upcoming = getUpcomingBooking(bookings);
+  const paidBookings = bookings.filter((b) => b.paymentStatus === 'paid').length;
+
+  if (loading) {
+    return <LoadingState message="Chargement de votre espace client…" />;
+  }
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto">
-      {downloadMsg && (
-        <div className="fixed top-6 right-6 z-50 p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-xs font-medium shadow-2xl">
-          <CheckCircle2 className="h-4 w-4 inline mr-2" />
-          {downloadMsg}
-        </div>
-      )}
-
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
-            Bonjour, <span className="gold-gradient-text">{currentUser.name.split(' ')[0]}</span>
-          </h1>
-          <p className="text-zinc-400 text-sm mt-1">
-            Espace client {settings.studioName} — {normalizeClientEmail(currentUser.email)}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Link href="/galerie-privee">
-            <Button variant="outline" size="sm">
-              <Lock className="h-4 w-4 mr-1.5" /> Accès par clé
-            </Button>
-          </Link>
-          <Link href="/reservation">
-            <Button variant="gold" size="sm">
-              <Calendar className="h-4 w-4 mr-1.5" /> Réserver
-            </Button>
-          </Link>
+      <div className="glass-panel rounded-2xl border-amber-400/20 p-6 sm:p-8 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-48 h-48 bg-amber-400/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none" />
+        <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <Badge variant="gold" className="text-[10px]">
+              <Sparkles className="h-3 w-3 mr-1 inline" />
+              Espace client
+            </Badge>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
+              Bonjour, <span className="gold-gradient-text">{currentUser.name.split(' ')[0]}</span>
+            </h1>
+            <p className="text-zinc-400 text-sm">
+              {settings.studioName} — {normalizeClientEmail(currentUser.email)}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/client/reservations">
+              <Button variant="outline" size="sm">
+                <CalendarDays className="h-4 w-4 mr-1.5" /> Mes réservations
+              </Button>
+            </Link>
+            <Link href="/galerie-privee">
+              <Button variant="gold" size="sm">
+                <KeyRound className="h-4 w-4 mr-1.5" /> Accès par clé
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card className="glass-panel">
-          <CardContent className="pt-6">
+          <CardContent className="pt-5 pb-5">
             <div className="text-2xl font-bold text-white">{clientGalleries.length}</div>
-            <p className="text-xs text-zinc-400 mt-1">Galerie(s) privée(s)</p>
+            <p className="text-[11px] sm:text-xs text-zinc-400 mt-1">Galerie(s) privée(s)</p>
           </CardContent>
         </Card>
         <Card className="glass-panel">
-          <CardContent className="pt-6">
+          <CardContent className="pt-5 pb-5">
             <div className="text-2xl font-bold text-amber-400">{totalPhotos}</div>
-            <p className="text-xs text-zinc-400 mt-1">Photos disponibles</p>
+            <p className="text-[11px] sm:text-xs text-zinc-400 mt-1">Photos disponibles</p>
           </CardContent>
         </Card>
         <Card className="glass-panel">
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-white">{settings.depositRate}%</div>
-            <p className="text-xs text-zinc-400 mt-1">Acompte standard studio</p>
+          <CardContent className="pt-5 pb-5">
+            <div className="text-2xl font-bold text-white">{bookings.length}</div>
+            <p className="text-[11px] sm:text-xs text-zinc-400 mt-1">Réservation(s)</p>
+          </CardContent>
+        </Card>
+        <Card className="glass-panel">
+          <CardContent className="pt-5 pb-5">
+            <div className="text-2xl font-bold text-emerald-400">{paidBookings}</div>
+            <p className="text-[11px] sm:text-xs text-zinc-400 mt-1">Acompte(s) réglé(s)</p>
           </CardContent>
         </Card>
       </div>
+
+      {upcoming && (
+        <Card className="glass-panel border-amber-400/25">
+          <CardContent className="py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <p className="text-[10px] uppercase tracking-wider text-amber-400 font-semibold">Prochaine séance</p>
+              <h2 className="font-bold text-white">{upcoming.serviceTitle}</h2>
+              <p className="text-xs text-zinc-400">
+                {upcoming.date} à {upcoming.time}
+                {upcoming.reference ? ` • Réf. ${upcoming.reference}` : ''}
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Badge variant={bookingStatusVariant(upcoming.status, upcoming.paymentStatus)}>
+                {bookingStatusLabel(upcoming.status, upcoming.paymentStatus)}
+              </Badge>
+              <Link href="/client/reservations">
+                <Button variant="outline" size="sm" className="text-xs">
+                  Détails <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {notifPreview.unread > 0 && (
         <Link href="/client/notifications">
@@ -170,83 +185,35 @@ function ClientDashboardContent() {
         </Link>
       )}
 
-      <Card className="glass-panel" id="galleries">
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <FolderHeart className="h-5 w-5 text-amber-400" /> Vos galeries photos
-          </CardTitle>
-          <CardDescription>
-            Ouvrez une galerie, marquez vos favoris et téléchargez vos épreuves HD.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {loading ? (
-            <LoadingState message="Chargement de vos galeries…" />
-          ) : clientGalleries.length === 0 ? (
-            <div className="text-center py-12 space-y-4">
-              <ImageIcon className="h-12 w-12 text-zinc-600 mx-auto" />
-              <p className="text-sm text-zinc-400">Aucune galerie associée à votre compte pour le moment.</p>
-              <Link href="/galerie-privee">
-                <Button variant="gold" size="sm">Entrer une clé d&apos;accès</Button>
-              </Link>
-            </div>
-          ) : (
-            clientGalleries.map((gal) => (
-              <div
-                key={gal.id}
-                className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-5 flex flex-col lg:flex-row gap-5 lg:items-center lg:justify-between"
-              >
-                <div className="flex gap-4 min-w-0">
-                  <img
-                    src={gal.coverUrl || DEFAULT_GALLERY_COVER}
-                    alt=""
-                    className="h-20 w-28 object-cover rounded-xl border border-zinc-800 shrink-0"
-                    onError={(e) => {
-                      e.currentTarget.src = DEFAULT_GALLERY_COVER;
-                    }}
-                  />
-                  <div className="min-w-0 space-y-1">
-                    <h3 className="font-bold text-white truncate">{gal.title}</h3>
-                    <p className="text-xs text-zinc-400">
-                      {gal.photos?.length || 0} photos
-                      {gal.expiresAt ? ` • Expire le ${gal.expiresAt}` : ''}
-                    </p>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <code className="text-[11px] text-amber-400 font-mono bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800">
-                        {gal.accessKey}
-                      </code>
-                      <button
-                        type="button"
-                        onClick={() => handleCopyKey(gal.accessKey)}
-                        className="text-[11px] text-zinc-500 hover:text-amber-400 flex items-center gap-1"
-                      >
-                        <Copy className="h-3 w-3" />
-                        {copiedKey === gal.accessKey ? 'Copié !' : 'Copier'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-2 shrink-0">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDownloadGallery(gal)}
-                    disabled={!gal.photos?.length}
-                    className="text-xs"
-                  >
-                    <Download className="h-4 w-4 mr-1" /> Télécharger
-                  </Button>
-                  <Link href={`/client/galeries/${gal.accessKey}`}>
-                    <Button variant="gold" size="sm" className="text-xs font-bold">
-                      Ouvrir <ExternalLink className="h-3.5 w-3.5 ml-1" />
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          { href: '/client/galeries', label: 'Mes galeries', icon: FolderHeart, desc: 'Photos HD' },
+          { href: '/client/reservations', label: 'Réservations', icon: CalendarDays, desc: 'Agenda & statuts' },
+          { href: '/client/documents', label: 'Factures', icon: FileSpreadsheet, desc: 'Devis & PDF' },
+          { href: '/client/notifications', label: 'Notifications', icon: Bell, desc: 'Activité récente' },
+        ].map((item) => {
+          const Icon = item.icon;
+          return (
+            <Link key={item.href} href={item.href}>
+              <Card className="glass-panel h-full hover:border-amber-400/30 transition-colors cursor-pointer group">
+                <CardContent className="pt-5 pb-5 space-y-2">
+                  <Icon className="h-5 w-5 text-amber-400 group-hover:scale-110 transition-transform" />
+                  <p className="font-semibold text-white text-sm">{item.label}</p>
+                  <p className="text-[11px] text-zinc-500">{item.desc}</p>
+                </CardContent>
+              </Card>
+            </Link>
+          );
+        })}
+      </div>
+
+      <ClientGalleriesList
+        galleries={clientGalleries}
+        loading={false}
+        error={loadError}
+        onRetry={load}
+        showHeader
+      />
     </div>
   );
 }

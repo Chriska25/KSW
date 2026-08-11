@@ -10,6 +10,8 @@ interface ImageCropModalProps {
   open: boolean;
   imageSrc: string;
   aspectRatio?: number;
+  /** Libellé du format affiché (ex. 16:9). */
+  formatHint?: string;
   title?: string;
   onClose: () => void;
   onConfirm: (croppedDataUrl: string) => void;
@@ -22,6 +24,7 @@ export function ImageCropModal({
   open,
   imageSrc,
   aspectRatio = 4 / 3,
+  formatHint,
   title = 'Recadrer l\'image',
   onClose,
   onConfirm,
@@ -82,6 +85,9 @@ export function ImageCropModal({
 
   const cropW = VIEWPORT_W * 0.85;
   const cropH = cropW / aspectRatio;
+  const formatLabel =
+    formatHint ||
+    (Math.abs(aspectRatio - 16 / 9) < 0.02 ? '16:9' : Math.abs(aspectRatio - 4 / 3) < 0.02 ? '4:3' : undefined);
 
   return (
     <AdminModal
@@ -103,8 +109,14 @@ export function ImageCropModal({
     >
       <div className="space-y-5">
         <p className="text-xs text-zinc-400">
-          Glissez l&apos;image pour ajuster le cadrage. Format recommandé :{' '}
-          <span className="text-amber-400 font-semibold">4:3</span> (couverture prestation).
+          Glissez l&apos;image pour ajuster le cadrage.
+          {formatLabel ? (
+            <>
+              {' '}
+              Format recommandé :{' '}
+              <span className="text-amber-400 font-semibold">{formatLabel}</span>.
+            </>
+          ) : null}
         </p>
 
         <div
@@ -143,7 +155,7 @@ export function ImageCropModal({
               }}
             />
             <div className="absolute bottom-2 left-2 text-[10px] font-mono text-amber-400/80 bg-zinc-950/80 px-2 py-0.5 rounded">
-              4:3
+              {formatLabel || 'Recadrage'}
             </div>
           </div>
         </div>

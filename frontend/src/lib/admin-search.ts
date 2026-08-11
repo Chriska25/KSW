@@ -1,4 +1,5 @@
 import apiClient from '@/lib/api-client';
+import { rememberBackupTimestamp } from '@/lib/admin-security-api';
 
 export type AdminSearchResultType = 'user' | 'booking' | 'contact' | 'blog' | 'gallery';
 
@@ -25,8 +26,16 @@ export async function searchAdmin(query: string): Promise<AdminSearchResult[]> {
   return Array.isArray(res.data?.data) ? res.data.data : [];
 }
 
-export async function downloadAdminBackup(): Promise<void> {
+export interface AdminBackupMeta {
+  version?: number;
+  exportedAt?: string;
+  counts?: Record<string, number>;
+  secretsRedacted?: boolean;
+}
+
+export async function downloadAdminBackup(): Promise<AdminBackupMeta | null> {
   const res = await apiClient.get('/admin/backup/export');
+  const meta = (res.data?.meta || null) as AdminBackupMeta | null;
   const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
@@ -35,4 +44,6 @@ export async function downloadAdminBackup(): Promise<void> {
   link.download = `ksw-studio-backup-${stamp}.json`;
   link.click();
   URL.revokeObjectURL(url);
+  rememberBackupTimestamp(meta?.exportedAt);
+  return meta;
 }

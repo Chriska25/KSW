@@ -1,321 +1,367 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import {
-  Calendar as CalendarIcon,
+  CalendarDays,
   Clock,
-  CheckCircle2,
-  Search,
-  Edit,
+  ChevronLeft,
+  ChevronRight,
+  Users,
+  AlertCircle,
+  Heart,
+  Wallet,
+  List,
+  Download,
+  RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { useSettings } from '@/context/settings-context';
-import { useAdminToast } from '@/components/admin/admin-toast';
 import { LoadingState } from '@/components/common/loading-state';
+import { AdminPageHeader } from '@/components/admin/admin-page-header';
+import { useSettings } from '@/context/settings-context';
+import { fetchAdminBookings } from '@/lib/admin-crm-api';
+import { exportBookingsCsv } from '@/lib/admin-dashboard';
+import { DEFAULT_TIME_SLOTS } from '@/lib/booking-availability';
 import {
-  fetchAdminBookings,
-  mapBookingToRow,
-  updateBooking,
-  updateBookingStatus,
-} from '@/lib/admin-crm-api';
+  addDays,
+  computeBookingScheduleStats,
+  formatFullDay,
+  paymentLabelFr,
+  startOfWeek,
+  statusBadgeVariant,
+  statusLabelFr,
+  type DaySchedule,
+  type ScheduleBooking,
+} from '@/lib/booking-schedule-utils';
 import { getApiErrorMessage } from '@/lib/api-error';
 
-type BookingRow = ReturnType<typeof mapBookingToRow>;
+function SlotGrid({ day }: { day: DaySchedule }) {
+  const bookedMap = new Map(day.bookings.map((b) => [b.time, b]));
 
-export default function AdminReservationsPage() {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+      {DEFAULT_TIME_SLOTS.map((slot) => {
+        const booking = bookedMap.get(slot);
+        const free = !booking;
+        return (
+          <div
+            key={slot}
+            className={`rounded-xl border p-3 min-h-[88px] flex flex-col justify-between ${
+              free
+                ? 'border-emerald-500/20 bg-emerald-500/5'
+                : booking.isWedding
+                  ? 'border-rose-400/30 bg-rose-500/10'
+                  : 'border-amber-400/30 bg-amber-400/10'
+            }`}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-bold text-white font-mono">{slot}</span>
+              <Badge variant={free ? 'success' : booking.isWedding ? 'warning' : 'gold'} className="text-[10px]">
+                {free ? 'Libre' : booking.isWedding ? 'Mariage' : 'Réservé'}
+              </Badge>
+            </div>
+            {booking ? (
+              <div className="mt-2 space-y-0.5 min-w-0">
+                <p className="text-xs font-semibold text-white truncate">{booking.clientName}</p>
+                <p className="text-[10px] text-zinc-400 truncate">{booking.serviceTitle}</p>
+                <p className="text-[10px] font-mono text-amber-400/80">{booking.reference}</p>
+              </div>
+            ) : (
+              <p className="text-[11px] text-emerald-300/80 mt-2">Créneau disponible</p>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function UpcomingRow({ booking }: { booking: ScheduleBooking }) {
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-3 border-b border-zinc-800/60 last:border-0">
+      <div className="min-w-0 space-y-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-mono text-[11px] text-amber-400">{booking.reference}</span>
+          <Badge variant={statusBadgeVariant(booking.status)} className="text-[10px]">
+            {statusLabelFr(booking.status)}
+          </Badge>
+          {booking.isWedding && (
+            <Badge variant="warning" className="text-[10px]">Mariage</Badge>
+          )}
+        </div>
+        <p className="text-sm font-semibold text-white truncate">{booking.clientName}</p>
+        <p className="text-xs text-zinc-400 truncate">{booking.serviceTitle}</p>
+      </div>
+      <div className="text-right shrink-0">
+        <p className="text-sm font-bold text-white">{formatFullDay(booking.date)}</p>
+        <p className="text-xs text-zinc-400 flex items-center justify-end gap-1">
+          <Clock className="h-3 w-3" /> {booking.time}
+        </p>
+        <p className="text-[10px] text-zinc-500 mt-1">{paymentLabelFr(booking.paymentStatus)}</p>
+      </div>
+    </div>
+  );
+}
+
+export default function AdminReservationsDashboardPage() {
   const { formatPrice } = useSettings();
-  const { toast } = useAdminToast();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
-  const [editingBooking, setEditingBooking] = useState<BookingRow | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editForm, setEditForm] = useState<Partial<BookingRow>>({});
-  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [bookings, setBookings] = useState<Awaited<ReturnType<typeof fetchAdminBookings>>>([]);
+  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()));
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
 
-  const loadBookings = useCallback(async () => {
-    setLoadError('');
+  const load = useCallback(async () => {
+    setError('');
+    setLoading(true);
     try {
       const data = await fetchAdminBookings();
-      setBookings(data.map(mapBookingToRow));
+      setBookings(data);
     } catch (err: unknown) {
-      setLoadError(getApiErrorMessage(err, 'Impossible de charger les réservations.'));
+      setError(getApiErrorMessage(err, 'Impossible de charger les réservations.'));
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadBookings();
-  }, [loadBookings]);
+    void load();
+  }, [load]);
 
-  const handleOpenEdit = (b: BookingRow) => {
-    setEditingBooking(b);
-    setEditForm({ ...b });
-    setIsEditModalOpen(true);
-  };
+  const stats = useMemo(
+    () => computeBookingScheduleStats(bookings, weekStart),
+    [bookings, weekStart]
+  );
 
-  const handleSaveEdit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingBooking) return;
-    setSaving(true);
-    try {
-      const updated = await updateBooking(editingBooking.id, {
-        first_name: editForm.clientName?.split(' ')[0],
-        last_name: editForm.clientName?.split(' ').slice(1).join(' '),
-        email: editForm.clientEmail,
-        service_title: editForm.serviceTitle,
-        date: editForm.date,
-        time: editForm.startTime,
-        location: editForm.location,
-        total_price: editForm.totalAmount,
-        deposit_amount: editForm.depositAmount,
-      });
-      setBookings((prev) =>
-        prev.map((b) => (b.id === editingBooking.id ? mapBookingToRow(updated) : b))
-      );
-      setIsEditModalOpen(false);
-      toast('Réservation mise à jour', 'success');
-    } catch (err: unknown) {
-      toast(getApiErrorMessage(err, 'Erreur lors de la sauvegarde.'), 'error');
-    } finally {
-      setSaving(false);
-    }
-  };
+  const selectedDay =
+    stats.weekDays.find((d) => d.date === selectedDate) ||
+    stats.weekDays.find((d) => d.isToday) ||
+    stats.weekDays[0];
 
-  const handleUpdateStatus = async (
-    id: string,
-    newStatus: BookingRow['status']
-  ) => {
-    try {
-      const updated = await updateBookingStatus(id, newStatus);
-      setBookings((prev) =>
-        prev.map((b) => (b.id === id ? mapBookingToRow(updated) : b))
-      );
-      toast('Statut mis à jour', 'success');
-    } catch (err: unknown) {
-      toast(getApiErrorMessage(err, 'Impossible de mettre à jour le statut.'), 'error');
-    }
-  };
-
-  const filteredBookings = bookings.filter((b) => {
-    const matchesSearch =
-      b.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.serviceTitle.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || b.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const weekLabel = `${formatFullDay(stats.weekDays[0]?.date || '')} → ${formatFullDay(stats.weekDays[6]?.date || '')}`;
 
   if (loading) {
-    return <LoadingState message="Chargement des réservations…" />;
+    return <LoadingState message="Chargement du planning séances…" />;
   }
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-white">
-            Gestion du <span className="gold-gradient-text">Planning & Réservations</span>
-          </h1>
-          <p className="text-zinc-400 text-sm mt-1">
-            Demandes entrantes depuis le tunnel public — données synchronisées avec la base.
-          </p>
-        </div>
-        <Button variant="outline" size="sm" onClick={loadBookings}>
-          Actualiser
-        </Button>
-      </div>
+      <AdminPageHeader
+        title="Planning"
+        accent="Séances"
+        description="Vue agenda des réservations — créneaux, mariages et disponibilités."
+        actions={
+          <>
+            <Button variant="outline" size="sm" onClick={load} className="gap-1.5">
+              <RefreshCw className="h-3.5 w-3.5" /> Actualiser
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => exportBookingsCsv(bookings)} className="gap-1.5">
+              <Download className="h-3.5 w-3.5" /> Export CSV
+            </Button>
+            <Link href="/admin/reservations/list">
+              <Button variant="gold" size="sm" className="gap-1.5">
+                <List className="h-3.5 w-3.5" /> Liste complète
+              </Button>
+            </Link>
+          </>
+        }
+      />
 
-      {loadError && (
+      {error && (
         <p className="text-rose-400 text-sm rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3">
-          {loadError}
+          {error}
         </p>
       )}
 
-      <div className="glass-panel p-4 rounded-2xl border-zinc-800 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="relative w-full md:w-80">
-          <Search className="h-4 w-4 absolute left-3 top-3 text-zinc-500" />
-          <Input
-            placeholder="Rechercher par référence, client..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 h-10 text-xs"
-          />
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {[
-            { id: 'all', label: 'Toutes' },
-            { id: 'pending', label: 'En attente' },
-            { id: 'confirmed', label: 'Confirmées' },
-            { id: 'completed', label: 'Effectuées' },
-          ].map((btn) => (
-            <button
-              key={btn.id}
-              onClick={() => setStatusFilter(btn.id)}
-              className={`px-4 py-2 text-xs font-semibold rounded-xl border transition-all cursor-pointer ${
-                statusFilter === btn.id
-                  ? 'border-amber-400 bg-amber-400 text-zinc-950'
-                  : 'border-zinc-800 glass-panel text-zinc-300 hover:border-zinc-700'
-              }`}
-            >
-              {btn.label}
-            </button>
-          ))}
-        </div>
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <Card className="glass-panel border-amber-400/30">
+          <CardContent className="pt-5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Aujourd&apos;hui</span>
+              <CalendarDays className="h-4 w-4 text-amber-400" />
+            </div>
+            <p className="text-2xl font-extrabold text-white mt-2">{stats.todayCount}</p>
+            <p className="text-[11px] text-zinc-500">séance(s)</p>
+          </CardContent>
+        </Card>
+        <Card className="glass-panel">
+          <CardContent className="pt-5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Cette semaine</span>
+              <Users className="h-4 w-4 text-zinc-400" />
+            </div>
+            <p className="text-2xl font-extrabold text-white mt-2">{stats.weekCount}</p>
+            <p className="text-[11px] text-zinc-500">réservation(s) actives</p>
+          </CardContent>
+        </Card>
+        <Card className="glass-panel">
+          <CardContent className="pt-5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">En attente</span>
+              <AlertCircle className="h-4 w-4 text-amber-400" />
+            </div>
+            <p className="text-2xl font-extrabold text-white mt-2">{stats.pendingCount}</p>
+            <p className="text-[11px] text-zinc-500">à confirmer</p>
+          </CardContent>
+        </Card>
+        <Card className="glass-panel">
+          <CardContent className="pt-5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Acomptes</span>
+              <Wallet className="h-4 w-4 text-rose-400" />
+            </div>
+            <p className="text-2xl font-extrabold text-white mt-2">{stats.unpaidCount}</p>
+            <p className="text-[11px] text-zinc-500">non payés</p>
+          </CardContent>
+        </Card>
+        <Card className="glass-panel border-rose-400/20">
+          <CardContent className="pt-5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Mariages</span>
+              <Heart className="h-4 w-4 text-rose-400" />
+            </div>
+            <p className="text-2xl font-extrabold text-white mt-2">{stats.weddingWeekCount}</p>
+            <p className="text-[11px] text-zinc-500">cette semaine</p>
+          </CardContent>
+        </Card>
       </div>
 
-      <Card className="glass-panel space-y-4">
-        <CardHeader>
-          <CardTitle className="text-xl">Agenda & Demandes ({filteredBookings.length})</CardTitle>
-          <CardDescription>Réservations enregistrées via le site public et Stripe.</CardDescription>
+      <Card className="glass-panel">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <CardTitle className="text-lg">Semaine en cours</CardTitle>
+            <CardDescription className="capitalize">{weekLabel}</CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const prev = addDays(weekStart, -7);
+                setWeekStart(prev);
+                setSelectedDate(prev.toISOString().slice(0, 10));
+              }}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const now = startOfWeek(new Date());
+                setWeekStart(now);
+                setSelectedDate(new Date().toISOString().slice(0, 10));
+              }}
+            >
+              Aujourd&apos;hui
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const next = addDays(weekStart, 7);
+                setWeekStart(next);
+                setSelectedDate(next.toISOString().slice(0, 10));
+              }}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
-          {filteredBookings.length === 0 ? (
-            <p className="text-zinc-500 text-sm text-center py-8">Aucune réservation pour le moment.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-zinc-300">
-                <thead className="bg-zinc-950/80 text-xs font-semibold uppercase text-zinc-400 border-b border-zinc-800">
-                  <tr>
-                    <th className="py-3 px-4">Réf.</th>
-                    <th className="py-3 px-4">Client</th>
-                    <th className="py-3 px-4">Prestation</th>
-                    <th className="py-3 px-4">Date</th>
-                    <th className="py-3 px-4">Tarif / Acompte</th>
-                    <th className="py-3 px-4">Statut</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-800/60">
-                  {filteredBookings.map((b) => (
-                    <tr key={b.id} className="hover:bg-zinc-900/40 transition-colors">
-                      <td className="py-3.5 px-4 font-mono text-xs text-amber-400">{b.reference}</td>
-                      <td className="py-3.5 px-4">
-                        <div className="font-semibold text-white">{b.clientName}</div>
-                        <div className="text-xs text-zinc-500">{b.clientEmail}</div>
-                      </td>
-                      <td className="py-3.5 px-4">{b.serviceTitle}</td>
-                      <td className="py-3.5 px-4 text-xs">
-                        <div className="flex items-center text-white">
-                          <CalendarIcon className="h-3.5 w-3.5 mr-1 text-amber-400" /> {b.date}
-                        </div>
-                        <div className="flex items-center text-zinc-400">
-                          <Clock className="h-3.5 w-3.5 mr-1 text-amber-400" /> {b.startTime}
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <div className="font-extrabold text-white">{formatPrice(b.totalAmount)}</div>
-                        <div className="text-xs text-emerald-400">Acompte: {formatPrice(b.depositAmount)}</div>
-                        {b.paymentStatus === 'paid' && (
-                          <div className="text-[10px] text-emerald-400 mt-0.5">Stripe ✓</div>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <Badge
-                          variant={
-                            b.status === 'confirmed'
-                              ? 'success'
-                              : b.status === 'pending'
-                                ? 'warning'
-                                : 'outline'
-                          }
-                        >
-                          {b.status === 'confirmed'
-                            ? 'Confirmé'
-                            : b.status === 'pending'
-                              ? 'En attente'
-                              : b.status === 'completed'
-                                ? 'Effectué'
-                                : 'Annulé'}
-                        </Badge>
-                      </td>
-                      <td className="py-3.5 px-4 text-right space-x-2">
-                        <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(b)}>
-                          <Edit className="h-3.5 w-3.5 mr-1" /> Modifier
-                        </Button>
-                        {b.status === 'pending' && (
-                          <Button variant="gold" size="sm" onClick={() => handleUpdateStatus(b.id, 'confirmed')}>
-                            Valider
-                          </Button>
-                        )}
-                        {b.status === 'confirmed' && (
-                          <Button variant="outline" size="sm" onClick={() => handleUpdateStatus(b.id, 'completed')}>
-                            Terminer
-                          </Button>
-                        )}
-                        {b.status !== 'cancelled' && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive"
-                            onClick={() => handleUpdateStatus(b.id, 'cancelled')}
-                          >
-                            Annuler
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+            {stats.weekDays.map((day) => {
+              const selected = day.date === selectedDate;
+              return (
+                <button
+                  key={day.date}
+                  type="button"
+                  onClick={() => setSelectedDate(day.date)}
+                  className={`rounded-xl border p-3 text-left transition-all ${
+                    selected
+                      ? 'border-amber-400 bg-amber-400/15 ring-1 ring-amber-400/40'
+                      : day.isToday
+                        ? 'border-amber-400/40 bg-zinc-900/60'
+                        : 'border-zinc-800 bg-zinc-950/40 hover:border-zinc-600'
+                  }`}
+                >
+                  <p className="text-[10px] uppercase text-zinc-500 font-semibold">{day.label.split(' ')[0]}</p>
+                  <p className="text-lg font-extrabold text-white mt-1">{day.label.split(' ').slice(1).join(' ')}</p>
+                  <p className="text-[11px] mt-2 text-zinc-400">
+                    {day.bookings.length} séance{day.bookings.length !== 1 ? 's' : ''}
+                  </p>
+                  <p className="text-[10px] text-emerald-400/90">{day.freeSlots.length} créneau(x) libre(s)</p>
+                </button>
+              );
+            })}
+          </div>
         </CardContent>
       </Card>
 
-      {isEditModalOpen && editingBooking && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <Card className="glass-panel max-w-lg w-full border-amber-400/40">
-            <CardHeader className="flex flex-row items-center justify-between border-b border-zinc-800 pb-3">
-              <CardTitle className="text-xl">Modifier {editingBooking.reference}</CardTitle>
-              <button type="button" onClick={() => setIsEditModalOpen(false)} className="text-zinc-400 hover:text-white">
-                ✕
-              </button>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSaveEdit} className="space-y-4 text-xs">
-                <Input
-                  required
-                  value={editForm.clientName || ''}
-                  onChange={(e) => setEditForm({ ...editForm, clientName: e.target.value })}
-                  placeholder="Nom client"
-                />
-                <Input
-                  type="email"
-                  required
-                  value={editForm.clientEmail || ''}
-                  onChange={(e) => setEditForm({ ...editForm, clientEmail: e.target.value })}
-                  placeholder="Email"
-                />
-                <Input
-                  required
-                  value={editForm.serviceTitle || ''}
-                  onChange={(e) => setEditForm({ ...editForm, serviceTitle: e.target.value })}
-                  placeholder="Prestation"
-                />
-                <div className="grid grid-cols-2 gap-4">
-                  <Input type="date" value={editForm.date || ''} onChange={(e) => setEditForm({ ...editForm, date: e.target.value })} />
-                  <Input value={editForm.startTime || ''} onChange={(e) => setEditForm({ ...editForm, startTime: e.target.value })} placeholder="Heure" />
-                </div>
-                <div className="flex justify-end gap-3 pt-2">
-                  <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)}>
-                    Annuler
-                  </Button>
-                  <Button type="submit" variant="gold" disabled={saving}>
-                    {saving ? 'Enregistrement…' : 'Enregistrer'}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
+      {selectedDay && (
+        <Card className="glass-panel border-amber-400/20">
+          <CardHeader>
+            <CardTitle className="text-lg capitalize">{formatFullDay(selectedDay.date)}</CardTitle>
+            <CardDescription>
+              {selectedDay.bookings.length} réservation(s) · {selectedDay.freeSlots.length} créneau(x) disponible(s)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <SlotGrid day={selectedDay} />
+            {selectedDay.bookings.length > 0 && (
+              <div className="rounded-xl border border-zinc-800 overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-zinc-950/80 text-xs uppercase text-zinc-500">
+                    <tr>
+                      <th className="py-2.5 px-4 text-left">Heure</th>
+                      <th className="py-2.5 px-4 text-left">Client</th>
+                      <th className="py-2.5 px-4 text-left">Prestation</th>
+                      <th className="py-2.5 px-4 text-left">Statut</th>
+                      <th className="py-2.5 px-4 text-right">Montant</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-800/60">
+                    {selectedDay.bookings.map((b) => (
+                      <tr key={b.id} className="hover:bg-zinc-900/40">
+                        <td className="py-3 px-4 font-mono text-amber-400">{b.time}</td>
+                        <td className="py-3 px-4">
+                          <div className="font-medium text-white">{b.clientName}</div>
+                          <div className="text-xs text-zinc-500">{b.clientEmail}</div>
+                        </td>
+                        <td className="py-3 px-4 text-zinc-300">{b.serviceTitle}</td>
+                        <td className="py-3 px-4">
+                          <Badge variant={statusBadgeVariant(b.status)} className="text-[10px]">
+                            {statusLabelFr(b.status)}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4 text-right text-zinc-300">{formatPrice(b.totalAmount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
+
+      <Card className="glass-panel">
+        <CardHeader>
+          <CardTitle className="text-lg">Prochaines séances</CardTitle>
+          <CardDescription>Les 12 prochaines réservations à venir.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {stats.upcoming.length === 0 ? (
+            <p className="text-sm text-zinc-500 text-center py-8">Aucune séance à venir.</p>
+          ) : (
+            stats.upcoming.map((b) => (
+              <UpcomingRow key={b.id} booking={b} />
+            ))
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

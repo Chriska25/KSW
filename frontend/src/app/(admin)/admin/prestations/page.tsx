@@ -24,6 +24,7 @@ import { useSettings } from '@/context/settings-context';
 import { AdminModal } from '@/components/admin/admin-modal';
 import { ImageCropModal } from '@/components/admin/image-crop-modal';
 import { useAdminToast } from '@/components/admin/admin-toast';
+import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import type { ServiceItem } from '@/lib/service-types';
 
 export default function AdminPrestationsPage() {
@@ -184,20 +185,17 @@ export default function AdminPrestationsPage() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
-            Catalogue <span className="gold-gradient-text">Prestations</span>
-          </h1>
-          <p className="text-zinc-400 text-sm mt-1">
-            Gérez vos formules, tarifs, images de couverture et publication.
-          </p>
-        </div>
-        <Button variant="gold" size="sm" onClick={handleOpenAddModal} className="space-x-2 shrink-0">
-          <Plus className="h-4 w-4" />
-          <span>Nouvelle prestation</span>
-        </Button>
-      </div>
+      <AdminPageHeader
+        title="Catalogue"
+        accent="Prestations"
+        description="Gérez vos formules, tarifs, images de couverture et publication."
+        actions={
+          <Button variant="gold" size="sm" onClick={handleOpenAddModal} className="space-x-2 shrink-0">
+            <Plus className="h-4 w-4" />
+            <span>Nouvelle prestation</span>
+          </Button>
+        }
+      />
 
       <div className="glass-panel p-4 rounded-2xl border-zinc-800 flex flex-col md:flex-row items-stretch md:items-center gap-3">
         <div className="relative flex-1 md:max-w-sm">
@@ -214,6 +212,7 @@ export default function AdminPrestationsPage() {
           <option value="Mariage">Mariage</option>
           <option value="Portrait">Portrait</option>
           <option value="Corporate">Corporate</option>
+          <option value="Événement">Événement</option>
         </select>
         <select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)} className={selectClass}>
           <option value="all">Tous statuts</option>
@@ -335,6 +334,7 @@ export default function AdminPrestationsPage() {
                 <option value="Mariage">Mariage</option>
                 <option value="Portrait">Portrait</option>
                 <option value="Corporate">Corporate</option>
+                <option value="Événement">Événement</option>
               </select>
             </div>
             <div>

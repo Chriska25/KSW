@@ -21,6 +21,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { LoadingState } from '@/components/common/loading-state';
+import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { useAdminToast } from '@/components/admin/admin-toast';
 import { getApiErrorMessage } from '@/lib/api-error';
 import {
@@ -218,20 +219,17 @@ export default function AdminBlogPage() {
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-white">
-            CMS Blog & <span className="gold-gradient-text">Articles</span>
-          </h1>
-          <p className="text-zinc-400 text-sm mt-1">
-            Gestion complète des articles, catégories, mots-clés SEO, brouillons et commentaires.
-          </p>
-        </div>
-        <Button variant="gold" size="sm" onClick={handleOpenAdd} className="space-x-2">
-          <Plus className="h-4 w-4" />
-          <span>Nouvel Article</span>
-        </Button>
-      </div>
+      <AdminPageHeader
+        title="CMS Blog &"
+        accent="Articles"
+        description="Gestion complète des articles, catégories, mots-clés SEO, brouillons et commentaires."
+        actions={
+          <Button variant="gold" size="sm" onClick={handleOpenAdd} className="space-x-2">
+            <Plus className="h-4 w-4" />
+            <span>Nouvel Article</span>
+          </Button>
+        }
+      />
 
       {/* Table Card */}
       <Card className="glass-panel space-y-4">

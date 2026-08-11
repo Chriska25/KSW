@@ -11,6 +11,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/contact',
     '/reservation',
     '/galerie-privee',
+    '/legal',
+    '/privacy',
   ];
 
   return routes.map((route) => ({

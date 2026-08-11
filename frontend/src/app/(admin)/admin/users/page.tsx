@@ -33,6 +33,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { LoadingState } from '@/components/common/loading-state';
+import { AdminPageHeader } from '@/components/admin/admin-page-header';
 
 export interface UserAccountItem {
   id: string;
@@ -397,19 +398,12 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-white">
-            Gestion <span className="gold-gradient-text">Utilisateurs & Rôles</span>
-          </h1>
-          <p className="text-zinc-400 text-sm mt-1">
-            Administration de l'équipe, définition des rôles personnalisés et matrice des permissions.
-          </p>
-        </div>
-
-        <div className="flex items-center space-x-3">
-          {activeTab === 'users' ? (
+      <AdminPageHeader
+        title="Gestion"
+        accent="Utilisateurs & Rôles"
+        description="Administration de l'équipe, définition des rôles personnalisés et matrice des permissions."
+        actions={
+          activeTab === 'users' ? (
             <Button variant="gold" size="sm" onClick={handleOpenAddUser} className="space-x-2">
               <UserPlus className="h-4 w-4" />
               <span>Nouvel Utilisateur</span>
@@ -419,9 +413,9 @@ export default function AdminUsersPage() {
               <Plus className="h-4 w-4" />
               <span>Nouveau Rôle</span>
             </Button>
-          )}
-        </div>
-      </div>
+          )
+        }
+      />
 
       {/* Tabs Navigation */}
       <div className="flex items-center space-x-3 border-b border-zinc-800 pb-3">

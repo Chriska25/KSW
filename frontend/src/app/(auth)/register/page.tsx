@@ -1,16 +1,27 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/use-auth';
+import { safeRedirect } from '@/lib/safe-redirect';
 
 export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="text-zinc-400 text-sm text-center py-8">Chargement…</div>}>
+      <RegisterPageContent />
+    </Suspense>
+  );
+}
+
+function RegisterPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get('redirect');
   const { register, loading, error } = useAuth();
   const [formData, setFormData] = useState({
     firstName: '',
@@ -19,12 +30,21 @@ export default function RegisterPage() {
     password: '',
   });
 
+  const [successMessage, setSuccessMessage] = useState('');
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSuccessMessage('');
     try {
-      await register(formData);
-      router.push('/client/dashboard');
-    } catch (err) {
+      const res = await register(formData);
+      if (res?.user?.status === 'pending') {
+        setSuccessMessage(
+          res.message || 'Compte créé. Votre accès sera activé après validation par l\'administrateur.'
+        );
+        return;
+      }
+      router.push(safeRedirect(redirect, '/client/dashboard'));
+    } catch {
       // Handled in hook
     }
   };
@@ -39,6 +59,14 @@ export default function RegisterPage() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleRegister} className="space-y-4">
+          {successMessage && (
+            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs">
+              {successMessage}{' '}
+              <Link href="/login" className="underline font-semibold">
+                Se connecter
+              </Link>
+            </div>
+          )}
           {error && (
             <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs">
               {error}
@@ -94,7 +122,10 @@ export default function RegisterPage() {
 
           <div className="pt-4 border-t border-zinc-800 text-center text-xs text-zinc-400">
             Déjà un compte ?{' '}
-            <Link href="/login" className="text-amber-400 font-semibold hover:underline">
+            <Link
+              href={redirect ? `/login?redirect=${encodeURIComponent(redirect)}` : '/login'}
+              className="text-amber-400 font-semibold hover:underline"
+            >
               Se connecter
             </Link>
           </div>

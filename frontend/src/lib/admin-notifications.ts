@@ -1,4 +1,4 @@
-import apiClient from '@/lib/api-client';
+import apiClient, { API_SMTP_TEST_TIMEOUT_MS } from '@/lib/api-client';
 
 export type NotificationType = 'booking' | 'contact' | 'payment' | 'system';
 export type NotificationChannel = 'internal' | 'email' | 'sms' | 'whatsapp' | 'push';
@@ -37,7 +37,7 @@ export async function sendTestNotification(): Promise<AdminNotification> {
 }
 
 export async function sendAdminTestEmail(to?: string): Promise<void> {
-  await apiClient.post('/admin/email/test', { to: to || undefined });
+  await apiClient.post('/admin/email/test', { to: to || undefined }, { timeout: API_SMTP_TEST_TIMEOUT_MS });
 }
 
 export function notificationIcon(type: NotificationType): 'booking' | 'contact' | 'payment' | 'system' {

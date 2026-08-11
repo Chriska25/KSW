@@ -14,6 +14,7 @@ import {
   Quote,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -148,27 +149,23 @@ export default function AdminTemoignagesPage() {
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-white">
-            Modération des <span className="gold-gradient-text">Témoignages & Avis Clients</span>
-          </h1>
-          <p className="text-zinc-400 text-sm mt-1">
-            Validation des avis déposés, contrôle des notes (1 à 5 étoiles) et affichage sur le site public.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={loadTestimonials} className="space-x-2">
-            <Search className="h-4 w-4" />
-            <span>Actualiser</span>
-          </Button>
-          <Button variant="gold" size="sm" onClick={handleOpenAdd} className="space-x-2">
-            <Plus className="h-4 w-4" />
-            <span>Ajouter un Témoignage</span>
-          </Button>
-        </div>
-      </div>
+      <AdminPageHeader
+        title="Modération des"
+        accent="Témoignages & Avis Clients"
+        description="Validation des avis déposés, contrôle des notes (1 à 5 étoiles) et affichage sur le site public."
+        actions={
+          <>
+            <Button variant="outline" size="sm" onClick={loadTestimonials} className="space-x-2">
+              <Search className="h-4 w-4" />
+              <span>Actualiser</span>
+            </Button>
+            <Button variant="gold" size="sm" onClick={handleOpenAdd} className="space-x-2">
+              <Plus className="h-4 w-4" />
+              <span>Ajouter un Témoignage</span>
+            </Button>
+          </>
+        }
+      />
 
       {/* Table Card */}
       <Card className="glass-panel space-y-4">

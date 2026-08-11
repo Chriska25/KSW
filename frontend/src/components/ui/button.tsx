@@ -13,13 +13,13 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     const variants = {
       primary:
-        'bg-amber-400 text-zinc-950 hover:bg-amber-300 font-semibold shadow-lg shadow-amber-400/20 hover:shadow-amber-400/30 hover:scale-[1.02]',
+        'bg-amber-400 text-zinc-100 hover:bg-amber-300 font-semibold shadow-lg shadow-amber-400/20 hover:shadow-amber-400/30 hover:scale-[1.02]',
       secondary:
         'bg-zinc-800 text-zinc-100 hover:bg-zinc-700 border border-zinc-700/60',
       outline:
         'border border-zinc-700 text-zinc-200 hover:bg-zinc-800/80 hover:border-zinc-500',
       ghost: 'text-zinc-300 hover:bg-zinc-800/50 hover:text-white',
-      gold: 'bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 text-zinc-950 font-bold shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-[1.02]',
+      gold: 'bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 text-zinc-100 font-bold shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-[1.02]',
     };
 
     const sizes = {

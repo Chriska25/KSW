@@ -14,6 +14,8 @@ services:
     volumes:
       - ./backend:/app
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    env_file:
+      - .env
     environment:
       - POSTGRES_USER=studio_user
       - POSTGRES_PASSWORD=studio_password
@@ -21,6 +23,20 @@ services:
       - DB_HOST=postgres
       - DB_PORT=5432
       - RUNNING_IN_DOCKER=true
+      - MAILTRAP_API_TOKEN=${MAILTRAP_API_TOKEN:-}
+      - GMAIL_APP_PASSWORD=${GMAIL_APP_PASSWORD:-}
+      - GMAIL_USE_API=${GMAIL_USE_API:-}
+      - GMAIL_CLIENT_ID=${GMAIL_CLIENT_ID:-}
+      - GMAIL_CLIENT_SECRET=${GMAIL_CLIENT_SECRET:-}
+      - GMAIL_REFRESH_TOKEN=${GMAIL_REFRESH_TOKEN:-}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_FROM=${SMTP_FROM:-}
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+      - 1.1.1.1
     networks:
       - studio_network
     depends_on:

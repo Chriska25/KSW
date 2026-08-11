@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { fetchBlogPostBySlug } from '@/lib/blog-api';
 import { LoadingState } from '@/components/common/loading-state';
+import { RevealPhotoCard, RevealPhotoImage } from '@/components/common/reveal-photo-card';
 
 export default function BlogDetailPage() {
   const params = useParams();
@@ -90,9 +91,10 @@ export default function BlogDetailPage() {
       </div>
 
       {article.featuredImage && (
-        <div className="aspect-[16/9] rounded-3xl overflow-hidden glass-panel border-zinc-800">
-          <img src={article.featuredImage} alt={article.title} className="w-full h-full object-cover" />
-        </div>
+        <RevealPhotoCard kenBurns withShine={false} className="aspect-[16/9] rounded-3xl border border-zinc-800 glass-panel">
+          <RevealPhotoImage src={article.featuredImage} alt={article.title} />
+          <div className="portfolio-photo-shine pointer-events-none" aria-hidden />
+        </RevealPhotoCard>
       )}
 
       <div className="prose prose-invert max-w-none text-zinc-300 leading-relaxed text-base space-y-6">

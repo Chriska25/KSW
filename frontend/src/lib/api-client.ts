@@ -1,5 +1,11 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { clearSession } from '@/lib/session';
+import { buildLoginUrl, isAdminLoginContext } from '@/lib/auth-login-url';
+import { isApiNetworkError, isApiTimeout } from '@/lib/api-error';
+
+const API_TIMEOUT_MS = 60_000;
+const API_WRITE_TIMEOUT_MS = 120_000;
+const API_SMTP_TEST_TIMEOUT_MS = 20_000;
 
 function normalizeApiV1Url(base: string): string {
   const trimmed = base.replace(/\/$/, '');
@@ -27,13 +33,11 @@ export function getApiBaseUrl(): string {
 
 export const apiClient: AxiosInstance = axios.create({
   baseURL: getApiBaseUrl(),
-  timeout: 15000,
+  timeout: API_TIMEOUT_MS,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
     'ngrok-skip-browser-warning': 'true',
-    'Cache-Control': 'no-cache, no-store, must-revalidate',
-    Pragma: 'no-cache',
   },
 });
 
@@ -48,8 +52,14 @@ apiClient.interceptors.request.use(
       }
       if (config.headers) {
         config.headers['ngrok-skip-browser-warning'] = 'true';
-        config.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
-        config.headers['Pragma'] = 'no-cache';
+        const path = config.url || '';
+        const isAdminGet =
+          typeof window !== 'undefined' &&
+          (window.location.pathname.startsWith('/admin') || path.includes('/admin/'));
+        if (isAdminGet && (config.method ?? 'get').toLowerCase() === 'get') {
+          config.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+          config.headers['Pragma'] = 'no-cache';
+        }
       }
     }
     return config;
@@ -59,19 +69,62 @@ apiClient.interceptors.request.use(
 
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => response,
-  (error) => {
+  async (error) => {
+    const config = error.config as (typeof error.config & { __retry?: boolean }) | undefined;
+    if (
+      config &&
+      !config.__retry &&
+      isApiTimeout(error) &&
+      (config.method ?? 'get').toLowerCase() === 'get'
+    ) {
+      config.__retry = true;
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      return apiClient.request(config);
+    }
+
     if (!error.response) {
-      console.warn('[API Client] Impossible de contacter l\'API backend. Vérifiez que le serveur est accessible sur le même domaine (/api/v1).');
+      if (isApiTimeout(error)) {
+        console.warn('[API Client] Délai dépassé — le backend ne répond pas assez vite (vérifiez port 8050 / docker).');
+      } else if (isApiNetworkError(error)) {
+        console.warn('[API Client] Backend injoignable. Démarrez : docker compose up -d backend');
+      } else {
+        console.warn('[API Client] Impossible de contacter l\'API backend (/api/v1).');
+      }
     } else {
-      console.error(`[API Client Error] ${error.response.status}:`, error.response.data);
       const status = error.response.status;
+      const path = typeof window !== 'undefined' ? window.location.pathname : '';
+      const requestUrl = String(error.config?.url || '');
+      const isPublicGallery =
+        path.startsWith('/galerie') || requestUrl.includes('/galleries/');
+      const isAnalyticsVisit = requestUrl.includes('/analytics/visit');
+
+      if (isPublicGallery && (status === 403 || status === 404)) {
+        console.warn(`[API Client] Galerie — ${status === 403 ? 'accès refusé' : 'ressource introuvable'}.`);
+      } else if (isAnalyticsVisit) {
+        // Tracking visiteurs — non critique, pas de log d'erreur
+      } else {
+        const payload = error.response.data;
+        const isHtml404 =
+          error.response.status === 404 &&
+          typeof payload === 'string' &&
+          /<!DOCTYPE html|<html[\s>]/i.test(payload);
+        if (isHtml404) {
+          console.error(
+            `[API Client Error] ${status}: route API introuvable (réponse HTML). Vérifiez le backend (docker compose up -d backend).`
+          );
+        } else {
+          console.error(`[API Client Error] ${status}:`, payload);
+        }
+      }
+
       if ((status === 401 || status === 403) && typeof window !== 'undefined') {
-        const path = window.location.pathname;
-        if (path.startsWith('/admin') || path.startsWith('/client')) {
+        if (!isPublicGallery && (path.startsWith('/admin') || path.startsWith('/client'))) {
           clearSession();
-          const redirect = encodeURIComponent(path);
           if (!path.startsWith('/login')) {
-            window.location.href = `/login?redirect=${redirect}`;
+            window.location.href = buildLoginUrl({
+              redirect: path,
+              admin: path.startsWith('/admin'),
+            });
           }
         }
       }
@@ -80,4 +133,5 @@ apiClient.interceptors.response.use(
   }
 );
 
+export { API_WRITE_TIMEOUT_MS, API_SMTP_TEST_TIMEOUT_MS };
 export default apiClient;

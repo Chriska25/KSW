@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   UploadCloud,
   FolderPlus,
@@ -25,60 +26,150 @@ import {
   Save,
   Key,
   Unlock,
+  RotateCcw,
+  FileText,
+  User,
+  Link2,
+  Loader2,
+  Mail,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useGalleries, GalleryAdminItem, AlbumItem, PhotoItem } from '@/context/gallery-context';
-import apiClient from '@/lib/api-client';
+import apiClient, { API_WRITE_TIMEOUT_MS } from '@/lib/api-client';
+import { galleryAccessUrl } from '@/lib/gallery-access-path';
 import { useAdminToast } from '@/components/admin/admin-toast';
 import { getApiErrorMessage } from '@/lib/api-error';
 import { LoadingState } from '@/components/common/loading-state';
+import { AdminPageHeader } from '@/components/admin/admin-page-header';
+import {
+  applyAlbumTrashToGallery,
+  applyPhotoTrashToGallery,
+  formatTrashDate,
+  getActiveAlbums,
+  getTrashedAlbums,
+  getTrashedPhotos,
+  isPhotoVisibleInGallery,
+} from '@/lib/gallery-album-utils';
+import {
+  getActiveGalleries,
+  getTrashedGalleries,
+  permanentlyDeleteGalleryFromList,
+  restoreGalleryInList,
+  trashGalleryInList,
+} from '@/lib/gallery-trash-utils';
+import { fetchAdminBookings, fetchRegisteredClients, sendGalleryAccessEmail, type ApiBooking } from '@/lib/admin-crm-api';
+import {
+  buildGalleryBookingMaps,
+  filterAlbumsByQuery,
+  filterGalleriesByQuery,
+  getAlbumSearchMatchIds,
+  getGalleryBookingMeta,
+} from '@/lib/gallery-search-utils';
 
 export default function AdminGaleriesPage() {
+  const searchParams = useSearchParams();
+  const linkedGalleryId = searchParams.get('galleryId');
   const { toast } = useAdminToast();
   const { galleries, updateGalleries, setGalleries } = useGalleries();
 
   const [galleriesLoading, setGalleriesLoading] = React.useState(true);
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [uploadError, setUploadError] = React.useState<string | null>(null);
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [copiedLink, setCopiedLink] = React.useState(false);
+  const [sendingGalleryAccess, setSendingGalleryAccess] = React.useState(false);
+  const [registeredClients, setRegisteredClients] = React.useState<
+    Array<{ id: string; name: string; email: string }>
+  >([]);
+  const saveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingSaveRef = React.useRef<{ next: GalleryAdminItem[]; successMsg?: string } | null>(null);
 
-  React.useEffect(() => {
-    const loadAdminGalleries = async () => {
-      setGalleriesLoading(true);
-      setLoadError(null);
-      try {
-        const res = await apiClient.get(`/admin/galleries?t=${Date.now()}`);
-        if (Array.isArray(res.data?.data)) {
-          setGalleries(res.data.data);
-          if (res.data.data.length > 0) {
-            setSelectedGalleryId(res.data.data[0].id);
-          }
-        }
-      } catch (e) {
-        console.error('Erreur chargement galeries admin:', e);
-        setLoadError(getApiErrorMessage(e, 'Impossible de charger les galeries.'));
-      } finally {
-        setGalleriesLoading(false);
-      }
-    };
-    loadAdminGalleries();
-  }, [setGalleries]);
-
-  const persistGalleries = async (next: GalleryAdminItem[], successMsg?: string) => {
+  const flushGallerySave = React.useCallback(async () => {
+    const pending = pendingSaveRef.current;
+    if (!pending) return;
+    pendingSaveRef.current = null;
+    setIsSaving(true);
     try {
-      await updateGalleries(next);
-      if (successMsg) toast(successMsg, 'success');
+      await updateGalleries(pending.next, { skipPublicCache: true });
+      if (pending.successMsg) toast(pending.successMsg, 'success');
     } catch (err) {
       toast(getApiErrorMessage(err, 'Erreur lors de la sauvegarde des galeries.'), 'error');
       throw err;
+    } finally {
+      setIsSaving(false);
+    }
+  }, [updateGalleries, toast]);
+
+  const persistGalleries = React.useCallback(
+    (next: GalleryAdminItem[], successMsg?: string, options?: { immediate?: boolean }) => {
+      setGalleries(next);
+      pendingSaveRef.current = { next, successMsg };
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+
+      if (options?.immediate) {
+        return flushGallerySave();
+      }
+
+      saveTimerRef.current = setTimeout(() => {
+        void flushGallerySave();
+      }, 800);
+    },
+    [setGalleries, flushGallerySave]
+  );
+
+  React.useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      if (pendingSaveRef.current) {
+        void updateGalleries(pendingSaveRef.current.next, { skipPublicCache: true });
+      }
+    };
+  }, [updateGalleries]);
+
+  const handleCopyGalleryLink = async (key: string) => {
+    try {
+      await navigator.clipboard.writeText(galleryAccessUrl(key));
+      setCopiedLink(true);
+      toast('Lien d\'accès copié', 'success');
+      setTimeout(() => setCopiedLink(false), 2000);
+    } catch {
+      toast('Impossible de copier le lien', 'error');
     }
   };
 
-  const [selectedGalleryId, setSelectedGalleryId] = useState<string>('1');
+  const handleSendGalleryAccess = async (gallery: GalleryAdminItem) => {
+    setSendingGalleryAccess(true);
+    try {
+      const data = await sendGalleryAccessEmail(gallery.id);
+      if (data?.password && data.password !== gallery.password) {
+        persistGalleries(
+          galleries.map((g) =>
+            g.id === gallery.id
+              ? { ...g, password: data.password, accessKey: data.accessKey || g.accessKey }
+              : g
+          ),
+          undefined,
+          { immediate: true }
+        );
+      }
+      const target = gallery.clientEmail || 'le client';
+      toast(`Clé et mot de passe envoyés à ${target}`, 'success');
+    } catch (err: unknown) {
+      toast(getApiErrorMessage(err, 'Envoi email impossible.'), 'error');
+    } finally {
+      setSendingGalleryAccess(false);
+    }
+  };
+
+  const [selectedGalleryId, setSelectedGalleryId] = useState<string>(() => linkedGalleryId || '1');
   const [selectedAlbumFilter, setSelectedAlbumFilter] = useState<string>('all');
+  const [searchGalleryQuery, setSearchGalleryQuery] = useState<string>('');
+  const [searchAlbumQuery, setSearchAlbumQuery] = useState<string>('');
   const [searchPhotoQuery, setSearchPhotoQuery] = useState<string>('');
+  const [bookings, setBookings] = useState<ApiBooking[]>([]);
 
   // Modals state
   const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false);
@@ -97,8 +188,94 @@ export default function AdminGaleriesPage() {
   // Uploader state
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [showTrashPanel, setShowTrashPanel] = useState(false);
+  const [showPhotoTrashPanel, setShowPhotoTrashPanel] = useState(false);
+  const [showGalleryTrashPanel, setShowGalleryTrashPanel] = useState(false);
+  const [generatingThumbs, setGeneratingThumbs] = useState(false);
 
-  const selectedGallery = galleries.find((g) => g.id === selectedGalleryId) || galleries[0];
+  React.useEffect(() => {
+    const loadAdminGalleries = async () => {
+      setGalleriesLoading(true);
+      setLoadError(null);
+      try {
+        const res = await apiClient.get(`/admin/galleries?t=${Date.now()}`);
+        if (Array.isArray(res.data?.data)) {
+          setGalleries(res.data.data);
+          const active = getActiveGalleries(res.data.data);
+          const preferredId =
+            linkedGalleryId && active.some((g: GalleryAdminItem) => g.id === linkedGalleryId)
+              ? linkedGalleryId
+              : active[0]?.id;
+          if (preferredId) {
+            setSelectedGalleryId(preferredId);
+          }
+        }
+      } catch (e) {
+        console.error('Erreur chargement galeries admin:', e);
+        setLoadError(getApiErrorMessage(e, 'Impossible de charger les galeries.'));
+      } finally {
+        setGalleriesLoading(false);
+      }
+    };
+    loadAdminGalleries();
+  }, [setGalleries, linkedGalleryId]);
+
+  React.useEffect(() => {
+    fetchRegisteredClients()
+      .then(setRegisteredClients)
+      .catch(() => setRegisteredClients([]));
+  }, []);
+
+  React.useEffect(() => {
+    fetchAdminBookings()
+      .then(setBookings)
+      .catch(() => setBookings([]));
+  }, []);
+
+  const activeGalleries = getActiveGalleries(galleries);
+  const trashedGalleries = getTrashedGalleries(galleries);
+  const bookingMaps = useMemo(() => buildGalleryBookingMaps(bookings), [bookings]);
+  const filteredActiveGalleries = useMemo(
+    () => filterGalleriesByQuery(galleries, searchGalleryQuery, bookingMaps),
+    [galleries, searchGalleryQuery, bookingMaps]
+  );
+
+  React.useEffect(() => {
+    if (!linkedGalleryId) return;
+    if (activeGalleries.some((g) => g.id === linkedGalleryId)) {
+      setSelectedGalleryId(linkedGalleryId);
+    }
+  }, [linkedGalleryId, activeGalleries]);
+
+  React.useEffect(() => {
+    if (filteredActiveGalleries.length === 0) return;
+    if (!filteredActiveGalleries.some((g) => g.id === selectedGalleryId)) {
+      setSelectedGalleryId(filteredActiveGalleries[0].id);
+      setSelectedAlbumFilter('all');
+      setSearchAlbumQuery('');
+    }
+  }, [filteredActiveGalleries, selectedGalleryId]);
+
+  const selectedGallery =
+    filteredActiveGalleries.find((g) => g.id === selectedGalleryId) ||
+    filteredActiveGalleries[0] ||
+    activeGalleries.find((g) => g.id === selectedGalleryId) ||
+    activeGalleries[0];
+  const selectedGalleryMeta = selectedGallery
+    ? getGalleryBookingMeta(selectedGallery, bookingMaps)
+    : undefined;
+  const activeAlbums = getActiveAlbums(selectedGallery?.albums || []);
+  const filteredAlbums = useMemo(
+    () => filterAlbumsByQuery(activeAlbums, searchAlbumQuery),
+    [activeAlbums, searchAlbumQuery]
+  );
+  const trashedAlbums = getTrashedAlbums(selectedGallery?.albums || []);
+  const trashedPhotos = getTrashedPhotos(selectedGallery?.photos || []);
+  const albumSearchMatchIds = useMemo(
+    () => getAlbumSearchMatchIds(activeAlbums, searchAlbumQuery),
+    [activeAlbums, searchAlbumQuery]
+  );
+
 
   if (galleriesLoading) {
     return (
@@ -108,25 +285,162 @@ export default function AdminGaleriesPage() {
     );
   }
 
-  // Filtering photos in current gallery
+  // Filtering photos in current gallery (hors albums en corbeille)
   const filteredPhotos = (selectedGallery?.photos || []).filter((p) => {
-    const matchesAlbum = selectedAlbumFilter === 'all' || p.albumId === selectedAlbumFilter;
-    const matchesSearch = p.title.toLowerCase().includes(searchPhotoQuery.toLowerCase());
-    return matchesAlbum && matchesSearch;
+    if (selectedGallery && !isPhotoVisibleInGallery(selectedGallery, p)) return false;
+
+    const matchesAlbumFilter =
+      selectedAlbumFilter === 'all' || p.albumId === selectedAlbumFilter;
+
+    const matchesAlbumSearch =
+      !albumSearchMatchIds ||
+      selectedAlbumFilter !== 'all' ||
+      (p.albumId ? albumSearchMatchIds.has(p.albumId) : true);
+
+    const matchesPhotoSearch = p.title.toLowerCase().includes(searchPhotoQuery.toLowerCase());
+
+    return matchesAlbumFilter && matchesAlbumSearch && matchesPhotoSearch;
   });
+
+  const totalVisiblePhotos = (selectedGallery?.photos || []).filter(
+    (p) => selectedGallery && isPhotoVisibleInGallery(selectedGallery, p)
+  ).length;
 
   // Toggle Album Privacy (Public <-> Privé)
   const handleToggleAlbumPrivacy = async (albumId: string) => {
     if (!selectedGallery) return;
+    const album = selectedGallery.albums.find((item) => item.id === albumId);
+    if (!album) return;
+    const nextPrivate = !(album.isPrivate === true);
+
     const updated = galleries.map((g) => {
       if (g.id !== selectedGallery.id) return g;
       const updatedAlbums = g.albums.map((alb) =>
-        alb.id === albumId ? { ...alb, isPrivate: !alb.isPrivate } : alb
+        alb.id === albumId ? { ...alb, isPrivate: nextPrivate } : alb
       );
       return { ...g, albums: updatedAlbums };
     });
+      persistGalleries(
+        updated,
+        nextPrivate ? 'Album passé en privé' : 'Album passé en public'
+      );
+  };
+
+  const handleTrashAlbum = async (albumId: string) => {
+    if (!selectedGallery) return;
+    if (activeAlbums.length <= 1) {
+      toast('Impossible de supprimer le dernier album actif de la galerie.', 'error');
+      return;
+    }
+    const album = selectedGallery.albums.find((item) => item.id === albumId);
+    if (!album) return;
+    if (!window.confirm(`Mettre l'album « ${album.name} » dans la corbeille ?`)) return;
+
+    const updated = applyAlbumTrashToGallery(galleries, selectedGallery.id, albumId, 'trash');
+    if (selectedAlbumFilter === albumId) {
+      setSelectedAlbumFilter('all');
+    }
+    setShowTrashPanel(true);
     try {
-      await persistGalleries(updated);
+      persistGalleries(updated, 'Album déplacé dans la corbeille');
+    } catch {
+      // toast affiché
+    }
+  };
+
+  const handleRestoreAlbum = async (albumId: string) => {
+    if (!selectedGallery) return;
+    const updated = applyAlbumTrashToGallery(galleries, selectedGallery.id, albumId, 'restore');
+    try {
+      persistGalleries(updated, 'Album restauré');
+    } catch {
+      // toast affiché
+    }
+  };
+
+  const handlePermanentDeleteAlbum = async (albumId: string) => {
+    if (!selectedGallery) return;
+    const album = selectedGallery.albums.find((item) => item.id === albumId);
+    if (!album) return;
+    const photoCount = selectedGallery.photos.filter((p) => p.albumId === albumId).length;
+    if (
+      !window.confirm(
+        `Supprimer définitivement « ${album.name} » ?${
+          photoCount > 0
+            ? ` Les ${photoCount} photo(s) seront déplacées vers un autre album.`
+            : ''
+        }`
+      )
+    ) {
+      return;
+    }
+
+    const updated = applyAlbumTrashToGallery(galleries, selectedGallery.id, albumId, 'delete');
+    try {
+      persistGalleries(updated, 'Album supprimé définitivement', { immediate: true });
+    } catch {
+      // toast affiché
+    }
+  };
+
+  const handleTrashGallery = async () => {
+    if (!selectedGallery) return;
+    if (activeGalleries.length <= 1) {
+      toast('Impossible de supprimer la dernière galerie active.', 'error');
+      return;
+    }
+    if (
+      !window.confirm(
+        `Mettre la galerie « ${selectedGallery.title} » dans la corbeille ? Elle sera masquée du portfolio et de l'espace client.`
+      )
+    ) {
+      return;
+    }
+
+    const updated = trashGalleryInList(galleries, selectedGallery.id);
+    const nextActive = getActiveGalleries(updated);
+    if (nextActive[0]?.id) {
+      setSelectedGalleryId(nextActive[0].id);
+    }
+    setShowGalleryTrashPanel(true);
+    try {
+      persistGalleries(updated, 'Galerie déplacée dans la corbeille');
+    } catch {
+      // toast affiché
+    }
+  };
+
+  const handleRestoreGallery = async (galleryId: string) => {
+    const updated = restoreGalleryInList(galleries, galleryId);
+    setSelectedGalleryId(galleryId);
+    try {
+      persistGalleries(updated, 'Galerie restaurée');
+    } catch {
+      // toast affiché
+    }
+  };
+
+  const handlePermanentDeleteGallery = async (galleryId: string) => {
+    const gallery = galleries.find((g) => g.id === galleryId);
+    if (!gallery) return;
+    const photoCount = gallery.photos?.length || 0;
+    if (
+      !window.confirm(
+        `Supprimer définitivement « ${gallery.title} » ?${
+          photoCount > 0 ? ` ${photoCount} photo(s) seront perdues.` : ''
+        }`
+      )
+    ) {
+      return;
+    }
+
+    const updated = permanentlyDeleteGalleryFromList(galleries, galleryId);
+    const nextActive = getActiveGalleries(updated);
+    if (nextActive[0]?.id) {
+      setSelectedGalleryId(nextActive[0].id);
+    }
+    try {
+      persistGalleries(updated, 'Galerie supprimée définitivement', { immediate: true });
     } catch {
       // toast affiché
     }
@@ -173,9 +487,32 @@ export default function AdminGaleriesPage() {
       return { ...g, photos: fixedPhotos };
     });
     try {
-      await persistGalleries(updated, 'Photos restaurées');
+      persistGalleries(updated, 'Photos restaurées');
     } catch {
       // toast affiché
+    }
+  };
+
+  const handleGenerateThumbnails = async () => {
+    setGeneratingThumbs(true);
+    try {
+      const res = await apiClient.post('/admin/galleries/generate-thumbnails', {}, {
+        timeout: API_WRITE_TIMEOUT_MS,
+      });
+      const stats = res.data?.stats;
+      const msg =
+        res.data?.message ||
+        `${stats?.generated ?? 0} miniature(s) générée(s)`;
+      toast(msg, 'success');
+
+      const refresh = await apiClient.get(`/admin/galleries?t=${Date.now()}`);
+      if (Array.isArray(refresh.data?.data)) {
+        setGalleries(refresh.data.data);
+      }
+    } catch (err) {
+      toast(getApiErrorMessage(err, 'Impossible de générer les miniatures.'), 'error');
+    } finally {
+      setGeneratingThumbs(false);
     }
   };
 
@@ -188,7 +525,7 @@ export default function AdminGaleriesPage() {
 
     const uploadedFiles = Array.from(e.target.files);
     const failures: string[] = [];
-    const successes: { file: File; url: string }[] = [];
+    const successes: { file: File; url: string; hdUrl?: string; originalUrl?: string; thumbUrl?: string }[] = [];
 
     for (let idx = 0; idx < uploadedFiles.length; idx++) {
       const file = uploadedFiles[idx];
@@ -198,9 +535,16 @@ export default function AdminGaleriesPage() {
         formData.append('file', file);
         const res = await apiClient.post('/upload', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
+          timeout: API_WRITE_TIMEOUT_MS,
         });
         if (res.data?.url) {
-          successes.push({ file, url: res.data.url });
+          successes.push({
+            file,
+            url: res.data.url,
+            hdUrl: res.data.hdUrl || res.data.url,
+            originalUrl: res.data.originalUrl || undefined,
+            thumbUrl: res.data.thumbUrl || undefined,
+          });
         } else {
           failures.push(`${file.name} : réponse serveur invalide`);
         }
@@ -220,16 +564,24 @@ export default function AdminGaleriesPage() {
       return;
     }
 
-    const targetAlbum = selectedGallery.albums.find((a) => a.id === selectedAlbumFilter);
+    const fallbackAlbum = activeAlbums[0];
+    const targetAlbum =
+      selectedAlbumFilter !== 'all'
+        ? activeAlbums.find((a) => a.id === selectedAlbumFilter)
+        : fallbackAlbum;
     const isAlbPrivate = targetAlbum ? targetAlbum.isPrivate ?? false : false;
 
-    const newPhotos: PhotoItem[] = successes.map(({ file, url }, idx) => ({
+    const newPhotos: PhotoItem[] = successes.map(({ file, url, hdUrl, originalUrl, thumbUrl }, idx) => ({
       id: `p-new-${Date.now()}-${idx}`,
       title: file.name.replace(/\.[^/.]+$/, ''),
       cat: selectedGallery.category || 'mariage',
       url,
-      albumId: selectedAlbumFilter !== 'all' ? selectedAlbumFilter : selectedGallery.albums[0]?.id,
-      albumName: targetAlbum?.name || 'Général',
+      hdUrl: hdUrl || url,
+      originalUrl,
+      thumbUrl,
+      watermarked: true,
+      albumId: targetAlbum?.id || fallbackAlbum?.id,
+      albumName: targetAlbum?.name || fallbackAlbum?.name || 'Général',
       isFavorite: false,
       isCover: false,
       isPrivate: isAlbPrivate,
@@ -241,9 +593,10 @@ export default function AdminGaleriesPage() {
     );
 
     try {
-      await persistGalleries(
+      persistGalleries(
         updated,
-        `${successes.length} photo(s) téléversée(s)${failures.length ? ` — ${failures.length} échec(s)` : ''}`
+        `${successes.length} photo(s) téléversée(s)${failures.length ? ` — ${failures.length} échec(s)` : ''}`,
+        { immediate: true }
       );
       if (failures.length > 0) {
         setUploadError(failures.join(' · '));
@@ -264,7 +617,7 @@ export default function AdminGaleriesPage() {
         g.id === editingGallery.id ? ({ ...g, ...editingGallery } as GalleryAdminItem) : g
       );
       try {
-        await persistGalleries(updated, 'Galerie mise à jour');
+        persistGalleries(updated, 'Galerie mise à jour', { immediate: true });
       } catch {
         return;
       }
@@ -283,7 +636,7 @@ export default function AdminGaleriesPage() {
         photos: [],
       };
       try {
-        await persistGalleries([...galleries, newG], 'Galerie créée');
+        persistGalleries([...galleries, newG], 'Galerie créée', { immediate: true });
         setSelectedGalleryId(newG.id);
       } catch {
         return;
@@ -309,7 +662,7 @@ export default function AdminGaleriesPage() {
       g.id === selectedGallery.id ? { ...g, albums: [...g.albums, newAlb] } : g
     );
     try {
-      await persistGalleries(updated, 'Album créé');
+      persistGalleries(updated, 'Album créé', { immediate: true });
     } catch {
       return;
     }
@@ -320,11 +673,38 @@ export default function AdminGaleriesPage() {
 
   const handleDeletePhoto = async (photoId: string) => {
     if (!selectedGallery) return;
-    const updated = galleries.map((g) =>
-      g.id === selectedGallery.id ? { ...g, photos: g.photos.filter((p) => p.id !== photoId) } : g
-    );
+    const photo = selectedGallery.photos.find((p) => p.id === photoId);
+    if (!photo) return;
+    if (!window.confirm(`Mettre « ${photo.title} » dans la corbeille ?`)) return;
+
+    const updated = applyPhotoTrashToGallery(galleries, selectedGallery.id, photoId, 'trash');
+    setShowPhotoTrashPanel(true);
     try {
-      await persistGalleries(updated);
+      persistGalleries(updated, 'Photo déplacée dans la corbeille');
+    } catch {
+      // toast affiché
+    }
+  };
+
+  const handleRestorePhoto = async (photoId: string) => {
+    if (!selectedGallery) return;
+    const updated = applyPhotoTrashToGallery(galleries, selectedGallery.id, photoId, 'restore');
+    try {
+      persistGalleries(updated, 'Photo restaurée');
+    } catch {
+      // toast affiché
+    }
+  };
+
+  const handlePermanentDeletePhoto = async (photoId: string) => {
+    if (!selectedGallery) return;
+    const photo = selectedGallery.photos.find((p) => p.id === photoId);
+    if (!photo) return;
+    if (!window.confirm(`Supprimer définitivement « ${photo.title} » ?`)) return;
+
+    const updated = applyPhotoTrashToGallery(galleries, selectedGallery.id, photoId, 'delete');
+    try {
+      persistGalleries(updated, 'Photo supprimée définitivement', { immediate: true });
     } catch {
       // toast affiché
     }
@@ -338,7 +718,7 @@ export default function AdminGaleriesPage() {
       return { ...g, coverUrl: photo.url, photos: updatedPhotos };
     });
     try {
-      await persistGalleries(updated, 'Couverture mise à jour');
+      persistGalleries(updated, 'Couverture mise à jour');
     } catch {
       // toast affiché
     }
@@ -354,7 +734,7 @@ export default function AdminGaleriesPage() {
       return { ...g, photos: updatedPhotos };
     });
     try {
-      await persistGalleries(updated);
+      persistGalleries(updated);
     } catch {
       // toast affiché
     }
@@ -370,7 +750,7 @@ export default function AdminGaleriesPage() {
       return { ...g, photos: updatedPhotos };
     });
     try {
-      await persistGalleries(updated, 'Photo mise à jour');
+      persistGalleries(updated, 'Photo mise à jour');
     } catch {
       return;
     }
@@ -380,13 +760,34 @@ export default function AdminGaleriesPage() {
   };
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-6 max-w-[1600px] mx-auto">
+      {isSaving && (
+        <div className="sticky top-0 z-30 flex items-center gap-2 rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-2 text-xs text-amber-200">
+          <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+          Sauvegarde en cours…
+        </div>
+      )}
       {!selectedGallery ? (
         <div className="text-center py-16 space-y-4">
           {loadError ? (
             <p className="text-sm text-red-400">{loadError}</p>
+          ) : trashedGalleries.length > 0 ? (
+            <p className="text-sm text-zinc-400">
+              Toutes les galeries sont dans la corbeille. Restaurez-en une ou créez une nouvelle galerie.
+            </p>
           ) : (
             <p className="text-sm text-zinc-400">Aucune galerie. Créez votre première galerie.</p>
+          )}
+          {trashedGalleries.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowGalleryTrashPanel(true)}
+              className="space-x-1.5 border-zinc-800 text-rose-400 hover:bg-rose-500/10"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span>Corbeille galeries ({trashedGalleries.length})</span>
+            </Button>
           )}
           <Button
             variant="gold"
@@ -401,96 +802,273 @@ export default function AdminGaleriesPage() {
         </div>
       ) : (
       <>
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-white">
-            Gestionnaire de <span className="gold-gradient-text">Galeries & Albums (Public/Privé)</span>
-          </h1>
-          <p className="text-zinc-400 text-sm mt-1">
-            Créer des galeries, des sous-albums publics ou verrouillés en privé, uploader et synchroniser.
+      <AdminPageHeader
+        title="Gestionnaire de"
+        accent="Galeries & Albums (Public/Privé)"
+        description="Créer des galeries, des sous-albums publics ou verrouillés en privé, uploader et synchroniser."
+        actions={
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={generatingThumbs}
+              onClick={handleGenerateThumbnails}
+              className="space-x-1.5 border-zinc-800 text-zinc-300 hover:bg-zinc-800/80 text-xs font-semibold hidden lg:inline-flex"
+            >
+              {generatingThumbs ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ImageIcon className="h-4 w-4" />
+              )}
+              <span>{generatingThumbs ? 'Optimisation…' : 'Optimiser vignettes'}</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRestoreBrokenPhotos}
+              className="space-x-1.5 border-zinc-800 text-amber-400 hover:bg-amber-400/10 text-xs font-semibold hidden md:inline-flex"
+            >
+              <Sparkles className="h-4 w-4" />
+              <span>Restaurer les Photos</span>
+            </Button>
+
+            <Button
+              variant="gold"
+              size="sm"
+              onClick={() => {
+                setEditingGallery({ isPrivate: true, category: 'mariage' });
+                setIsGalleryModalOpen(true);
+              }}
+              className="space-x-2 font-bold shadow-md shadow-amber-400/20"
+            >
+              <FolderPlus className="h-4 w-4" />
+              <span>Nouvelle Galerie</span>
+            </Button>
+          </>
+        }
+      />
+
+      {/* Workspace : liste galeries | albums + photos */}
+      <div className="flex flex-col xl:flex-row gap-5 min-h-[calc(100vh-10rem)]">
+        {/* Colonne gauche — navigateur de galeries */}
+        <aside className="w-full xl:w-72 shrink-0 flex flex-col gap-3">
+          <div className="relative">
+            <Search className="h-4 w-4 absolute left-3 top-3 text-zinc-500" />
+            <Input
+              placeholder="Galerie, client, clé, facture…"
+              value={searchGalleryQuery}
+              onChange={(e) => setSearchGalleryQuery(e.target.value)}
+              className="pl-9 h-10 text-xs"
+            />
+          </div>
+          <p className="text-[10px] text-zinc-500 px-1">
+            Nom, client, clé d&apos;accès, n° facture, réf. réservation
           </p>
-        </div>
 
-        <div className="flex items-center space-x-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRestoreBrokenPhotos}
-            className="space-x-1.5 border-zinc-800 text-amber-400 hover:bg-amber-400/10 text-xs font-semibold"
-          >
-            <Sparkles className="h-4 w-4" />
-            <span>Restaurer les Photos</span>
-          </Button>
-
-          <Button
-            variant="gold"
-            size="sm"
-            onClick={() => {
-              setEditingGallery({ isPrivate: true, category: 'mariage' });
-              setIsGalleryModalOpen(true);
-            }}
-            className="space-x-2 font-bold shadow-md shadow-amber-400/20"
-          >
-            <FolderPlus className="h-4 w-4" />
-            <span>Nouvelle Galerie</span>
-          </Button>
-        </div>
-      </div>
-
-      {/* Gallery Selector Pills */}
-      <div className="flex items-center space-x-3 overflow-x-auto pb-2 border-b border-zinc-800">
-        {galleries.map((gal) => (
-          <button
-            key={gal.id}
-            onClick={() => {
-              setSelectedGalleryId(gal.id);
-              setSelectedAlbumFilter('all');
-            }}
-            className={`px-5 py-3 rounded-2xl border text-xs font-semibold flex items-center space-x-3 shrink-0 transition-all cursor-pointer ${
-              selectedGalleryId === gal.id
-                ? 'border-amber-400 bg-amber-400 text-zinc-950 shadow-lg shadow-amber-400/20'
-                : 'border-zinc-800 glass-panel text-zinc-300 hover:border-zinc-700'
-            }`}
-          >
-            <img src={gal.coverUrl} alt={gal.title} className="h-7 w-9 object-cover rounded-lg border border-zinc-700" />
-            <div className="text-left">
-              <div className="font-bold truncate max-w-[180px]">{gal.title}</div>
-              <div className="text-[10px] opacity-80 flex items-center space-x-1">
-                <span>{gal.photos.length} photos</span>
-                <span>•</span>
-                {gal.isPrivate ? <Lock className="h-3 w-3 inline text-amber-400" /> : <Globe className="h-3 w-3 inline text-emerald-400" />}
+          <div className="flex-1 overflow-y-auto space-y-2 max-h-[420px] xl:max-h-[calc(100vh-14rem)] pr-1 custom-scrollbar">
+            {filteredActiveGalleries.length === 0 ? (
+              <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4 text-center text-xs text-zinc-500">
+                Aucune galerie ne correspond à « {searchGalleryQuery} »
               </div>
-            </div>
-          </button>
-        ))}
-      </div>
+            ) : (
+              filteredActiveGalleries.map((gal) => {
+                const meta = getGalleryBookingMeta(gal, bookingMaps);
+                const isSelected = selectedGallery?.id === gal.id;
+                return (
+                  <button
+                    key={gal.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedGalleryId(gal.id);
+                      setSelectedAlbumFilter('all');
+                      setSearchAlbumQuery('');
+                    }}
+                    className={`w-full text-left rounded-xl border p-3 flex gap-3 transition-all cursor-pointer ${
+                      isSelected
+                        ? 'border-amber-400 bg-amber-400/10 shadow-md shadow-amber-400/10'
+                        : 'border-zinc-800 glass-panel hover:border-zinc-700'
+                    }`}
+                  >
+                    <img
+                      src={gal.coverUrl}
+                      alt={gal.title}
+                      className="h-14 w-[4.5rem] object-cover rounded-lg border border-zinc-700 shrink-0"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className={`text-xs font-bold truncate ${isSelected ? 'text-amber-400' : 'text-white'}`}>
+                        {gal.title}
+                      </p>
+                      <p className="text-[10px] text-zinc-500 truncate mt-0.5 flex items-center gap-1">
+                        <User className="h-3 w-3 shrink-0" />
+                        {gal.clientName}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                        <code className="text-[9px] font-mono text-amber-400/90 bg-zinc-900 px-1.5 py-0.5 rounded border border-zinc-800">
+                          {gal.accessKey}
+                        </code>
+                        {meta?.invoiceNumber && (
+                          <span className="text-[9px] font-mono text-zinc-500 flex items-center gap-0.5">
+                            <FileText className="h-2.5 w-2.5" />
+                            {meta.invoiceNumber}
+                          </span>
+                        )}
+                        {gal.isPrivate ? (
+                          <Lock className="h-3 w-3 text-amber-400" />
+                        ) : (
+                          <Globe className="h-3 w-3 text-emerald-400" />
+                        )}
+                      </div>
+                      <p className="text-[10px] text-zinc-600 mt-1">{gal.photos.length} photo(s)</p>
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
 
-      {/* Current Gallery Details Card & Controls */}
-      <Card className="glass-panel border-amber-400/30 p-6 space-y-6">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-6 border-b border-zinc-800">
-          <div className="flex items-center space-x-4">
+          {/* Corbeille galeries — toujours accessible */}
+          <div className="border-t border-zinc-800 pt-3 space-y-2">
+            <button
+              type="button"
+              onClick={() => setShowGalleryTrashPanel((open) => !open)}
+              className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                showGalleryTrashPanel
+                  ? 'border-rose-500/40 bg-rose-500/10 text-rose-400'
+                  : 'border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-rose-400'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <Trash2 className="h-4 w-4" />
+                Corbeille galeries
+              </span>
+              {trashedGalleries.length > 0 && (
+                <Badge variant="warning" className="text-[10px]">{trashedGalleries.length}</Badge>
+              )}
+            </button>
+
+            {showGalleryTrashPanel && (
+              <div className="rounded-xl border border-zinc-800 bg-zinc-950/80 p-3 space-y-2 max-h-56 overflow-y-auto custom-scrollbar">
+                <p className="text-[10px] text-zinc-500 leading-relaxed">
+                  Galeries masquées du portfolio et de l&apos;espace client.
+                </p>
+                {trashedGalleries.length === 0 ? (
+                  <p className="text-[11px] text-zinc-600 text-center py-3">Corbeille vide</p>
+                ) : (
+                  trashedGalleries.map((gal) => (
+                    <div
+                      key={gal.id}
+                      className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-2.5 space-y-2"
+                    >
+                      <div className="flex gap-2 min-w-0">
+                        <img
+                          src={gal.coverUrl}
+                          alt={gal.title}
+                          className="h-10 w-12 object-cover rounded-md border border-zinc-700 shrink-0"
+                        />
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-semibold text-zinc-200 truncate">{gal.title}</p>
+                          <p className="text-[9px] text-zinc-500 mt-0.5">
+                            {gal.photos.length} photo(s) • {formatTrashDate(gal.deletedAt)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-[10px] flex-1"
+                          onClick={() => handleRestoreGallery(gal.id)}
+                        >
+                          <RotateCcw className="h-3 w-3 mr-1" />
+                          Restaurer
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-[10px] text-rose-400 flex-1"
+                          onClick={() => handlePermanentDeleteGallery(gal.id)}
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Suppr.
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        </aside>
+
+        {/* Colonne droite — contenu galerie sélectionnée */}
+        <div className="flex-1 min-w-0">
+      <Card className="glass-panel border-amber-400/30 overflow-hidden h-full flex flex-col">
+        {/* En-tête galerie compact */}
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 p-5 border-b border-zinc-800 bg-zinc-950/40">
+          <div className="flex items-center gap-4 min-w-0">
             <img
               src={selectedGallery.coverUrl}
               alt={selectedGallery.title}
-              className="h-20 w-28 object-cover rounded-2xl border border-amber-400/40 gold-border-glow shrink-0"
+              className="h-16 w-22 object-cover rounded-xl border border-amber-400/40 shrink-0"
             />
-            <div className="space-y-1">
-              <div className="flex items-center space-x-3">
-                <h2 className="text-2xl font-extrabold text-white">{selectedGallery.title}</h2>
-                <Badge variant={selectedGallery.isPrivate ? 'gold' : 'success'}>
-                  {selectedGallery.isPrivate ? 'Galerie Privée' : 'Galerie Publique'}
+            <div className="min-w-0 space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-lg font-extrabold text-white truncate">{selectedGallery.title}</h2>
+                <Badge variant={selectedGallery.isPrivate ? 'gold' : 'success'} className="text-[10px]">
+                  {selectedGallery.isPrivate ? 'Privée' : 'Publique'}
                 </Badge>
               </div>
-              <p className="text-xs text-zinc-400">Client : <span className="text-white font-semibold">{selectedGallery.clientName}</span> • Catégorie : <span className="text-amber-400 uppercase font-mono">{selectedGallery.category}</span></p>
-              <div className="text-xs text-zinc-400 flex items-center space-x-3 font-mono">
-                <span>Clé d'Accès : <code className="text-amber-400 font-bold bg-zinc-900 px-2 py-0.5 rounded-lg border border-zinc-800">{selectedGallery.accessKey}</code></span>
-                {selectedGallery.password && <span>Mot de Passe : <code className="text-zinc-300 bg-zinc-900 px-2 py-0.5 rounded-lg border border-zinc-800">{selectedGallery.password}</code></span>}
+              <p className="text-[11px] text-zinc-400">
+                {selectedGallery.clientName} • <span className="text-amber-400 uppercase font-mono">{selectedGallery.category}</span>
+              </p>
+              <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono text-zinc-500">
+                <span className="inline-flex items-center gap-1">
+                  <Key className="h-3 w-3 text-amber-400" />
+                  {selectedGallery.accessKey}
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-[10px] text-zinc-400 hover:text-amber-400"
+                  onClick={() => handleCopyGalleryLink(selectedGallery.accessKey)}
+                >
+                  {copiedLink ? (
+                    <Check className="h-3 w-3 mr-1" />
+                  ) : (
+                    <Link2 className="h-3 w-3 mr-1" />
+                  )}
+                  {copiedLink ? 'Copié' : 'Copier le lien'}
+                </Button>
+                {selectedGalleryMeta?.invoiceNumber && (
+                  <span className="inline-flex items-center gap-1">
+                    <FileText className="h-3 w-3" />
+                    {selectedGalleryMeta.invoiceNumber}
+                  </span>
+                )}
+                {selectedGalleryMeta?.reference && (
+                  <span>Rés. {selectedGalleryMeta.reference}</span>
+                )}
               </div>
             </div>
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {selectedGallery.isPrivate && (
+              <Button
+                variant="gold"
+                size="sm"
+                disabled={sendingGalleryAccess}
+                onClick={() => handleSendGalleryAccess(selectedGallery)}
+                className="text-xs font-bold"
+              >
+                <Mail className="h-3.5 w-3.5 mr-1.5" />
+                {sendingGalleryAccess ? 'Envoi…' : 'Envoyer clé par email'}
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -498,146 +1076,304 @@ export default function AdminGaleriesPage() {
                 setEditingGallery(selectedGallery);
                 setIsGalleryModalOpen(true);
               }}
-              className="space-x-1.5 border-zinc-800 text-xs"
+              className="text-xs border-zinc-800"
             >
-              <Edit3 className="h-3.5 w-3.5 text-amber-400" />
-              <span>Modifier la Galerie</span>
+              <Edit3 className="h-3.5 w-3.5 text-amber-400 mr-1.5" />
+              Modifier
             </Button>
             <Button
-              variant="gold"
+              variant="outline"
               size="sm"
-              onClick={() => setIsAlbumModalOpen(true)}
-              className="space-x-1.5 font-bold text-xs"
+              onClick={handleTrashGallery}
+              title="Mettre la galerie dans la corbeille"
+              className="text-xs border-zinc-800 text-zinc-400 hover:text-rose-400 hover:border-rose-500/40"
             >
-              <Plus className="h-3.5 w-3.5" />
-              <span>Nouveau Sous-Album</span>
+              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+              Mettre en corbeille
+            </Button>
+            <Button variant="gold" size="sm" onClick={() => setIsAlbumModalOpen(true)} className="text-xs font-bold">
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
+              Album
             </Button>
           </div>
         </div>
 
-        {/* Albums Filter Tabs with Public/Privé Toggle Controls */}
-        <div className="space-y-3">
-          <div className="text-xs font-bold text-zinc-400 uppercase tracking-wider flex items-center justify-between">
-            <span>Sous-Albums ({selectedGallery.albums.length})</span>
-            <span className="text-zinc-500 font-mono text-[11px]">Cliquez sur le cadenas d'un album pour le passer en Public ou Privé</span>
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                onClick={() => setSelectedAlbumFilter('all')}
-                className={`px-4 py-2.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-                  selectedAlbumFilter === 'all'
-                    ? 'border-amber-400 bg-amber-400/20 text-amber-400 font-bold'
-                    : 'border-zinc-800 glass-panel text-zinc-400 hover:text-white'
-                }`}
-              >
-                Toutes les Photos ({selectedGallery.photos.length})
-              </button>
-
-              {(selectedGallery.albums || []).map((alb) => {
-                const albumCount = selectedGallery.photos.filter((p) => p.albumId === alb.id).length;
-                return (
-                  <div key={alb.id} className="inline-flex items-center space-x-1">
-                    <button
-                      onClick={() => setSelectedAlbumFilter(alb.id)}
-                      className={`px-4 py-2.5 rounded-l-xl text-xs font-semibold border-y border-l transition-all cursor-pointer flex items-center space-x-2 ${
-                        selectedAlbumFilter === alb.id
-                          ? 'border-amber-400 bg-amber-400/20 text-amber-400 font-bold'
-                          : 'border-zinc-800 glass-panel text-zinc-400 hover:text-white'
-                      }`}
-                    >
-                      <span>📁 {alb.name} ({albumCount})</span>
-                    </button>
-
-                    {/* Quick Toggle Public/Private Album Button */}
-                    <button
-                      onClick={() => handleToggleAlbumPrivacy(alb.id)}
-                      title={alb.isPrivate ? 'Album Privé Verrouillé - S’afficherait uniquement dans l’Espace Client' : 'Album Public - Visible dans le Portfolio Public'}
-                      className={`px-2.5 py-2.5 rounded-r-xl border text-xs font-bold transition-all cursor-pointer ${
-                        alb.isPrivate
-                          ? 'border-amber-400/50 bg-amber-400/10 text-amber-400 hover:bg-amber-400 hover:text-zinc-950'
-                          : 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-zinc-950'
-                      }`}
-                    >
-                      {alb.isPrivate ? <Lock className="h-3.5 w-3.5" /> : <Globe className="h-3.5 w-3.5" />}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="relative w-full sm:w-72">
-              <Search className="h-4 w-4 absolute left-3 top-3 text-zinc-500" />
-              <Input
-                placeholder="Rechercher une photo..."
-                value={searchPhotoQuery}
-                onChange={(e) => setSearchPhotoQuery(e.target.value)}
-                className="pl-9 h-10 text-xs"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Drag & Drop Multi-Uploader for Selected Gallery */}
-        <div className="p-6 rounded-2xl border-2 border-dashed border-amber-400/40 bg-zinc-950/60 text-center space-y-3">
-          <div className="h-12 w-12 rounded-2xl bg-amber-400/10 text-amber-400 flex items-center justify-center mx-auto">
-            <UploadCloud className="h-6 w-6" />
-          </div>
-          <div className="space-y-1">
-            <h4 className="text-sm font-bold text-white">Uploader des Photos HD dans "{selectedGallery.title}"</h4>
-            <p className="text-xs text-zinc-400">
-              Déposez vos clichés HD (JPEG/PNG/RAW). Traitement WebP & Filigranage automatique.
-            </p>
-          </div>
-
-          <div>
-            <label className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-amber-400 text-zinc-950 font-bold text-xs cursor-pointer hover:bg-amber-300 transition-all shadow-md shadow-amber-400/20">
-              <UploadCloud className="h-4 w-4 mr-2" />
-              Sélectionner & Uploader des Photos
-              <input
-                type="file"
-                multiple
-                accept="image/*"
-                className="hidden"
-                onChange={handleMultiPhotoUpload}
-              />
-            </label>
-          </div>
-
-          {uploading && (
-            <div className="max-w-md mx-auto space-y-2 pt-2">
-              <div className="flex justify-between text-xs text-amber-400 font-semibold">
-                <span>Traitement WebP & Synchronisation...</span>
-                <span>{uploadProgress}%</span>
+        {/* Split albums | photos */}
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(240px,280px)_1fr] flex-1 min-h-0 divide-y lg:divide-y-0 lg:divide-x divide-zinc-800">
+          {/* Panneau albums */}
+          <div className="flex flex-col min-h-0 bg-zinc-950/30">
+            <div className="p-4 space-y-3 border-b border-zinc-800/80">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Layers className="h-3.5 w-3.5" />
+                  Albums ({activeAlbums.length})
+                </h3>
+                {trashedAlbums.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowTrashPanel((open) => !open)}
+                    className="text-[10px] text-zinc-500 hover:text-rose-400 flex items-center gap-1"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                    {trashedAlbums.length}
+                  </button>
+                )}
               </div>
-              <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-amber-400 transition-all duration-300"
-                  style={{ width: `${uploadProgress}%` }}
+              <div className="relative">
+                <Search className="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-zinc-500" />
+                <Input
+                  placeholder="Album, mot de passe…"
+                  value={searchAlbumQuery}
+                  onChange={(e) => setSearchAlbumQuery(e.target.value)}
+                  className="pl-8 h-9 text-[11px]"
                 />
               </div>
             </div>
-          )}
 
-          {!uploading && uploadError && (
-            <p className="text-xs text-red-400 max-w-md mx-auto pt-2">{uploadError}</p>
-          )}
-        </div>
+            <div className="flex-1 overflow-y-auto p-3 space-y-1.5 max-h-[280px] lg:max-h-[calc(100vh-20rem)] custom-scrollbar">
+              <button
+                type="button"
+                onClick={() => setSelectedAlbumFilter('all')}
+                className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer flex items-center justify-between ${
+                  selectedAlbumFilter === 'all'
+                    ? 'border-amber-400 bg-amber-400/15 text-amber-400'
+                    : 'border-transparent text-zinc-400 hover:bg-zinc-900/60 hover:text-white'
+                }`}
+              >
+                <span>Toutes les photos</span>
+                <span className="text-[10px] font-mono opacity-70">{totalVisiblePhotos}</span>
+              </button>
 
-        {/* Photo Grid with Interactive Actions */}
-        <div className="space-y-4 pt-2">
-          <div className="flex items-center justify-between text-xs font-semibold text-zinc-400">
-            <span>Affichage de {filteredPhotos.length} photo(s)</span>
-            <span className="text-amber-400/80">Les photos des albums publics sont affichées sur le Portfolio public</span>
+              {filteredAlbums.length === 0 ? (
+                <p className="text-[11px] text-zinc-600 text-center py-4">Aucun album trouvé</p>
+              ) : (
+                filteredAlbums.map((alb) => {
+                  const albumCount = (selectedGallery.photos || []).filter(
+                    (p) => p.albumId === alb.id && isPhotoVisibleInGallery(selectedGallery, p)
+                  ).length;
+                  const isActive = selectedAlbumFilter === alb.id;
+                  return (
+                    <div
+                      key={alb.id}
+                      className={`rounded-xl border transition-all ${
+                        isActive ? 'border-amber-400/50 bg-amber-400/5' : 'border-zinc-800/80'
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setSelectedAlbumFilter(alb.id)}
+                        className="w-full text-left px-3 py-2.5 flex items-start justify-between gap-2 cursor-pointer"
+                      >
+                        <div className="min-w-0">
+                          <p className={`text-xs font-semibold truncate ${isActive ? 'text-amber-400' : 'text-zinc-200'}`}>
+                            {alb.name}
+                          </p>
+                          <p className="text-[10px] text-zinc-500 mt-0.5">{albumCount} photo(s)</p>
+                        </div>
+                        {alb.isPrivate ? (
+                          <Lock className="h-3.5 w-3.5 text-amber-400 shrink-0 mt-0.5" />
+                        ) : (
+                          <Globe className="h-3.5 w-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                        )}
+                      </button>
+                      <div className="flex border-t border-zinc-800/80">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleAlbumPrivacy(alb.id);
+                          }}
+                          title={alb.isPrivate ? 'Passer en public' : 'Passer en privé'}
+                          className={`flex-1 py-1.5 text-[10px] font-semibold transition-colors cursor-pointer ${
+                            alb.isPrivate
+                              ? 'text-amber-400 hover:bg-amber-400/10'
+                              : 'text-emerald-400 hover:bg-emerald-500/10'
+                          }`}
+                        >
+                          {alb.isPrivate ? 'Privé → Public' : 'Public → Privé'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleTrashAlbum(alb.id);
+                          }}
+                          title="Corbeille"
+                          className="flex-1 py-1.5 text-[10px] text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer border-l border-zinc-800/80"
+                        >
+                          Suppr.
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="border-t border-zinc-800 p-3 space-y-2">
+              <button
+                type="button"
+                onClick={() => setShowTrashPanel((open) => !open)}
+                className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg border text-[10px] font-semibold transition-all cursor-pointer ${
+                  showTrashPanel
+                    ? 'border-rose-500/40 bg-rose-500/10 text-rose-400'
+                    : 'border-zinc-800 text-zinc-500 hover:text-rose-400'
+                }`}
+              >
+                <span className="flex items-center gap-1.5">
+                  <Trash2 className="h-3 w-3" />
+                  Corbeille albums
+                </span>
+                {trashedAlbums.length > 0 && (
+                  <Badge variant="warning" className="text-[9px]">{trashedAlbums.length}</Badge>
+                )}
+              </button>
+              {showTrashPanel && (
+                <div className="space-y-2 max-h-40 overflow-y-auto custom-scrollbar">
+                  {trashedAlbums.length === 0 ? (
+                    <p className="text-[10px] text-zinc-600 text-center py-2">Corbeille vide</p>
+                  ) : (
+                    trashedAlbums.map((album) => (
+                      <div key={album.id} className="rounded-lg border border-zinc-800 bg-zinc-900/50 px-2.5 py-2 space-y-1.5">
+                        <p className="text-[11px] font-semibold text-zinc-300 truncate">{album.name}</p>
+                        <p className="text-[9px] text-zinc-600">{formatTrashDate(album.deletedAt)}</p>
+                        <div className="flex gap-1">
+                          <Button type="button" variant="outline" size="sm" className="h-7 text-[10px] flex-1" onClick={() => handleRestoreAlbum(album.id)}>
+                            <RotateCcw className="h-3 w-3 mr-1" />
+                            Restaurer
+                          </Button>
+                          <Button type="button" variant="ghost" size="sm" className="h-7 text-[10px] text-rose-400 flex-1" onClick={() => handlePermanentDeleteAlbum(album.id)}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
-          {filteredPhotos.length === 0 ? (
-            <div className="p-12 text-center rounded-2xl border border-zinc-800 bg-zinc-950 text-zinc-500 text-xs">
-              Aucune photo trouvée dans cette sélection. Téléversez vos premiers clichés ci-dessus.
+          {/* Panneau photos */}
+          <div className="flex flex-col min-h-0 min-w-0">
+            <div className="p-4 border-b border-zinc-800/80 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="relative flex-1 max-w-sm">
+                  <Search className="h-4 w-4 absolute left-3 top-2.5 text-zinc-500" />
+                  <Input
+                    placeholder="Rechercher une photo…"
+                    value={searchPhotoQuery}
+                    onChange={(e) => setSearchPhotoQuery(e.target.value)}
+                    className="pl-9 h-9 text-xs"
+                  />
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setShowPhotoTrashPanel((open) => !open)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-semibold transition-all cursor-pointer ${
+                      showPhotoTrashPanel
+                        ? 'border-rose-500/40 bg-rose-500/10 text-rose-400'
+                        : 'border-zinc-800 text-zinc-400 hover:text-rose-400 hover:border-rose-500/30'
+                    }`}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Corbeille photos
+                    {trashedPhotos.length > 0 && (
+                      <Badge variant="warning" className="text-[9px] ml-0.5">{trashedPhotos.length}</Badge>
+                    )}
+                  </button>
+                  <span className="text-[11px] text-zinc-500">
+                    {filteredPhotos.length} / {totalVisiblePhotos}
+                  </span>
+                </div>
+              </div>
+
+              {showPhotoTrashPanel && (
+                <div className="rounded-xl border border-rose-500/20 bg-zinc-950/80 p-3 space-y-3">
+                  <p className="text-[10px] text-zinc-500">
+                    Photos supprimées — restaurez-les ou supprimez-les définitivement.
+                  </p>
+                  {trashedPhotos.length === 0 ? (
+                    <p className="text-[11px] text-zinc-600 text-center py-4">Aucune photo en corbeille</p>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-52 overflow-y-auto custom-scrollbar">
+                      {trashedPhotos.map((photo) => (
+                        <div key={photo.id} className="rounded-lg border border-zinc-800 bg-zinc-900/60 overflow-hidden">
+                          <div className="relative aspect-[4/3]">
+                            <img src={photo.url} alt={photo.title} className="absolute inset-0 w-full h-full object-cover opacity-70" />
+                          </div>
+                          <div className="p-2 space-y-1.5">
+                            <p className="text-[10px] font-semibold text-zinc-300 truncate">{photo.title}</p>
+                            <p className="text-[9px] text-zinc-600">{formatTrashDate(photo.deletedAt)}</p>
+                            <div className="flex gap-1">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-6 text-[9px] flex-1 px-1"
+                                onClick={() => handleRestorePhoto(photo.id)}
+                              >
+                                <RotateCcw className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 text-[9px] text-rose-400 flex-1 px-1"
+                                onClick={() => handlePermanentDeletePhoto(photo.id)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Uploader compact */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-3 rounded-xl border border-dashed border-amber-400/30 bg-zinc-950/50">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="h-9 w-9 rounded-lg bg-amber-400/10 text-amber-400 flex items-center justify-center shrink-0">
+                    <UploadCloud className="h-4 w-4" />
+                  </div>
+                  <p className="text-[11px] text-zinc-400 truncate">
+                    Glisser-déposer ou sélectionner — WebP & filigrane auto
+                  </p>
+                </div>
+                <label className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-amber-400 text-zinc-950 font-bold text-[11px] cursor-pointer hover:bg-amber-300 transition-all shrink-0">
+                  <UploadCloud className="h-3.5 w-3.5 mr-1.5" />
+                  Uploader
+                  <input type="file" multiple accept="image/*" className="hidden" onChange={handleMultiPhotoUpload} />
+                </label>
+              </div>
+
+              {uploading && (
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-[11px] text-amber-400 font-semibold">
+                    <span>Traitement…</span>
+                    <span>{uploadProgress}%</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
+                    <div className="h-full bg-amber-400 transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                  </div>
+                </div>
+              )}
+              {!uploading && uploadError && (
+                <p className="text-[11px] text-red-400">{uploadError}</p>
+              )}
             </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+
+            <div className="flex-1 overflow-y-auto p-4 max-h-[520px] lg:max-h-[calc(100vh-20rem)] custom-scrollbar">
+              {filteredPhotos.length === 0 ? (
+                <div className="p-10 text-center rounded-xl border border-zinc-800 bg-zinc-950/60 text-zinc-500 text-xs">
+                  Aucune photo dans cette sélection.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {filteredPhotos.map((photo) => {
                 const parentAlb = selectedGallery.albums.find((a) => a.id === photo.albumId);
                 const isPhotoLocked = parentAlb?.isPrivate ?? photo.isPrivate ?? selectedGallery.isPrivate;
@@ -702,7 +1438,7 @@ export default function AdminGaleriesPage() {
                         </button>
                         <button
                           onClick={() => handleDeletePhoto(photo.id)}
-                          title="Supprimer la photo"
+                          title="Mettre dans la corbeille"
                           className="h-8 w-8 rounded-xl bg-rose-500/20 text-rose-400 hover:bg-rose-500 hover:text-white flex items-center justify-center transition-all cursor-pointer"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -730,10 +1466,14 @@ export default function AdminGaleriesPage() {
                   </div>
                 );
               })}
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </Card>
+        </div>
+      </div>
       </>
       )}
 
@@ -801,7 +1541,42 @@ export default function AdminGaleriesPage() {
                 </div>
 
                 {editingGallery.isPrivate && (
-                  <div className="grid grid-cols-2 gap-4 pt-2 border-t border-zinc-800">
+                  <div className="space-y-4 pt-2 border-t border-zinc-800">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-zinc-400 block mb-1 font-semibold">Client enregistré</label>
+                        <select
+                          value={editingGallery.clientEmail || ''}
+                          onChange={(e) => {
+                            const email = e.target.value;
+                            const match = registeredClients.find((c) => c.email === email);
+                            setEditingGallery({
+                              ...editingGallery,
+                              clientEmail: email,
+                              clientName: match?.name || editingGallery.clientName,
+                            });
+                          }}
+                          className="w-full h-11 rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-xs text-zinc-100"
+                        >
+                          <option value="">— Choisir un client du système —</option>
+                          {registeredClients.map((client) => (
+                            <option key={client.id} value={client.email}>
+                              {client.name} ({client.email})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-zinc-400 block mb-1 font-semibold">Email de réception</label>
+                        <Input
+                          type="email"
+                          placeholder="client@email.com"
+                          value={editingGallery.clientEmail || ''}
+                          onChange={(e) => setEditingGallery({ ...editingGallery, clientEmail: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="text-zinc-400 block mb-1 font-semibold">Clé d'Accès Personnalisée</label>
                       <Input
@@ -819,6 +1594,7 @@ export default function AdminGaleriesPage() {
                         value={editingGallery.password || ''}
                         onChange={(e) => setEditingGallery({ ...editingGallery, password: e.target.value })}
                       />
+                    </div>
                     </div>
                   </div>
                 )}
@@ -974,7 +1750,7 @@ export default function AdminGaleriesPage() {
                     }}
                     className="w-full h-11 rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-xs text-zinc-100"
                   >
-                    {(selectedGallery.albums || []).map((alb) => (
+                    {(getActiveAlbums(selectedGallery.albums || []) || []).map((alb) => (
                       <option key={alb.id} value={alb.id}>
                         {alb.name} {alb.isPrivate ? '(Privé 🔒)' : '(Public 🌍)'}
                       </option>

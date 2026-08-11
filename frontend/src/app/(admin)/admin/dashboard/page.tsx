@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import {
   TrendingUp,
@@ -8,38 +9,41 @@ import {
   Users,
   Calendar,
   ArrowUpRight,
+  Eye,
 } from 'lucide-react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useSettings } from '@/context/settings-context';
 import { LoadingState } from '@/components/common/loading-state';
+import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { fetchDashboardData, type DashboardStats } from '@/lib/admin-dashboard';
+import { fetchVisitAnalytics } from '@/lib/visit-analytics';
 import { getApiErrorMessage } from '@/lib/api-error';
+
+const DashboardCharts = dynamic(() => import('@/components/admin/dashboard-charts'), {
+  ssr: false,
+  loading: () => <div className="h-72 animate-pulse rounded-xl bg-zinc-900/40" />,
+});
 
 export default function AdminDashboardPage() {
   const { formatPrice, currencySymbol } = useSettings();
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [todayViews, setTodayViews] = useState<number | null>(null);
+  const [todayUniqueVisitors, setTodayUniqueVisitors] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
     setError('');
     try {
-      const data = await fetchDashboardData();
+      const [data, visitData] = await Promise.all([
+        fetchDashboardData(),
+        fetchVisitAnalytics().catch(() => null),
+      ]);
       setStats(data.stats);
+      setTodayViews(visitData?.todayViews ?? null);
+      setTodayUniqueVisitors(visitData?.todayUniqueVisitors ?? null);
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, 'Impossible de charger le tableau de bord.'));
     } finally {
@@ -63,30 +67,27 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-white">
-            Tableau de Bord <span className="gold-gradient-text">Studio</span>
-          </h1>
-          <p className="text-zinc-400 text-sm mt-1">
-            Données live depuis réservations, paiements Stripe et CRM ({currencySymbol}).
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" onClick={load}>
-            Actualiser
-          </Button>
-          <Link href="/admin/reservations">
-            <Button variant="gold" size="sm">Voir réservations</Button>
-          </Link>
-        </div>
-      </div>
+      <AdminPageHeader
+        title="Tableau de bord"
+        accent="Studio"
+        description={`Données live depuis réservations, paiements Stripe et CRM (${currencySymbol}).`}
+        actions={
+          <>
+            <Button variant="outline" size="sm" onClick={load}>
+              Actualiser
+            </Button>
+            <Link href="/admin/reservations">
+              <Button variant="gold" size="sm">Voir réservations</Button>
+            </Link>
+          </>
+        }
+      />
 
       {error && (
         <p className="text-amber-400 text-xs rounded-xl border border-amber-400/30 bg-amber-400/5 px-4 py-3">{error}</p>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         <Card className="glass-panel border-amber-400/30">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-xs font-semibold text-zinc-400 uppercase">CA du mois</CardTitle>
@@ -130,61 +131,29 @@ export default function AdminDashboardPage() {
             <div className="text-xs text-zinc-400 mt-1">+{stats.newLeadsCount} message(s) contact (30 j)</div>
           </CardContent>
         </Card>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <Card className="lg:col-span-2 glass-panel space-y-4">
-          <CardHeader>
-            <CardTitle className="text-lg">Volume d&apos;affaires mensuel</CardTitle>
-            <CardDescription>Réservations enregistrées par mois ({currencySymbol}).</CardDescription>
+        <Card className="glass-panel border-emerald-400/20">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-xs font-semibold text-zinc-400 uppercase">Visites aujourd&apos;hui</CardTitle>
+            <Eye className="h-4 w-4 text-emerald-400" />
           </CardHeader>
-          <CardContent className="h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.monthlyRevenueChart}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                <XAxis dataKey="month" stroke="#71717a" />
-                <YAxis stroke="#71717a" />
-                <Tooltip
-                  formatter={(value) => formatPrice(Number(value ?? 0))}
-                  contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '12px', color: '#fff' }}
-                />
-                <Bar dataKey="revenue" fill="#d4af37" radius={[6, 6, 0, 0]} name="CA" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-panel space-y-4">
-          <CardHeader>
-            <CardTitle className="text-lg">Répartition prestations</CardTitle>
-            <CardDescription>Part des réservations par catégorie.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-72 flex items-center justify-center">
-            {stats.serviceDistribution.length === 0 ? (
-              <p className="text-zinc-500 text-sm">Aucune donnée</p>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={stats.serviceDistribution}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {stats.serviceDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '12px', color: '#fff' }} />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
+          <CardContent>
+            <div className="text-2xl font-extrabold text-white">{todayViews ?? '—'}</div>
+            <div className="text-xs text-zinc-400 mt-1">
+              {todayUniqueVisitors != null
+                ? `${todayUniqueVisitors} visiteur(s) unique(s)`
+                : 'Compteur site public'}
+            </div>
+            <Link href="/admin/analytics" className="text-xs text-emerald-400/90 hover:text-emerald-300 mt-2 inline-block">
+              Voir le trafic →
+            </Link>
           </CardContent>
         </Card>
       </div>
+
+      {stats && (
+        <DashboardCharts stats={stats} formatPrice={formatPrice} currencySymbol={currencySymbol} />
+      )}
 
       <Card className="glass-panel space-y-4">
         <CardHeader className="flex flex-row items-center justify-between">

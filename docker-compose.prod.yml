@@ -11,6 +11,10 @@ services:
       - DB_HOST=postgres
       - DB_PORT=5432
       - RUNNING_IN_DOCKER=true
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+      - 1.1.1.1
     depends_on:
       - postgres
       - redis

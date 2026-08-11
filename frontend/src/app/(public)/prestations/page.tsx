@@ -1,153 +1,209 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import Link from 'next/link';
-import { CheckCircle2, Calendar, Heart, Camera, Briefcase, Shield } from 'lucide-react';
+import {
+  Shield,
+  Sparkles,
+  Calendar,
+  CreditCard,
+  Images,
+  ArrowRight,
+  CheckCircle2,
+  Star,
+  type LucideIcon,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useSettings } from '@/context/settings-context';
 import { useServices } from '@/context/services-context';
-import type { ServiceItem } from '@/lib/service-types';
+import { getPrestationsContent, resolvePrestationsHeroImages } from '@/lib/prestations-content';
+import { ServicePackagesGrid } from '@/components/public/service-packages-grid';
+import { HeroBackgroundSlideshow } from '@/components/common/hero-background-slideshow';
+import { useRevealInView } from '@/lib/use-reveal-in-view';
+import { cn } from '@/lib/utils';
 
-export default function PrestationsPage() {
-  const { settings: systemSettings, formatPrice } = useSettings();
-  const { services: packages } = useServices();
+const PROCESS_STEP_ICONS: LucideIcon[] = [Star, CreditCard, Images];
 
-  const getCategoryIcon = (category: string) => {
-    switch (category.toLowerCase()) {
-      case 'mariage':
-        return Heart;
-      case 'portrait':
-        return Camera;
-      default:
-        return Briefcase;
-    }
-  };
+function ProcessStepCard({
+  step,
+  title,
+  description,
+  index,
+  Icon,
+}: {
+  step: string;
+  title: string;
+  description: string;
+  index: number;
+  Icon: LucideIcon;
+}) {
+  const { ref, visible } = useRevealInView<HTMLDivElement>(0.12);
 
   return (
-    <div className="pt-28 pb-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
-      <div className="text-center max-w-3xl mx-auto space-y-4">
-        <Badge variant="gold">Formules & Offres</Badge>
-        <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
-          Prestations Photographiques <span className="gold-gradient-text">Sur-Mesure</span>
-        </h1>
-        <p className="text-zinc-400 text-base leading-relaxed">
-          Découvrez des prestations claires et transparentes pour {systemSettings.studioName}. Choisissez la formule adaptée et réservez votre date en ligne avec acompte personnalisé.
-        </p>
-      </div>
-
-      {packages.length === 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-96 rounded-2xl bg-zinc-900/50 border border-zinc-800 animate-pulse" />
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {packages.map((pkg, idx) => {
-            const IconComp = getCategoryIcon(pkg.category);
-            const isPopular = idx === 0;
-            const depositAmount = Math.round((pkg.price * (pkg.depositPercentage || systemSettings.depositRate || 30)) / 100);
-
-            return (
-              <Card
-                key={pkg.id}
-                className={`flex flex-col justify-between relative overflow-hidden ${
-                  isPopular
-                    ? 'border-amber-400/60 gold-border-glow bg-amber-500/5'
-                    : 'hover:border-zinc-700'
-                }`}
-              >
-                {isPopular && (
-                  <div className="absolute top-3 right-3 z-10 bg-amber-400 text-zinc-950 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-md">
-                    Formule Plébiscitée
-                  </div>
-                )}
-
-                {pkg.coverImage && (
-                  <div className="h-44 w-full overflow-hidden relative border-b border-zinc-800">
-                    <img
-                      src={pkg.coverImage}
-                      alt={pkg.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/20 to-transparent" />
-                  </div>
-                )}
-
-                <CardHeader className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="h-10 w-10 rounded-xl bg-amber-400/10 flex items-center justify-center text-amber-400">
-                      <IconComp className="h-5 w-5" />
-                    </div>
-                    <Badge variant="gold" className="text-[10px]">
-                      {pkg.category}
-                    </Badge>
-                  </div>
-                  <CardTitle className="text-xl font-bold">{pkg.title}</CardTitle>
-                </CardHeader>
-
-                <CardContent className="space-y-6">
-                  <div>
-                    <div className="text-3xl font-extrabold text-white">{formatPrice(pkg.price)}</div>
-                    <div className="text-xs text-amber-400/80 font-mono mt-0.5">
-                      Acompte ({pkg.depositPercentage || systemSettings.depositRate || 30}%) : {formatPrice(depositAmount)}
-                    </div>
-                  </div>
-
-                  <div className="border-t border-zinc-800 pt-4 space-y-3">
-                    <span className="text-xs font-semibold uppercase text-zinc-400 tracking-wider">
-                      Inclus dans ce pack :
-                    </span>
-                    <ul className="space-y-2 text-sm text-zinc-300">
-                      <li className="flex items-start space-x-2">
-                        <CheckCircle2 className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
-                        <span>Durée de la séance: {pkg.durationMinutes / 60} heure(s)</span>
-                      </li>
-                      <li className="flex items-start space-x-2">
-                        <CheckCircle2 className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
-                        <span>{pkg.photosCount}+ Photos retouchées en Haute Définition</span>
-                      </li>
-                      <li className="flex items-start space-x-2">
-                        <CheckCircle2 className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
-                        <span>Galerie en ligne privée sécurisée avec téléchargement HD</span>
-                      </li>
-                    </ul>
-                  </div>
-
-                  <div className="pt-4 border-t border-zinc-800">
-                    <Link href={`/reservation?service=${pkg.id}`}>
-                      <Button variant={isPopular ? 'gold' : 'outline'} size="md" className="w-full justify-center space-x-2">
-                        <Calendar className="h-4 w-4" />
-                        <span>Réserver cette Prestation</span>
-                      </Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+    <div
+      ref={ref}
+      className={cn(
+        'prestations-step group relative p-6 sm:p-8 rounded-3xl border border-zinc-800/90 bg-zinc-950/60 hover:border-amber-400/25 transition-colors',
+        visible && 'is-visible'
       )}
+      style={{ animationDelay: visible ? `${index * 120}ms` : undefined }}
+    >
+      <span className="text-[10px] font-mono text-amber-400/80 tracking-[0.3em]">{step}</span>
+      <div className="mt-4 h-11 w-11 rounded-xl bg-amber-400/10 flex items-center justify-center text-amber-400 group-hover:scale-110 transition-transform">
+        <Icon className="h-5 w-5" />
+      </div>
+      <h3 className="mt-4 text-lg font-bold text-white">{title}</h3>
+      <p className="mt-2 text-sm text-zinc-400 leading-relaxed">{description}</p>
+    </div>
+  );
+}
 
-      <div className="glass-panel rounded-3xl p-8 border-zinc-800 flex flex-col md:flex-row items-center justify-between gap-6">
-        <div className="flex items-center space-x-4">
-          <div className="h-12 w-12 rounded-2xl bg-amber-400/10 flex items-center justify-center text-amber-400 shrink-0">
-            <Shield className="h-6 w-6" />
+export default function PrestationsPage() {
+  const { settings, fullStudioName, formatPrice } = useSettings();
+  const { services } = useServices();
+  const content = getPrestationsContent(settings);
+  const heroImages = useMemo(() => resolvePrestationsHeroImages(content), [content]);
+
+  const stats = useMemo(() => {
+    const prices = services.map((s) => s.price).filter((p) => p > 0);
+    const minPrice = prices.length ? Math.min(...prices) : null;
+    return [
+      { value: String(services.length || '—'), label: 'Formules actives' },
+      { value: minPrice != null ? `dès ${formatPrice(minPrice)}` : 'Sur devis', label: 'Tarifs transparents' },
+      { value: `${settings.depositRate || 30}%`, label: "Acompte à la réservation" },
+    ];
+  }, [services, formatPrice, settings.depositRate]);
+
+  return (
+    <div className="pb-24">
+      {/* Hero */}
+      <section className="relative min-h-[68vh] flex items-end overflow-hidden">
+        <HeroBackgroundSlideshow images={heroImages} />
+        <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/40 via-zinc-950/80 to-zinc-950" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_20%,_rgba(212,175,55,0.14),_transparent_55%)]" />
+
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-14">
+          <Badge variant="gold" className="mb-5 px-4 py-1.5 text-[10px] uppercase tracking-[0.2em]">
+            <Sparkles className="h-3.5 w-3.5 mr-2 inline" />
+            {content.heroBadge}
+          </Badge>
+          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-white tracking-tight leading-[1.05] max-w-4xl">
+            {content.heroTitleLine1}{' '}
+            <span className="gold-gradient-text block sm:inline">{content.heroTitleHighlight}</span>
+          </h1>
+          <p className="mt-6 max-w-2xl text-base sm:text-lg text-zinc-300 leading-relaxed font-light">
+            {content.heroSubtitle.includes('Chez ')
+              ? content.heroSubtitle
+              : `Chez ${fullStudioName}, ${content.heroSubtitle.charAt(0).toLowerCase()}${content.heroSubtitle.slice(1)}`}
+          </p>
+
+          <div className="mt-10 flex flex-wrap gap-8 sm:gap-12">
+            {stats.map((stat) => (
+              <div key={stat.label}>
+                <div className="text-2xl sm:text-3xl font-extrabold text-white">{stat.value}</div>
+                <div className="text-[11px] uppercase tracking-wider text-zinc-500 mt-1">{stat.label}</div>
+              </div>
+            ))}
           </div>
-          <div>
-            <h3 className="text-lg font-bold text-white">Engagement de Qualité & Sécurité</h3>
-            <p className="text-sm text-zinc-400">
-              Paiement d'acompte par Stripe 100% sécurisé • Contrat avec signature électronique immédiate.
+        </div>
+      </section>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-4 relative z-20 space-y-20">
+        {/* Grille prestations */}
+        <section>
+          <ServicePackagesGrid />
+        </section>
+
+        {/* Comment ça marche */}
+        <section className="space-y-10">
+          <div className="text-center max-w-2xl mx-auto space-y-3">
+            <Badge variant="outline" className="border-zinc-700 text-zinc-400">
+              Parcours client
+            </Badge>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white">
+              {content.processTitle}
+            </h2>
+            <p className="text-sm text-zinc-400 leading-relaxed">
+              Un processus fluide, pensé pour les mariés et clients exigeants — de la réservation à la livraison de vos images.
             </p>
           </div>
-        </div>
-        <Link href="/contact">
-          <Button variant="outline" size="md">
-            Une demande spécifique ? Contactez-nous
-          </Button>
-        </Link>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-6">
+            {content.processSteps.map((item, index) => (
+              <ProcessStepCard
+                key={item.title}
+                step={`0${index + 1}`}
+                title={item.title}
+                description={item.description}
+                index={index}
+                Icon={PROCESS_STEP_ICONS[index] ?? Star}
+              />
+            ))}
+          </div>
+        </section>
+
+        {/* Garanties */}
+        <section className="glass-panel rounded-3xl p-8 sm:p-10 border border-zinc-800/90">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 items-center">
+            <div className="space-y-5">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-2xl bg-amber-400/10 flex items-center justify-center text-amber-400 shrink-0">
+                  <Shield className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Engagement qualité & sécurité</h3>
+                  <p className="text-sm text-zinc-400 mt-0.5">Votre sérénité, notre priorité.</p>
+                </div>
+              </div>
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-zinc-300">
+                {[
+                  'Paiement sécurisé Stripe & Mobile Money',
+                  'Contrat avec signature électronique',
+                  'Galerie privée chiffrée par clé d\'accès',
+                  'Retouche professionnelle & livraison HD',
+                ].map((line) => (
+                  <li key={line} className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+                    <span>{line}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="flex flex-col sm:flex-row lg:flex-col gap-3 shrink-0">
+              <Link href="/reservation">
+                <Button variant="gold" size="lg" className="w-full sm:w-auto space-x-2">
+                  <Calendar className="h-4 w-4" />
+                  <span>Réserver maintenant</span>
+                </Button>
+              </Link>
+              <Link href="/contact">
+                <Button variant="outline" size="lg" className="w-full sm:w-auto">
+                  Demande sur mesure
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* CTA final */}
+        <section className="relative overflow-hidden rounded-3xl border border-amber-400/20 bg-gradient-to-br from-zinc-900 via-zinc-950 to-zinc-950 p-8 sm:p-12 text-center">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-32 bg-amber-400/10 blur-3xl" />
+          <div className="relative space-y-4 max-w-xl mx-auto">
+            <h2 className="text-2xl sm:text-3xl font-bold text-white">
+              Une date en tête ? <span className="gold-gradient-text">Sécurisez-la dès aujourd&apos;hui.</span>
+            </h2>
+            <p className="text-sm text-zinc-400">
+              Les créneaux haute saison partent vite. Verrouillez votre date avec un acompte et recevez votre confirmation immédiatement.
+            </p>
+            <Link href="/reservation">
+              <Button variant="gold" size="lg" className="mt-2 space-x-2">
+                <span>Voir les disponibilités</span>
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        </section>
       </div>
     </div>
   );

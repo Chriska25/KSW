@@ -1,151 +1,61 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import apiClient from '@/lib/api-client';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { usePathname } from 'next/navigation';
+import apiClient, { API_WRITE_TIMEOUT_MS } from '@/lib/api-client';
+import { onVisibleInterval } from '@/lib/visible-interval';
 import type { PhotoItem, AlbumItem, GalleryAdminItem } from '@/lib/gallery-types';
+import { isAlbumTrashed, isPhotoInTrashedAlbum, isPhotoTrashed } from '@/lib/gallery-album-utils';
+import { isGalleryTrashed } from '@/lib/gallery-trash-utils';
 
 export type { PhotoItem, AlbumItem, GalleryAdminItem };
-
-/** Données de démo — utilisées uniquement en admin si la BDD est vide */
-export const INITIAL_GALLERIES: GalleryAdminItem[] = [
-  {
-    id: '1',
-    title: 'Mariage Sophie & Alexandre - Château de Chantilly',
-    clientName: 'Sophie Dupont',
-    clientEmail: 'sophie.d@email.com',
-    category: 'mariage',
-    isPrivate: true,
-    accessKey: 'SOPHIE-ALEX-2026',
-    password: 'Love2026!',
-    expiresAt: '2027-08-15',
-    coverUrl: 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=600&auto=format&fit=crop',
-    albums: [
-      { id: 'alb-1', name: 'Préparatifs & Habillage', photosCount: 2, isPrivate: true },
-      { id: 'alb-2', name: 'Cérémonie & Alliances', photosCount: 2, isPrivate: true },
-      { id: 'alb-3', name: 'Cocktail & Valse', photosCount: 2, isPrivate: false },
-    ],
-    photos: [
-      {
-        id: '1',
-        title: 'Échange des Alliances - Château de Chantilly',
-        cat: 'mariage',
-        url: 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=1200&auto=format&fit=crop',
-        albumId: 'alb-2',
-        albumName: 'Cérémonie & Alliances',
-        isFavorite: true,
-        isCover: true,
-        isPrivate: true,
-        exif: { camera: 'Canon EOS R5', lens: 'RF 85mm F1.2', iso: 100, aperture: 'f/1.2' },
-      },
-      {
-        id: '4',
-        title: 'Réception & Valse des Mariés',
-        cat: 'mariage',
-        url: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?q=80&w=1200&auto=format&fit=crop',
-        albumId: 'alb-3',
-        albumName: 'Cocktail & Valse',
-        isFavorite: true,
-        isCover: false,
-        isPrivate: false,
-        exif: { camera: 'Canon EOS R5', lens: 'RF 35mm F1.8', iso: 800, aperture: 'f/2.0' },
-      },
-    ],
-  },
-  {
-    id: '2',
-    title: 'Portfolio Public Studio 2026',
-    clientName: 'Portfolio Public',
-    category: 'portrait',
-    isPrivate: false,
-    accessKey: 'PUBLIC-2026',
-    coverUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=600&auto=format&fit=crop',
-    albums: [
-      { id: 'alb-pub1', name: 'Portraits Studio', photosCount: 2, isPrivate: false },
-      { id: 'alb-pub2', name: 'Corporate Executive', photosCount: 2, isPrivate: false },
-    ],
-    photos: [
-      {
-        id: '2',
-        title: 'Portrait Noir & Blanc Profond',
-        cat: 'portrait',
-        url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=1200&auto=format&fit=crop',
-        albumId: 'alb-pub1',
-        albumName: 'Portraits Studio',
-        isFavorite: true,
-        isCover: true,
-        isPrivate: false,
-        exif: { camera: 'Canon EOS R5', lens: 'RF 50mm F1.2', iso: 200, aperture: 'f/1.4' },
-      },
-      {
-        id: '3',
-        title: 'Executive Leadership Campaign',
-        cat: 'corporate',
-        url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1200&auto=format&fit=crop',
-        albumId: 'alb-pub2',
-        albumName: 'Corporate Executive',
-        isFavorite: false,
-        isCover: false,
-        isPrivate: false,
-        exif: { camera: 'Sony A7IV', lens: 'FE 24-70mm F2.8', iso: 400, aperture: 'f/2.8' },
-      },
-      {
-        id: '5',
-        title: 'Lumière Dorée en Studio',
-        cat: 'portrait',
-        url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=1200&auto=format&fit=crop',
-        albumId: 'alb-pub1',
-        albumName: 'Portraits Studio',
-        isFavorite: true,
-        isCover: false,
-        isPrivate: false,
-        exif: { camera: 'Canon EOS R5', lens: 'RF 85mm F1.2', iso: 100, aperture: 'f/1.8' },
-      },
-      {
-        id: '6',
-        title: 'Architecture & Design Intérieur',
-        cat: 'corporate',
-        url: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=1200&auto=format&fit=crop',
-        albumId: 'alb-pub2',
-        albumName: 'Corporate Executive',
-        isFavorite: false,
-        isCover: false,
-        isPrivate: false,
-        exif: { camera: 'Sony A7IV', lens: 'FE 16-35mm F2.8', iso: 100, aperture: 'f/8.0' },
-      },
-    ],
-  },
-];
 
 interface GalleryContextType {
   galleries: GalleryAdminItem[];
   setGalleries: React.Dispatch<React.SetStateAction<GalleryAdminItem[]>>;
-  updateGalleries: (newGalleries: GalleryAdminItem[]) => void;
+  hydrateGalleries: (items: GalleryAdminItem[]) => void;
+  updateGalleries: (
+    newGalleries: GalleryAdminItem[],
+    options?: { skipPublicCache?: boolean }
+  ) => Promise<void>;
   publicPhotos: PhotoItem[];
+  galleriesLoading: boolean;
 }
 
 const GalleryContext = createContext<GalleryContextType>({
   galleries: [],
   setGalleries: () => {},
-  updateGalleries: () => {},
+  hydrateGalleries: () => {},
+  updateGalleries: async () => {},
   publicPhotos: [],
+  galleriesLoading: false,
 });
 
-interface GalleryProviderProps {
-  children: React.ReactNode;
-  initialGalleries?: GalleryAdminItem[];
+const SYNC_INTERVAL_MS = 300_000;
+
+function routeNeedsGalleries(pathname: string | null): boolean {
+  if (!pathname) return false;
+  return (
+    pathname.startsWith('/portfolio') ||
+    pathname.startsWith('/contact') ||
+    pathname.startsWith('/galerie')
+  );
 }
 
-export function GalleryProvider({ children, initialGalleries = [] }: GalleryProviderProps) {
-  const [galleries, setGalleries] = useState<GalleryAdminItem[]>(initialGalleries);
+export function GalleryProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const [galleries, setGalleries] = useState<GalleryAdminItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const fetchedRef = useRef(false);
 
-  const fetchLiveGalleries = async () => {
+  const fetchLiveGalleries = useCallback(async () => {
+    setLoading(true);
     try {
-      const res = await apiClient.get(`/galleries/public?t=${Date.now()}`, {
-        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' },
-      });
+      const res = await apiClient.get('/galleries/public');
       const data = res.data;
       if (data && Array.isArray(data.data)) {
         setGalleries(data.data);
+        fetchedRef.current = true;
         try {
           localStorage.setItem('studio_galleries', JSON.stringify(data.data));
         } catch {
@@ -154,54 +64,97 @@ export function GalleryProvider({ children, initialGalleries = [] }: GalleryProv
       }
     } catch (e) {
       console.error('Erreur chargement API galeries:', e);
+    } finally {
+      setLoading(false);
     }
-  };
+  }, []);
+
+  const hydrateGalleries = useCallback((items: GalleryAdminItem[]) => {
+    if (!items.length) return;
+    setGalleries(items);
+    fetchedRef.current = true;
+    try {
+      localStorage.setItem('studio_galleries', JSON.stringify(items));
+    } catch {
+      // ignore
+    }
+  }, []);
 
   useEffect(() => {
+    if (!routeNeedsGalleries(pathname)) return;
+    if (fetchedRef.current) return;
+    fetchedRef.current = true;
+
+    try {
+      const cached = localStorage.getItem('studio_galleries');
+      if (cached) {
+        const parsed = JSON.parse(cached) as GalleryAdminItem[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setGalleries(parsed);
+        }
+      }
+    } catch {
+      // ignore cache parse errors
+    }
+
     fetchLiveGalleries();
+  }, [pathname, fetchLiveGalleries]);
 
-    const interval = setInterval(() => {
-      fetchLiveGalleries();
-    }, 30000);
+  useEffect(() => {
+    if (!routeNeedsGalleries(pathname)) return;
 
-    const handleUpdate = () => fetchLiveGalleries();
+    const clearInterval = onVisibleInterval(fetchLiveGalleries, SYNC_INTERVAL_MS);
+    const handleUpdate = () => {
+      if (document.visibilityState === 'visible') fetchLiveGalleries();
+    };
     window.addEventListener('galleries_updated', handleUpdate);
     window.addEventListener('storage', handleUpdate);
 
     return () => {
-      clearInterval(interval);
+      clearInterval();
       window.removeEventListener('galleries_updated', handleUpdate);
       window.removeEventListener('storage', handleUpdate);
     };
-  }, []);
+  }, [pathname, fetchLiveGalleries]);
 
-  const updateGalleries = async (newGalleries: GalleryAdminItem[]) => {
-    setGalleries(newGalleries);
-    try {
-      localStorage.setItem('studio_galleries', JSON.stringify(newGalleries));
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new Event('galleries_updated'));
+  const updateGalleries = useCallback(
+    async (newGalleries: GalleryAdminItem[], options?: { skipPublicCache?: boolean }) => {
+      setGalleries(newGalleries);
+
+      if (!options?.skipPublicCache) {
+        try {
+          localStorage.setItem('studio_galleries', JSON.stringify(newGalleries));
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new Event('galleries_updated'));
+          }
+        } catch {
+          // localStorage indisponible
+        }
       }
-    } catch {
-      // localStorage indisponible
-    }
 
-    try {
-      await apiClient.post('/admin/galleries/save-all', { galleries: newGalleries });
-      await fetchLiveGalleries();
-    } catch (e) {
-      console.error('Erreur sauvegarde BDD galeries:', e);
-      throw e;
-    }
-  };
+      try {
+        await apiClient.post('/admin/galleries/save-all', { galleries: newGalleries }, {
+          timeout: API_WRITE_TIMEOUT_MS,
+        });
+      } catch (e) {
+        console.error('Erreur sauvegarde BDD galeries:', e);
+        throw e;
+      }
+    },
+    []
+  );
 
   const publicPhotos = useMemo(() => {
     return galleries.flatMap((g) => {
+      if (isGalleryTrashed(g)) return [];
       return (g.photos || [])
         .filter((p) => {
+          if (isPhotoTrashed(p)) return false;
           if (p.isPrivate === true) return false;
+          if (isPhotoInTrashedAlbum(g, p)) return false;
           const parentAlb = (g.albums || []).find((a) => a.id === p.albumId);
           if (parentAlb && parentAlb.isPrivate === true) return false;
+          if (parentAlb && isAlbumTrashed(parentAlb)) return false;
           return true;
         })
         .map((p) => ({
@@ -211,8 +164,20 @@ export function GalleryProvider({ children, initialGalleries = [] }: GalleryProv
     });
   }, [galleries]);
 
+  const value = useMemo(
+    () => ({
+      galleries,
+      setGalleries,
+      hydrateGalleries,
+      updateGalleries,
+      publicPhotos,
+      galleriesLoading: loading,
+    }),
+    [galleries, hydrateGalleries, updateGalleries, publicPhotos, loading]
+  );
+
   return (
-    <GalleryContext.Provider value={{ galleries, setGalleries, updateGalleries, publicPhotos }}>
+    <GalleryContext.Provider value={value}>
       {children}
     </GalleryContext.Provider>
   );

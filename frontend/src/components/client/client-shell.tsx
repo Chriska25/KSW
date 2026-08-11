@@ -1,130 +1,137 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import {
-  Calendar,
-  FolderHeart,
-  LogOut,
-  ArrowLeft,
-  KeyRound,
-  Bell,
-} from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { AppLink } from '@/components/navigation/app-link';
+import { ArrowLeft, KeyRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StudioLogo } from '@/components/brand/studio-logo';
-import { clearClientSession, getClientInitials, getClientSession } from '@/lib/client-session';
-import type { AuthUser } from '@/hooks/use-auth';
+import { ClientSidebar } from '@/components/client/client-sidebar';
+import { ClientTopbar } from '@/components/client/client-topbar';
+import { ClientBreadcrumb } from '@/components/client/client-breadcrumb';
 import { fetchClientNotifications } from '@/lib/client-notifications';
+import { useSessionUser } from '@/hooks/use-session-user';
+import { runWhenIdle } from '@/lib/run-when-idle';
 
-export function ClientShell({ children }: { children: React.ReactNode }) {
+export function ClientShell({
+  children,
+  keyOnlyGallery = false,
+}: {
+  children: React.ReactNode;
+  keyOnlyGallery?: boolean;
+}) {
   const pathname = usePathname();
-  const router = useRouter();
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const { user } = useSessionUser();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadNotifs, setUnreadNotifs] = useState(0);
+  const guestGalleryView = keyOnlyGallery && !user;
 
   useEffect(() => {
-    setUser(getClientSession());
-    fetchClientNotifications()
-      .then((r) => setUnreadNotifs(r.unreadCount))
-      .catch(() => {});
+    setSidebarOpen(false);
   }, [pathname]);
 
-  const handleLogout = () => {
-    clearClientSession();
-    router.push('/login');
-  };
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [sidebarOpen]);
 
-  const navItems: Array<{
-    href: string;
-    label: string;
-    icon: typeof Calendar;
-    badge?: number;
-  }> = [
-    { href: '/client/dashboard', label: 'Tableau de bord', icon: Calendar },
-    { href: '/client/notifications', label: 'Notifications', icon: Bell, badge: unreadNotifs },
-    { href: '/galerie-privee', label: 'Accès par clé', icon: KeyRound },
-  ];
+  useEffect(() => {
+    if (guestGalleryView) return;
+    let cancelled = false;
+    const load = () => {
+      fetchClientNotifications()
+        .then((r) => {
+          if (!cancelled) setUnreadNotifs(r.unreadCount);
+        })
+        .catch(() => {});
+    };
+    runWhenIdle(load);
+    const interval = window.setInterval(load, 60000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [guestGalleryView]);
 
-  const initials = user ? getClientInitials(user.name) : '?';
+  useEffect(() => {
+    if (guestGalleryView) return;
+    let cancelled = false;
+    const ping = () => {
+      if (cancelled) return;
+      void import('@/lib/client-presence').then(({ sendClientPresenceHeartbeat }) =>
+        sendClientPresenceHeartbeat(pathname || '/client/dashboard')
+      );
+    };
+    runWhenIdle(ping);
+    const interval = window.setInterval(ping, 90000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [guestGalleryView, pathname]);
+
+  if (guestGalleryView) {
+    return (
+      <div className="min-h-screen h-[100dvh] bg-zinc-950 text-zinc-100 overflow-hidden flex flex-col">
+        <header className="border-b border-zinc-800/80 bg-zinc-950/90 backdrop-blur-md sticky top-0 z-40 shrink-0">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
+            <StudioLogo size="sm" showSubtitle={false} />
+            <div className="flex items-center gap-2">
+              <AppLink href="/galerie-privee">
+                <Button variant="ghost" size="sm" className="text-zinc-400 text-xs">
+                  <KeyRound className="h-3.5 w-3.5 mr-1" /> Autre clé
+                </Button>
+              </AppLink>
+              <AppLink href="/">
+                <Button variant="ghost" size="sm" className="text-zinc-400 text-xs">
+                  <ArrowLeft className="h-3.5 w-3.5 mr-1" /> Site
+                </Button>
+              </AppLink>
+            </div>
+          </div>
+        </header>
+        <main className="flex-1 overflow-y-auto overscroll-contain admin-main-scroll p-4 sm:p-6 md:p-10">
+          <div className="admin-page-enter max-w-7xl mx-auto">{children}</div>
+        </main>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col md:flex-row text-zinc-100">
-      <aside className="w-full md:w-64 bg-zinc-900/80 border-b md:border-b-0 md:border-r border-zinc-800 p-5 md:p-6 flex flex-col gap-8 shrink-0">
-        <StudioLogo size="sm" showSubtitle={false} />
+    <div className="min-h-screen h-[100dvh] bg-zinc-950 flex text-zinc-100 overflow-hidden">
+      <div
+        className={`${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        } md:translate-x-0 fixed md:static inset-y-0 left-0 z-50 md:z-auto transition-transform duration-200 ease-out shrink-0 shadow-2xl md:shadow-none`}
+      >
+        <ClientSidebar unreadNotifs={unreadNotifs} onCloseMobile={() => setSidebarOpen(false)} />
+      </div>
 
-        <nav className="space-y-1 text-sm font-medium">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors ${
-                  active
-                    ? 'bg-amber-400/10 text-amber-400 font-semibold border border-amber-400/25'
-                    : 'text-zinc-400 hover:text-white hover:bg-zinc-800/60'
-                }`}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                <span className="flex-1">{item.label}</span>
-                {'badge' in item && (item.badge ?? 0) > 0 && (
-                  <span className="text-[10px] bg-amber-400 text-zinc-950 font-bold px-1.5 py-0.5 rounded-full">
-                    {item.badge}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
-          {user && (
-            <Link
-              href="/client/dashboard#galleries"
-              className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800/60 transition-colors"
-            >
-              <FolderHeart className="h-4 w-4 shrink-0" />
-              <span>Mes galeries</span>
-            </Link>
-          )}
-        </nav>
+      {sidebarOpen && (
+        <button
+          type="button"
+          aria-label="Fermer le menu"
+          className="md:hidden fixed inset-0 z-40 bg-black/65 backdrop-blur-[2px]"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
-        <div className="md:mt-auto pt-4 border-t border-zinc-800 space-y-3">
-          {user ? (
-            <>
-              <div className="flex items-center gap-3 px-1">
-                <div className="h-9 w-9 rounded-full bg-zinc-800 flex items-center justify-center font-bold text-amber-400 text-xs shrink-0">
-                  {initials}
-                </div>
-                <div className="min-w-0 text-xs">
-                  <div className="font-semibold text-white truncate">{user.name}</div>
-                  <div className="text-zinc-500 truncate">{user.email}</div>
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleLogout}
-                className="w-full justify-start text-xs text-zinc-400 hover:text-red-300"
-              >
-                <LogOut className="h-3.5 w-3.5 mr-2" /> Déconnexion
-              </Button>
-            </>
-          ) : (
-            <Link href="/login">
-              <Button variant="outline" size="sm" className="w-full text-xs">
-                Se connecter
-              </Button>
-            </Link>
-          )}
-          <Link href="/">
-            <Button variant="ghost" size="sm" className="w-full justify-start text-xs text-zinc-400">
-              <ArrowLeft className="h-3.5 w-3.5 mr-2" /> Retour au site
-            </Button>
-          </Link>
-        </div>
-      </aside>
-
-      <main className="flex-1 p-4 sm:p-6 md:p-10 overflow-y-auto">{children}</main>
+      <div className="flex-1 flex flex-col min-w-0 min-h-0">
+        <ClientTopbar
+          onToggleSidebar={() => setSidebarOpen((open) => !open)}
+          unreadNotifs={unreadNotifs}
+        />
+        <main className="flex-1 overflow-y-auto overscroll-contain admin-main-scroll">
+          <div className="max-w-[1200px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-5 sm:py-6 lg:py-8">
+            <ClientBreadcrumb />
+            <div className="admin-page-enter">{children}</div>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

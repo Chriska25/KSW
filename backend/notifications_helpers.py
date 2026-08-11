@@ -2,8 +2,11 @@ import json
 from typing import Any, Dict, List, Set, Optional
 
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
-from models import Setting, Gallery
+from gallery_photo_notify import list_gallery_photo_notifications
+from models import Setting, Gallery, ElectronicInvitation
+from invitation_helpers import INVITATION_STATUSES
 
 BOOKINGS_KEY = "bookings"
 CONTACT_MESSAGES_KEY = "contact_messages"
@@ -98,11 +101,15 @@ def build_client_notifications(db: Session, user_email: str) -> List[Dict[str, A
                 "relatedId": bid,
             })
 
-    galleries = db.query(Gallery).filter(Gallery.is_private == True).all()
+    galleries = (
+        db.query(Gallery)
+        .filter(
+            Gallery.is_private == True,
+            func.lower(func.coalesce(Gallery.client_email, "")) == email_clean,
+        )
+        .all()
+    )
     for g in galleries:
-        g_email = _normalize_email(g.client_email or "")
-        if g_email != email_clean:
-            continue
         gid = str(g.id)
         notifications.append({
             "id": f"gallery-{gid}",
@@ -113,6 +120,48 @@ def build_client_notifications(db: Session, user_email: str) -> List[Dict[str, A
             "read": f"gallery-{gid}" in read_ids,
             "relatedId": gid,
             "accessKey": g.access_key,
+        })
+
+    invitations = (
+        db.query(ElectronicInvitation)
+        .filter(
+            ElectronicInvitation.deleted_at.is_(None),
+            func.lower(ElectronicInvitation.client_email) == email_clean,
+        )
+        .order_by(ElectronicInvitation.updated_at.desc())
+        .limit(10)
+        .all()
+    )
+    for inv in invitations:
+        iid = str(inv.id)
+        status_label = INVITATION_STATUSES.get(inv.status, inv.status)
+        notifications.append({
+            "id": f"invitation-{iid}",
+            "type": "invitation",
+            "title": f"Invitation — {inv.organizer_names}",
+            "message": f"Statut : {status_label} · {inv.event_date}",
+            "createdAt": inv.updated_at.isoformat() + "Z" if inv.updated_at else "",
+            "read": f"invitation-{iid}" in read_ids,
+            "relatedId": iid,
+            "publicToken": inv.public_token,
+        })
+
+    for event in list_gallery_photo_notifications(db):
+        event_email = _normalize_email(str(event.get("clientEmail", "")))
+        if event_email != email_clean:
+            continue
+        nid = str(event.get("id", ""))
+        count = int(event.get("newPhotosCount") or 0)
+        title = str(event.get("title") or "Galerie")
+        notifications.append({
+            "id": nid,
+            "type": "gallery",
+            "title": "Nouvelles photos disponibles",
+            "message": f'{count} photo(s) ajoutée(s) dans « {title} ». Consultez votre galerie privée.',
+            "createdAt": event.get("createdAt", ""),
+            "read": nid in read_ids,
+            "relatedId": str(event.get("galleryId", "")),
+            "accessKey": event.get("accessKey"),
         })
 
     notifications.sort(key=lambda n: str(n.get("createdAt", "")), reverse=True)

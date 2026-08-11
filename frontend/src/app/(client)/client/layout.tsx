@@ -1,5 +1,6 @@
-import { ClientShell } from '@/components/client/client-shell';
+import React from 'react';
+import { ClientShellWrapper } from '@/components/client/client-shell-wrapper';
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
-  return <ClientShell>{children}</ClientShell>;
+  return <ClientShellWrapper>{children}</ClientShellWrapper>;
 }

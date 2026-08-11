@@ -1,23 +1,37 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { ArrowRight } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { ArrowRight, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useAuth, isAdminUser } from '@/hooks/use-auth';
+import { safeRedirect } from '@/lib/safe-redirect';
 import { useSettings } from '@/context/settings-context';
-import { isDevMode } from '@/lib/session';
+import { clearSession } from '@/lib/session';
+import { buildLoginUrl, isAdminLoginContext } from '@/lib/auth-login-url';
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="text-zinc-400 text-sm text-center py-8">Chargement…</div>}>
+      <LoginPageContent />
+    </Suspense>
+  );
+}
+
+function LoginPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login, loading, error, clearError } = useAuth();
   const { settings } = useSettings();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
+
+  const redirect = searchParams.get('redirect');
+  const isAdminLogin = isAdminLoginContext(searchParams);
 
   const displayError = localError || error;
 
@@ -33,26 +47,32 @@ export default function LoginPage() {
 
     try {
       const res = await login(email.trim(), password);
-      const redirect =
-        typeof window !== 'undefined'
-          ? new URLSearchParams(window.location.search).get('redirect')
-          : null;
 
       if (res.requires_2fa) {
         router.replace(
           `/verify-2fa?userId=${encodeURIComponent(res.user_id || res.user.id)}${
             redirect ? `&redirect=${encodeURIComponent(redirect)}` : ''
-          }`
+          }${isAdminLogin ? '&admin=1' : ''}`
         );
         return;
       }
 
       if (isAdminUser(res.user)) {
-        router.replace('/admin/dashboard');
+        const adminTarget = safeRedirect(
+          redirect && redirect.startsWith('/admin') ? redirect : null,
+          '/admin/dashboard'
+        );
+        router.replace(adminTarget);
         return;
       }
 
-      router.replace(redirect || '/client/dashboard');
+      if (isAdminLogin) {
+        clearSession();
+        setLocalError('Accès réservé aux comptes administrateur.');
+        return;
+      }
+
+      router.replace(safeRedirect(redirect, '/client/dashboard'));
     } catch (err: unknown) {
       if (err instanceof Error && err.message) {
         setLocalError(err.message);
@@ -63,11 +83,19 @@ export default function LoginPage() {
   return (
     <Card className="glass-panel border-amber-400/30 gold-border-glow">
       <CardHeader className="text-center space-y-2">
+        {isAdminLogin && (
+          <div className="inline-flex items-center gap-2 mx-auto px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/30 text-amber-400 text-xs font-semibold uppercase tracking-wider">
+            <Shield className="h-3.5 w-3.5" />
+            Espace administrateur
+          </div>
+        )}
         <CardTitle className="text-2xl font-bold">
           Connexion à <span className="gold-gradient-text">{settings.studioName || 'KSW Studio'}</span>
         </CardTitle>
         <CardDescription>
-          Accédez à vos galeries privées, devis et espace membre.
+          {isAdminLogin
+            ? 'Identifiez-vous pour accéder au back-office studio.'
+            : 'Accédez à vos galeries privées, devis et espace membre.'}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -87,7 +115,7 @@ export default function LoginPage() {
               required
               type="email"
               autoComplete="email"
-              placeholder="sophie.d@email.com"
+              placeholder="vous@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -124,25 +152,33 @@ export default function LoginPage() {
             {!loading && <ArrowRight className="h-4 w-4 ml-2" />}
           </Button>
 
-          {isDevMode() && (
-          <div className="rounded-xl border border-zinc-800 bg-zinc-950/80 p-3 text-[11px] text-zinc-500 space-y-1">
-            <p className="font-semibold text-zinc-400">Comptes de démonstration (dev)</p>
-            <p>
-              Client : <span className="text-zinc-300">sophie.d@email.com</span> /{' '}
-              <span className="text-zinc-300">Password123!</span>
-            </p>
-            <p>
-              Admin : <span className="text-zinc-300">admin@kswstudio.fr</span> /{' '}
-              <span className="text-zinc-300">Password123!</span> (code 2FA : 123456)
-            </p>
-          </div>
-          )}
-
-          <div className="pt-2 border-t border-zinc-800 text-center text-xs text-zinc-400">
-            Nouveau client ?{' '}
-            <Link href="/register" className="text-amber-400 font-semibold hover:underline">
-              Créer un compte
-            </Link>
+          <div className="pt-2 border-t border-zinc-800 text-center text-xs text-zinc-400 space-y-2">
+            {isAdminLogin ? (
+              <>
+                <Link href="/" className="text-amber-400 font-semibold hover:underline block">
+                  Retour au site public
+                </Link>
+                <Link href="/login" className="text-zinc-500 hover:text-zinc-300 block">
+                  Connexion client →
+                </Link>
+              </>
+            ) : (
+              <>
+                Nouveau client ?{' '}
+                <Link
+                  href={redirect ? `/register?redirect=${encodeURIComponent(redirect)}` : '/register'}
+                  className="text-amber-400 font-semibold hover:underline"
+                >
+                  Créer un compte
+                </Link>
+                <span className="block pt-1 text-zinc-500">
+                  Personnel du studio ?{' '}
+                  <Link href={buildLoginUrl({ admin: true })} className="text-amber-400 font-semibold hover:underline">
+                    Accès administrateur
+                  </Link>
+                </span>
+              </>
+            )}
           </div>
         </form>
       </CardContent>

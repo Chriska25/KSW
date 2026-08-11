@@ -21,6 +21,7 @@ frontend/build/
 # Uploads & backups locaux
 backend/uploads/*
 !backend/uploads/.gitkeep
+backend/logs/*.log
 backups/
 
 # IDE

@@ -23,10 +23,25 @@ import { useSettings } from '@/context/settings-context';
 import { submitContactMessage } from '@/lib/contact-api';
 import { getApiErrorMessage } from '@/lib/api-error';
 import { submitTestimonial } from '@/lib/testimonials';
+import { fetchPublicFaq } from '@/lib/faq-api';
+import { StudioMapEmbed } from '@/components/common/studio-map-embed';
+import { RevealPhotoCard } from '@/components/common/reveal-photo-card';
+import { ContactAmbianceGallery } from '@/components/contact/contact-ambiance-gallery';
+import { useGalleries } from '@/context/gallery-context';
 
 export default function ContactPage() {
   const { settings } = useSettings();
+  const { publicPhotos } = useGalleries();
   const formStartedAt = React.useRef(Date.now());
+
+  const ambiancePhotos = React.useMemo(
+    () =>
+      publicPhotos.slice(0, 8).map((p) => ({
+        url: p.url,
+        title: p.title || p.albumName || 'Portfolio studio',
+      })),
+    [publicPhotos]
+  );
 
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -34,6 +49,49 @@ export default function ContactPage() {
   const [captchaVerified, setCaptchaVerified] = useState(false);
   const [honeypot, setHoneypot] = useState('');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
+  const [faqs, setFaqs] = useState<{ q: string; a: string }[]>([]);
+
+  const fallbackFaqs = React.useMemo(
+    () => [
+      {
+        q: 'Combien de temps à l\'avance dois-je réserver mon mariage ?',
+        a: 'Pour les mariages entre mai et septembre, il est recommandé de réserver entre 8 et 12 mois à l\'avance. N\'hésitez pas toutefois à nous contacter pour vérifier la disponibilité sur une date spécifique.',
+      },
+      {
+        q: 'Comment s\'effectue la livraison de mes photographies ?',
+        a: 'Toutes vos photographies retouchées en Haute Définition vous sont livrées dans une galerie privée sécurisée sous 2 à 3 semaines, avec possibilité de téléchargement ZIP illimité.',
+      },
+      {
+        q: 'Fournissez-vous les fichiers bruts (RAW) ?',
+        a: `Le travail d'étalonnage et de retouche fait partie intégrante de la signature artistique de ${settings.studioName}. Nous livrons uniquement des images sélectionnées et sublimées en format JPEG HD.`,
+      },
+      {
+        q: 'Quels sont les modes de paiement acceptés pour l\'acompte ?',
+        a: `Nous acceptons le règlement de l'acompte (${settings.depositRate}%) directement en ligne par carte bancaire via Stripe sécurisé, PayPal ou par virement bancaire.`,
+      },
+    ],
+    [settings.studioName, settings.depositRate]
+  );
+
+  React.useEffect(() => {
+    let cancelled = false;
+    fetchPublicFaq()
+      .then((items) => {
+        if (cancelled) return;
+        if (items.length > 0) {
+          setFaqs(items.map((item) => ({ q: item.question, a: item.answer })));
+        } else {
+          setFaqs(fallbackFaqs);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setFaqs(fallbackFaqs);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [fallbackFaqs]);
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -41,25 +99,6 @@ export default function ContactPage() {
     subject: 'Mariage',
     message: '',
   });
-
-  const faqs = [
-    {
-      q: 'Combien de temps à l\'avance dois-je réserver mon mariage ?',
-      a: 'Pour les mariages entre mai et septembre, il est recommandé de réserver entre 8 et 12 mois à l\'avance. N\'hésitez pas toutefois à nous contacter pour vérifier la disponibilité sur une date spécifique.',
-    },
-    {
-      q: 'Comment s\'effectue la livraison de mes photographies ?',
-      a: 'Toutes vos photographies retouchées en Haute Définition vous sont livrées dans une galerie privée sécurisée sous 2 à 3 semaines, avec possibilité de téléchargement ZIP illimité.',
-    },
-    {
-      q: 'Fournissez-vous les fichiers bruts (RAW) ?',
-      a: `Le travail d'étalonnage et de retouche fait partie intégrante de la signature artistique de ${settings.studioName}. Nous livrons uniquement des images sélectionnées et sublimées en format JPEG HD.`,
-    },
-    {
-      q: 'Quels sont les modes de paiement acceptés pour l\'acompte ?',
-      a: `Nous acceptons le règlement de l'acompte (${settings.depositRate}%) directement en ligne par carte bancaire via Stripe sécurisé, PayPal ou par virement bancaire.`,
-    },
-  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,6 +135,8 @@ export default function ContactPage() {
           Une question sur un projet de mariage, une séance portrait ou une prestation corporate ? Le studio vous répond avec soin sous 24 heures.
         </p>
       </div>
+
+      <ContactAmbianceGallery photos={ambiancePhotos} />
 
       {/* Main Grid: Form + Info Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -254,18 +295,9 @@ export default function ContactPage() {
             </div>
           </Card>
 
-          {/* Google Maps iFrame */}
-          <div className="h-48 rounded-2xl overflow-hidden glass-panel border border-zinc-800">
-            <iframe
-              title="Google Maps Studio Paris"
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2624.472901389812!2d2.317581176882046!3d48.86828580002812!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47e66fcd1536b379%3A0xc3b8398b6a378036!2sRue%20du%20Faubourg%20Saint-Honor%C3%A9%2C%2075008%20Paris!5e0!3m2!1sfr!2sfr!4v1700000000000!5m2!1sfr!2sfr"
-              width="100%"
-              height="100%"
-              style={{ border: 0, filter: 'grayscale(1) invert(0.9) contrast(1.2)' }}
-              allowFullScreen={false}
-              loading="lazy"
-            />
-          </div>
+          <RevealPhotoCard index={0} withShine={false} className="rounded-2xl overflow-hidden">
+            <StudioMapEmbed title={`Localisation — ${settings.address}`} className="h-48 w-full rounded-none border-0 shadow-none" />
+          </RevealPhotoCard>
         </div>
       </div>
 

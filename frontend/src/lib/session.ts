@@ -1,4 +1,5 @@
 import type { AuthUser } from '@/hooks/use-auth';
+import { clearAuthVerifyCache, markAuthVerified } from '@/lib/auth-verify-cache';
 
 const USER_KEY = 'studio_current_user';
 const TOKEN_KEY = 'studio_token';
@@ -40,6 +41,7 @@ export function persistSession(token: string, user: AuthUser): AuthUser {
     localStorage.setItem(TOKEN_KEY, token);
     localStorage.setItem(USER_KEY, JSON.stringify(user));
     syncAuthCookie(token);
+    markAuthVerified();
   } catch {
     // localStorage indisponible
   }
@@ -47,6 +49,7 @@ export function persistSession(token: string, user: AuthUser): AuthUser {
 }
 
 export function clearSession(): void {
+  clearAuthVerifyCache();
   try {
     localStorage.removeItem(USER_KEY);
     localStorage.removeItem(TOKEN_KEY);
@@ -61,8 +64,15 @@ export function isAdminUser(user: Partial<AuthUser> | null | undefined): boolean
   return (
     user.role === 'admin' ||
     user.role === 'photographer' ||
-    user.roles?.some((r) => r.name === 'admin' || r.name === 'photographer') === true
+    user.role === 'assistant' ||
+    user.roles?.some(
+      (r) => r.name === 'admin' || r.name === 'photographer' || r.name === 'assistant'
+    ) === true
   );
+}
+
+export function isSuperUser(user: Partial<AuthUser> | null | undefined): boolean {
+  return Boolean(user?.isSuperuser);
 }
 
 export function isClientUser(user: Partial<AuthUser> | null | undefined): boolean {

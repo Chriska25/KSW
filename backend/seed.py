@@ -1,10 +1,7 @@
 import json
-import hashlib
 from sqlalchemy.orm import Session
 from models import Setting, User, Service, Testimonial, Gallery
-
-def hash_password(pwd: str) -> str:
-    return hashlib.sha256(pwd.encode('utf-8')).hexdigest()
+from security import hash_password
 
 def seed_database(db: Session):
     # Seed Settings if empty
@@ -19,6 +16,19 @@ def seed_database(db: Session):
             "contactEmail": "contact@kswstudio.fr",
             "phone": "+33 1 42 68 00 00",
             "address": "12 Rue du Faubourg Saint-Honoré, 75008 Paris",
+            "studioMapLat": 48.868285,
+            "studioMapLng": 2.317581,
+            "studioMapZoom": 16,
+            "socialLinks": {
+                "instagram": "https://instagram.com/kswstudio",
+                "facebook": "https://facebook.com/kswstudio",
+                "tiktok": "",
+                "youtube": "",
+                "linkedin": "",
+                "pinterest": "",
+                "x": "",
+                "whatsapp": "",
+            },
             "currency": "EUR (€)",
             "timezone": "Europe/Paris",
             "depositRate": "30",
@@ -110,6 +120,19 @@ def seed_database(db: Session):
                 photos_count=30,
                 cover_image="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=600&auto=format&fit=crop",
                 is_active=True
+            ),
+            Service(
+                id="4",
+                title="Invitations électroniques Premium",
+                category="Événement",
+                price=149.0,
+                deposit_percentage=30,
+                duration_minutes=60,
+                photos_count=6,
+                cover_image="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=600&auto=format&fit=crop",
+                is_active=True,
+                seo_title="Invitations électroniques — lien RSVP & partage",
+                seo_description="Invitation digitale sur-mesure : page publique, RSVP invités, templates premium et statistiques en temps réel.",
             ),
         ]
         for s in services:
@@ -333,4 +356,49 @@ def ensure_blog_posts(db: Session) -> None:
         except Exception:
             pass
     db.add(Setting(key='blog_posts', value=json.dumps(DEFAULT_BLOG_POSTS), group='content'))
+    db.commit()
+
+
+DEFAULT_FAQ_ITEMS = [
+    {
+        'id': 'faq-1',
+        'question': "Combien de temps à l'avance dois-je réserver mon mariage ?",
+        'answer': "Pour les mariages entre mai et septembre, il est recommandé de réserver entre 8 et 12 mois à l'avance. N'hésitez pas toutefois à nous contacter pour vérifier la disponibilité sur une date spécifique.",
+        'order': 0,
+        'isPublished': True,
+    },
+    {
+        'id': 'faq-2',
+        'question': 'Comment s\'effectue la livraison de mes photographies ?',
+        'answer': 'Toutes vos photographies retouchées en Haute Définition vous sont livrées dans une galerie privée sécurisée sous 2 à 3 semaines, avec possibilité de téléchargement ZIP illimité.',
+        'order': 1,
+        'isPublished': True,
+    },
+    {
+        'id': 'faq-3',
+        'question': 'Fournissez-vous les fichiers bruts (RAW) ?',
+        'answer': "Le travail d'étalonnage et de retouche fait partie intégrante de la signature artistique du studio. Nous livrons uniquement des images sélectionnées et sublimées en format JPEG HD.",
+        'order': 2,
+        'isPublished': True,
+    },
+    {
+        'id': 'faq-4',
+        'question': "Quels sont les modes de paiement acceptés pour l'acompte ?",
+        'answer': "Nous acceptons le règlement de l'acompte par carte bancaire (Stripe), Mobile Money (Orange Money, MTN, Wave…), PayPal ou virement bancaire.",
+        'order': 3,
+        'isPublished': True,
+    },
+]
+
+
+def ensure_faq_items(db: Session) -> None:
+    setting = db.query(Setting).filter(Setting.key == 'faq_items').first()
+    if setting and setting.value:
+        try:
+            existing = json.loads(setting.value)
+            if isinstance(existing, list) and len(existing) > 0:
+                return
+        except Exception:
+            pass
+    db.add(Setting(key='faq_items', value=json.dumps(DEFAULT_FAQ_ITEMS), group='content'))
     db.commit()

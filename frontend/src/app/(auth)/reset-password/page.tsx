@@ -7,6 +7,7 @@ import { Lock, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { LoadingState } from '@/components/common/loading-state';
 import { useAuth } from '@/hooks/use-auth';
 
 function ResetPasswordForm() {
@@ -126,7 +127,7 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={<div className="text-center text-zinc-400 text-sm py-12">Chargement…</div>}>
+    <Suspense fallback={<LoadingState message="Chargement…" className="py-8" />}>
       <ResetPasswordForm />
     </Suspense>
   );
