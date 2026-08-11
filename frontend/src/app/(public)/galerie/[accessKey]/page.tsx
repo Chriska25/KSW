@@ -1,13 +1,29 @@
 'use client';
 
 import React from 'react';
+import dynamic from 'next/dynamic';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import { PrivateGalleryView } from '@/components/gallery/private-gallery-view';
 import { normalizeGalleryAccessKey } from '@/lib/gallery-access-path';
 import { StudioLogo } from '@/components/brand/studio-logo';
 import { Button } from '@/components/ui/button';
+import { LoadingState } from '@/components/common/loading-state';
+
+const PrivateGalleryView = dynamic(
+  () =>
+    import('@/components/gallery/private-gallery-view').then((m) => ({
+      default: m.PrivateGalleryView,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="py-16">
+        <LoadingState message="Chargement de votre galerie…" />
+      </div>
+    ),
+  }
+);
 
 export default function PublicGalleryByKeyPage() {
   const params = useParams();

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import type { GalleryAdminItem } from '@/lib/gallery-types';
 import { useGalleries } from '@/context/gallery-context';
 
@@ -9,7 +9,7 @@ export function PublicDataSeed({ galleries }: { galleries: GalleryAdminItem[] })
   const { hydrateGalleries } = useGalleries();
   const seededRef = useRef(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (seededRef.current || galleries.length === 0) return;
     seededRef.current = true;
     hydrateGalleries(galleries);

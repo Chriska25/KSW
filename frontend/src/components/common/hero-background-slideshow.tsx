@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { optimizeImageUrl } from '@/lib/optimize-image-url';
+import { isPreGeneratedThumb, optimizeImageUrl } from '@/lib/optimize-image-url';
 
 interface HeroBackgroundSlideshowProps {
   images: string[];
@@ -35,6 +35,7 @@ export function HeroBackgroundSlideshow({ images, intervalMs = 6500 }: HeroBackg
 
   const activeIndex = reduceMotion ? 0 : index;
   const activeUrl = slides[activeIndex];
+  const unoptimized = isPreGeneratedThumb(activeUrl);
 
   return (
     <div className="absolute inset-0 overflow-hidden" aria-hidden>
@@ -45,7 +46,8 @@ export function HeroBackgroundSlideshow({ images, intervalMs = 6500 }: HeroBackg
         fill
         priority={activeIndex === 0}
         sizes="100vw"
-        quality={70}
+        quality={unoptimized ? undefined : 70}
+        unoptimized={unoptimized}
         className="object-cover scale-105 hero-background-slide-active transition-opacity duration-[2200ms]"
       />
     </div>

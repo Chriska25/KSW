@@ -2,7 +2,11 @@
 
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
-import { optimizeImageUrl, resolveGridImageUrl } from '@/lib/optimize-image-url';
+import {
+  isPreGeneratedThumb,
+  optimizeImageUrl,
+  resolveGridImageUrl,
+} from '@/lib/optimize-image-url';
 
 const FALLBACK = optimizeImageUrl(
   'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=800&auto=format&fit=crop',
@@ -31,6 +35,7 @@ export function OptimizedPhoto({
   thumbSrc,
 }: OptimizedPhotoProps) {
   const resolved = resolveGridImageUrl(src || FALLBACK, thumbSrc, width);
+  const unoptimized = isPreGeneratedThumb(resolved);
 
   return (
     <Image
@@ -39,7 +44,8 @@ export function OptimizedPhoto({
       fill
       sizes={sizes}
       priority={priority}
-      quality={75}
+      quality={unoptimized ? undefined : 75}
+      unoptimized={unoptimized}
       className={cn('object-cover', className)}
     />
   );
