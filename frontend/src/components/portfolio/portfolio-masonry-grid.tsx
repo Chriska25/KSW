@@ -6,6 +6,7 @@ import { OptimizedPhoto } from '@/components/common/optimized-photo';
 import type { PhotoItem } from '@/lib/gallery-types';
 import { PORTFOLIO_CATEGORY_LABELS } from '@/lib/portfolio-content';
 import { prefetchImageUrl } from '@/lib/prefetch-image';
+import { resolveGridImageUrl } from '@/lib/optimize-image-url';
 import { useRevealInView } from '@/lib/use-reveal-in-view';
 import { useProgressiveVisible } from '@/lib/use-progressive-visible';
 import { LoadMoreSentinel } from '@/components/common/load-more-sentinel';
@@ -41,7 +42,7 @@ function PortfolioPhotoCard({ photo, index, onClick }: PortfolioPhotoCardProps) 
       ref={ref}
       type="button"
       onClick={onClick}
-      onMouseEnter={() => prefetchImageUrl(photo.url)}
+      onMouseEnter={() => prefetchImageUrl(resolveGridImageUrl(photo.url, photo.thumbUrl, 640))}
       style={{ animationDelay: visible ? `${staggerMs}ms` : undefined }}
       className={cn(
         'portfolio-photo-card group relative overflow-hidden rounded-2xl border border-zinc-800/80 bg-zinc-950 text-left cursor-pointer min-h-[220px]',
@@ -54,6 +55,7 @@ function PortfolioPhotoCard({ photo, index, onClick }: PortfolioPhotoCardProps) 
         src={photo.url}
         thumbSrc={photo.thumbUrl}
         alt={photo.title}
+        priority={index < 6}
         className="portfolio-photo-image absolute inset-0 h-full w-full object-cover"
       />
 

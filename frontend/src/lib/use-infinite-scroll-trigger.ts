@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 
 /** Déclenche `onLoadMore` quand le sentinel entre dans le viewport (scroll infini). */
-export function useInfiniteScrollTrigger(enabled: boolean, onLoadMore: () => void, rootMargin = '480px 0px') {
+export function useInfiniteScrollTrigger(enabled: boolean, onLoadMore: () => void, rootMargin = '200px 0px') {
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

@@ -38,6 +38,7 @@ export default function ContactPage() {
     () =>
       publicPhotos.slice(0, 8).map((p) => ({
         url: p.url,
+        thumbUrl: p.thumbUrl,
         title: p.title || p.albumName || 'Portfolio studio',
       })),
     [publicPhotos]

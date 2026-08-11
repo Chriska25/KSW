@@ -35,11 +35,7 @@ const SYNC_INTERVAL_MS = 300_000;
 
 function routeNeedsGalleries(pathname: string | null): boolean {
   if (!pathname) return false;
-  return (
-    pathname.startsWith('/portfolio') ||
-    pathname.startsWith('/contact') ||
-    pathname.startsWith('/galerie')
-  );
+  return pathname.startsWith('/portfolio') || pathname.startsWith('/contact');
 }
 
 export function GalleryProvider({ children }: { children: React.ReactNode }) {

@@ -5,7 +5,7 @@ import { OptimizedPhoto } from '@/components/common/optimized-photo';
 import { RevealPhotoCard } from '@/components/common/reveal-photo-card';
 import type { PhotoItem } from '@/lib/gallery-types';
 import { prefetchImageUrl } from '@/lib/prefetch-image';
-import { resolvePhotoHdUrl } from '@/lib/gallery-client';
+import { resolveGridImageUrl } from '@/lib/optimize-image-url';
 import { cn } from '@/lib/utils';
 
 interface PrivateGalleryPhotoCardProps {
@@ -36,7 +36,7 @@ export function PrivateGalleryPhotoCard({
         isWide && 'sm:col-span-2 sm:aspect-[2/1]'
       )}
       onClick={onOpen}
-      onMouseEnter={() => prefetchImageUrl(resolvePhotoHdUrl(photo))}
+      onMouseEnter={() => prefetchImageUrl(resolveGridImageUrl(photo.url, photo.thumbUrl, 560))}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {

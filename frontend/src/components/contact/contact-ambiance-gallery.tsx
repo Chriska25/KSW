@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import Image from 'next/image';
-import { optimizeImageUrl } from '@/lib/optimize-image-url';
+import { isPreGeneratedThumb, resolveGridImageUrl } from '@/lib/optimize-image-url';
 
 const FALLBACK_CONTACT_PHOTOS = [
   {
@@ -32,7 +32,7 @@ const FALLBACK_CONTACT_PHOTOS = [
 ];
 
 interface ContactAmbianceGalleryProps {
-  photos: { url: string; title: string }[];
+  photos: { url: string; title: string; thumbUrl?: string | null }[];
 }
 
 export function ContactAmbianceGallery({ photos }: ContactAmbianceGalleryProps) {
@@ -62,18 +62,21 @@ export function ContactAmbianceGallery({ photos }: ContactAmbianceGalleryProps) 
 
         <div className="overflow-hidden py-1">
           <div className="ambiance-marquee-track flex w-max gap-4 sm:gap-5 px-4 sm:px-6">
-            {loop.map((photo, index) => (
+            {loop.map((photo, index) => {
+              const src = resolveGridImageUrl(photo.url, photo.thumbUrl, 480, 70);
+              return (
               <article
                 key={`${photo.url}-${index}`}
                 className="group relative shrink-0 w-[11.5rem] sm:w-[13.5rem] md:w-[15rem] aspect-[3/4] rounded-2xl overflow-hidden border border-zinc-800/80 bg-zinc-950 shadow-lg shadow-black/20"
               >
                 <Image
-                  src={optimizeImageUrl(photo.url, 480, 70)}
+                  src={src}
                   alt={photo.title}
                   fill
                   sizes="240px"
                   quality={70}
                   loading="lazy"
+                  unoptimized={isPreGeneratedThumb(src)}
                   className="object-cover transition-transform duration-700 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/10 to-transparent" />
@@ -81,7 +84,8 @@ export function ContactAmbianceGallery({ photos }: ContactAmbianceGalleryProps) 
                   {photo.title}
                 </p>
               </article>
-            ))}
+            );
+            })}
           </div>
         </div>
       </div>

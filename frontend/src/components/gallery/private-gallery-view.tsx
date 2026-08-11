@@ -47,7 +47,7 @@ import {
 import type { GalleryAdminItem } from '@/lib/gallery-types';
 import { getApiErrorMessage, isAuthApiError } from '@/lib/api-error';
 import { useSettings } from '@/context/settings-context';
-import { optimizeImageUrl } from '@/lib/optimize-image-url';
+import { resolveGridImageUrl } from '@/lib/optimize-image-url';
 import { useProgressiveVisible } from '@/lib/use-progressive-visible';
 import { LoadMoreSentinel } from '@/components/common/load-more-sentinel';
 
@@ -192,11 +192,13 @@ export function PrivateGalleryView({
 
   const heroImages = useMemo(() => {
     const urls: string[] = [];
-    if (gallery?.coverUrl) urls.push(optimizeImageUrl(gallery.coverUrl, 1280, 80));
+    if (gallery?.coverUrl) {
+      urls.push(resolveGridImageUrl(gallery.coverUrl, undefined, 640, 75));
+    }
     for (const photo of photos) {
       if (photo.url) {
-        const optimized = optimizeImageUrl(photo.url, 1280, 80);
-        if (!urls.includes(optimized)) urls.push(optimized);
+        const gridUrl = resolveGridImageUrl(photo.url, photo.thumbUrl, 640, 75);
+        if (!urls.includes(gridUrl)) urls.push(gridUrl);
       }
       if (urls.length >= 4) break;
     }
