@@ -5,6 +5,13 @@ export function invitationPublicUrl(token: string): string {
   return `/invitation/${token}`;
 }
 
+export function guestPassUrl(checkInToken: string): string {
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}/invitation/pass/${checkInToken}`;
+  }
+  return `/invitation/pass/${checkInToken}`;
+}
+
 export function invitationWhatsAppShareUrl(publicUrl: string, organizerNames: string): string {
   const text = encodeURIComponent(
     `Vous êtes invité(e) — ${organizerNames}\n\nConsultez l'invitation et confirmez votre présence :\n${publicUrl}`

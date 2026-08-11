@@ -14,7 +14,9 @@ export function ClientAuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const pathnameRef = useRef(pathname);
-  pathnameRef.current = pathname;
+  useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
 
   const [ready, setReady] = useState(() => canSkipAuthVerify(isClientUser));
   const [denied, setDenied] = useState(false);

@@ -32,6 +32,7 @@ import {
   deleteAdminGuest,
   downloadGuestsCsv,
   importInvitedGuestListCsv,
+  downloadGuestPassPdf,
 } from '@/lib/admin-invitations-api';
 import type { ElectronicInvitation, InvitationGuest } from '@/lib/invitation-types';
 import { INVITATION_STATUS_OPTIONS, formatGuestPreferencesSummary } from '@/lib/invitation-types';
@@ -40,6 +41,7 @@ import {
   invitationStatusVariant,
   guestResponseLabel,
   qrCodeImageUrl,
+  guestPassUrl,
 } from '@/lib/invitation-utils';
 import { getApiErrorMessage } from '@/lib/api-error';
 import { InvitationLinkControl } from '@/components/invitations/invitation-link-control';
@@ -480,6 +482,7 @@ export default function AdminInvitationsPage() {
                         <th className="text-left py-2 pr-2">Réponse</th>
                         <th className="text-left py-2 pr-2">Pers.</th>
                         <th className="text-left py-2 pr-2">Repas / Boisson</th>
+                        <th className="text-left py-2 pr-2">QR billet</th>
                         <th className="text-left py-2">Actions</th>
                       </tr>
                     </thead>
@@ -492,6 +495,31 @@ export default function AdminInvitationsPage() {
                           <td className="py-2 pr-2">{g.guestCount}</td>
                           <td className="py-2 pr-2 text-zinc-400 text-[11px]">
                             {formatGuestPreferencesSummary(g.preferences)}
+                          </td>
+                          <td className="py-2 pr-2">
+                            {g.response === 'yes' && g.checkInToken ? (
+                              <div className="flex items-center gap-2">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={qrCodeImageUrl(guestPassUrl(g.checkInToken), 64)}
+                                  alt=""
+                                  className="rounded border border-zinc-800 bg-white p-0.5"
+                                  width={40}
+                                  height={40}
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  type="button"
+                                  className="h-7 px-2 text-[10px]"
+                                  onClick={() => void downloadGuestPassPdf(detail.id, g.id)}
+                                >
+                                  PDF
+                                </Button>
+                              </div>
+                            ) : (
+                              <span className="text-zinc-600">—</span>
+                            )}
                           </td>
                           <td className="py-2">
                             <Button size="sm" variant="ghost" className="text-rose-400 h-7 px-2" onClick={() => handleDeleteGuest(g.id)}>

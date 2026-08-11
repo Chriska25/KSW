@@ -203,7 +203,7 @@ export function PrivateGalleryView({
       if (urls.length >= 4) break;
     }
     return urls;
-  }, [gallery?.coverUrl, photos]);
+  }, [gallery, photos]);
 
   const { visibleItems: visiblePhotos, hasMore, loadMore, remaining } = useProgressiveVisible(
     filteredPhotos,

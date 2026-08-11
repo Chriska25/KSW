@@ -15,7 +15,9 @@ export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const pathnameRef = useRef(pathname);
-  pathnameRef.current = pathname;
+  useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
 
   const [ready, setReady] = useState(() => canSkipAuthVerify(isAdminUser));
   const [denied, setDenied] = useState(false);

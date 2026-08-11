@@ -165,4 +165,15 @@ export async function uploadInvitationPdfTemplate(
   );
 }
 
+export async function downloadGuestPassPdf(invitationId: string, guestId: string): Promise<void> {
+  const res = await apiClient.get(
+    `/admin/invitations/${invitationId}/guests/${guestId}/pass.pdf`,
+    { responseType: 'blob' }
+  );
+  await downloadBlobResponse(
+    { data: res.data as Blob, headers: res.headers as Record<string, unknown> },
+    `billet-${guestId}.pdf`
+  );
+}
+
 export type { InvitationStats };

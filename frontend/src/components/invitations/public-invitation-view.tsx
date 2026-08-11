@@ -4,11 +4,11 @@ import React, { useMemo, useState } from 'react';
 import { Calendar, Clock, MapPin, Shirt, CheckCircle2, Sparkles, CalendarClock, Car, Hotel, Bus, Gift, Baby, Church, PartyPopper } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import type { PublicInvitation, GuestResponse, GuestPersonPreferences } from '@/lib/invitation-types';
+import type { PublicInvitation, GuestResponse, GuestPersonPreferences, InvitationGuest } from '@/lib/invitation-types';
 import { normalizeServiceOptions, normalizePracticalInfo, MAX_RSVP_PERSONS, emptyPersonPreferences } from '@/lib/invitation-types';
 import { submitPublicRsvp } from '@/lib/invitation-public-api';
 import { getApiErrorMessage } from '@/lib/api-error';
-import { formatDisplayDate, isRsvpFormOpen } from '@/lib/invitation-utils';
+import { formatDisplayDate, guestPassUrl, isRsvpFormOpen, qrCodeImageUrl } from '@/lib/invitation-utils';
 
 const TEMPLATE_STYLES: Record<string, { bg: string; accent: string; card: string; font: string }> = {
   elegant: {
@@ -74,6 +74,7 @@ export function PublicInvitationView({ token, invitation }: PublicInvitationView
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [confirmed, setConfirmed] = useState(false);
+  const [confirmedGuest, setConfirmedGuest] = useState<InvitationGuest | null>(null);
 
   const guestCount = persons.length;
 
@@ -194,7 +195,7 @@ export function PublicInvitationView({ token, invitation }: PublicInvitationView
         return entry;
       });
 
-      await submitPublicRsvp(token, {
+      const result = await submitPublicRsvp(token, {
         fullName: persons[0].name.trim(),
         phone: phone.trim() || undefined,
         response,
@@ -203,6 +204,7 @@ export function PublicInvitationView({ token, invitation }: PublicInvitationView
         message: message.trim() || undefined,
         preferences: { persons: personPrefs },
       });
+      setConfirmedGuest(result.guest ?? null);
       setConfirmed(true);
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, 'Impossible d\'enregistrer votre réponse.'));
@@ -212,6 +214,9 @@ export function PublicInvitationView({ token, invitation }: PublicInvitationView
   };
 
   if (confirmed) {
+    const passToken = confirmedGuest?.checkInToken;
+    const passLink = passToken ? guestPassUrl(passToken) : null;
+
     return (
       <div className={`min-h-screen ${style.bg} flex items-center justify-center p-6`}>
         <div className={`max-w-md w-full text-center p-10 rounded-3xl border ${style.card}`}>
@@ -220,6 +225,29 @@ export function PublicInvitationView({ token, invitation }: PublicInvitationView
           <p className="text-zinc-400 text-sm leading-relaxed">
             Votre réponse a bien été transmise aux organisateurs. À très bientôt !
           </p>
+          {passToken && passLink && (
+            <div className="mt-8 pt-6 border-t border-zinc-800/80 space-y-4">
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                Votre QR code personnel est prêt — imprimez-le sur votre invitation papier pour l&apos;accès le jour J.
+              </p>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={qrCodeImageUrl(passLink, 200)}
+                alt="QR code billet"
+                className="mx-auto rounded-xl border border-zinc-800 bg-white p-2"
+                width={200}
+                height={200}
+              />
+              <a
+                href={passLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block text-xs text-amber-400 hover:underline"
+              >
+                Ouvrir mon billet numérique
+              </a>
+            </div>
+          )}
         </div>
       </div>
     );

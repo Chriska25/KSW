@@ -93,14 +93,15 @@ export default function DebugPage() {
           const s = res.data.data;
           liveSettings = `${s.studioNameFirstPart || '?'} ${s.studioNameSecondPart || '?'}`;
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         const duration = Date.now() - epStart;
+        const message = err instanceof Error ? err.message : String(err);
         results.push({
           name: ep.name,
           url: `${aUrl}${ep.path}`,
           status: 'error',
           latency: duration,
-          message: err.message || 'Échec de connexion API',
+          message: message || 'Échec de connexion API',
         });
       }
     }

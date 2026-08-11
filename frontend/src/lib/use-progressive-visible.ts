@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 /** Affiche une liste par tranches (pagination client) — réinitialise quand `resetKey` change. */
 export function useProgressiveVisible<T>(
@@ -7,19 +7,23 @@ export function useProgressiveVisible<T>(
   initial = 12,
   step = 12
 ) {
-  const [visibleCount, setVisibleCount] = useState(initial);
+  const [state, setState] = useState({ resetKey, visibleCount: initial });
 
-  useEffect(() => {
-    setVisibleCount(initial);
-  }, [resetKey, initial]);
+  if (state.resetKey !== resetKey) {
+    setState({ resetKey, visibleCount: initial });
+  }
 
-  const visibleItems = items.slice(0, visibleCount);
+  const visibleCount = state.visibleCount;
   const hasMore = visibleCount < items.length;
   const remaining = items.length - visibleCount;
 
   const loadMore = useCallback(() => {
-    setVisibleCount((n) => Math.min(n + step, items.length));
+    setState((prev) => ({
+      ...prev,
+      visibleCount: Math.min(prev.visibleCount + step, items.length),
+    }));
   }, [items.length, step]);
 
+  const visibleItems = items.slice(0, visibleCount);
   return { visibleItems, hasMore, loadMore, remaining, total: items.length };
 }

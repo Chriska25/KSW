@@ -5,6 +5,7 @@ import { CheckCircle2, Calendar, Clock, ImageIcon, ArrowRight, Mail, Share2, Bar
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { ServiceItem } from '@/lib/service-types';
+import { isInvitationService } from '@/lib/service-kind';
 import { useSettings } from '@/context/settings-context';
 import { useRevealInView } from '@/lib/use-reveal-in-view';
 import { cn } from '@/lib/utils';
@@ -22,11 +23,6 @@ function getCategoryLabel(category: string): string {
   if (c.includes('corp')) return 'Corporate';
   if (c.includes('événement') || c.includes('evenement')) return 'Événement';
   return category;
-}
-
-function isInvitationService(pkg: ServiceItem): boolean {
-  const hay = `${pkg.title} ${pkg.category}`.toLowerCase();
-  return hay.includes('invitation') || hay.includes('événement') || hay.includes('evenement');
 }
 
 export function ServicePackageCard({ pkg, index, isPopular }: ServicePackageCardProps) {

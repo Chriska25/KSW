@@ -67,7 +67,9 @@ export default function AdminAnalyticsPage() {
   }, []);
 
   useEffect(() => {
-    load();
+    queueMicrotask(() => {
+      void load();
+    });
   }, [load]);
 
   const allConnections = useMemo(() => {
@@ -97,21 +99,12 @@ export default function AdminAnalyticsPage() {
   }, [allConnections, connectionFilter]);
 
   const connectionPageCount = Math.max(1, Math.ceil(filteredConnections.length / CONNECTIONS_PAGE_SIZE));
+  const safeConnectionPage = Math.min(connectionPage, connectionPageCount);
 
   const paginatedConnections = useMemo(() => {
-    const start = (connectionPage - 1) * CONNECTIONS_PAGE_SIZE;
+    const start = (safeConnectionPage - 1) * CONNECTIONS_PAGE_SIZE;
     return filteredConnections.slice(start, start + CONNECTIONS_PAGE_SIZE);
-  }, [filteredConnections, connectionPage]);
-
-  useEffect(() => {
-    setConnectionPage(1);
-  }, [connectionFilter]);
-
-  useEffect(() => {
-    if (connectionPage > connectionPageCount) {
-      setConnectionPage(connectionPageCount);
-    }
-  }, [connectionPage, connectionPageCount]);
+  }, [filteredConnections, safeConnectionPage]);
 
   const handleExport = () => {
     setExporting(true);

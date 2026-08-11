@@ -224,8 +224,8 @@ export interface ElectronicInvitation {
   customization?: InvitationCustomization;
   publicToken?: string;
   linkActive?: boolean;
-  linkActiveFrom?: string;
-  linkActiveUntil?: string;
+  linkActiveFrom?: string | null;
+  linkActiveUntil?: string | null;
   /** État réel après vérification des dates programmées. */
   linkEffectiveActive?: boolean;
   linkScheduleStatus?: 'active' | 'disabled' | 'scheduled' | 'expired';
@@ -248,7 +248,26 @@ export interface InvitationGuest {
   message?: string;
   preferences?: GuestPreferences;
   source?: string;
+  /** Token unique pour le QR code imprimable (confirmés uniquement). */
+  checkInToken?: string | null;
+  passUrl?: string | null;
+  checkedInAt?: string | null;
   respondedAt?: string;
+}
+
+export interface GuestPass {
+  guestId: string;
+  fullName: string;
+  guestCount: number;
+  companions?: string[];
+  organizerNames: string;
+  eventTypeLabel?: string;
+  eventDate: string;
+  eventTime?: string;
+  venue?: string;
+  checkInToken: string;
+  passUrl?: string | null;
+  checkedInAt?: string | null;
 }
 
 export interface PublicInvitation {

@@ -79,7 +79,7 @@ export function AdminInvitationPdfPanel({
           Invitation imprimable & QR code
         </CardTitle>
         <p className="text-zinc-500 text-xs mt-1">
-          Le QR code ouvre l&apos;invitation digitale sur le téléphone — idéal à scanner lors de la cérémonie.
+          QR général vers l&apos;invitation digitale. Chaque invité confirmé reçoit aussi un QR personnel (billet) dans la liste des réponses.
         </p>
       </CardHeader>
       <CardContent className="space-y-5">

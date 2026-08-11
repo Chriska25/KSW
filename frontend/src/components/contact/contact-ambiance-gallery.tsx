@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import Image from 'next/image';
 import { isPreGeneratedThumb, resolveGridImageUrl } from '@/lib/optimize-image-url';
 
-const FALLBACK_CONTACT_PHOTOS = [
+const FALLBACK_CONTACT_PHOTOS: { url: string; title: string; thumbUrl?: string | null }[] = [
   {
     url: 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=800&auto=format&fit=crop',
     title: 'Mariage d\'exception',

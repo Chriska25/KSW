@@ -17,7 +17,7 @@ from reportlab.platypus import Image as RlImage
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from pypdf import PdfReader, PdfWriter
 
-from models import ElectronicInvitation
+from models import ElectronicInvitation, InvitationGuest
 
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
 QR_POSITION = Literal["bottom-right", "bottom-left", "top-right", "top-left", "center"]
@@ -227,3 +227,71 @@ def pdf_filename(inv: ElectronicInvitation, suffix: str = "invitation") -> str:
     stamp = datetime.utcnow().strftime("%Y%m%d")
     safe = "".join(c if c.isalnum() else "-" for c in (inv.organizer_names or "event")[:30]).strip("-") or "event"
     return f"{suffix}-{safe}-{token}-{stamp}.pdf"
+
+
+def guest_pass_pdf_filename(guest_name: str, check_in_token: str) -> str:
+    safe = "".join(c if c.isalnum() else "-" for c in (guest_name or "invite")[:24]).strip("-") or "invite"
+    return f"billet-{safe}-{check_in_token}.pdf"
+
+
+def build_guest_pass_pdf(guest: InvitationGuest, inv: ElectronicInvitation, pass_url: str) -> bytes:
+    """Billet invité A6-like avec QR personnel pour contrôle à l'entrée."""
+    buffer = io.BytesIO()
+    page_w, page_h = (105 * mm, 148 * mm)
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=(page_w, page_h),
+        rightMargin=10 * mm,
+        leftMargin=10 * mm,
+        topMargin=10 * mm,
+        bottomMargin=10 * mm,
+    )
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        "PassTitle",
+        parent=styles["Title"],
+        fontName="Helvetica-Bold",
+        fontSize=14,
+        textColor=colors.HexColor("#1a1a1a"),
+        alignment=TA_CENTER,
+        spaceAfter=6,
+    )
+    body_style = ParagraphStyle(
+        "PassBody",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=10,
+        leading=13,
+        textColor=colors.HexColor("#333333"),
+        alignment=TA_CENTER,
+        spaceAfter=3,
+    )
+
+    story = []
+    story.append(Paragraph("Billet d&apos;invitation", body_style))
+    story.append(Paragraph(guest.full_name or "Invité", title_style))
+    if guest.guest_count and guest.guest_count > 1:
+        story.append(Paragraph(f"{guest.guest_count} personnes", body_style))
+    story.append(Spacer(1, 4 * mm))
+    story.append(Paragraph(inv.organizer_names or "Événement", body_style))
+    if inv.event_date:
+        line = inv.event_date
+        if inv.event_time:
+            line = f"{line} · {inv.event_time}"
+        story.append(Paragraph(line, body_style))
+    if inv.venue:
+        story.append(Paragraph(inv.venue, body_style))
+    story.append(Spacer(1, 6 * mm))
+    qr_path = io.BytesIO(generate_qr_png_bytes(pass_url))
+    qr_img = RlImage(qr_path, width=32 * mm, height=32 * mm)
+    qr_img.hAlign = "CENTER"
+    story.append(qr_img)
+    story.append(Spacer(1, 3 * mm))
+    story.append(
+        Paragraph(
+            "Présentez ce QR code à l&apos;entrée.<br/>Il sera scanné pour valider votre accès.",
+            body_style,
+        )
+    )
+    doc.build(story)
+    return buffer.getvalue()

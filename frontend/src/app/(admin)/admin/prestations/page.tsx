@@ -26,6 +26,8 @@ import { ImageCropModal } from '@/components/admin/image-crop-modal';
 import { useAdminToast } from '@/components/admin/admin-toast';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import type { ServiceItem } from '@/lib/service-types';
+import type { ServiceKind } from '@/lib/service-kind';
+import { SERVICE_KIND_LABELS, inferServiceKind } from '@/lib/service-kind';
 
 export default function AdminPrestationsPage() {
   const { formatPrice, currencySymbol } = useSettings();
@@ -45,6 +47,7 @@ export default function AdminPrestationsPage() {
   const [formData, setFormData] = useState({
     title: '',
     category: 'Mariage',
+    serviceKind: 'photo' as ServiceKind,
     price: 500,
     depositPercentage: 30,
     durationMinutes: 120,
@@ -119,6 +122,7 @@ export default function AdminPrestationsPage() {
   const resetForm = () => ({
     title: '',
     category: 'Mariage',
+    serviceKind: 'photo' as ServiceKind,
     price: 500,
     depositPercentage: 30,
     durationMinutes: 120,
@@ -140,6 +144,7 @@ export default function AdminPrestationsPage() {
     setFormData({
       title: service.title,
       category: service.category,
+      serviceKind: inferServiceKind(service),
       price: service.price,
       depositPercentage: service.depositPercentage,
       durationMinutes: service.durationMinutes,
@@ -270,7 +275,14 @@ export default function AdminPrestationsPage() {
                       </td>
                       <td className="py-3 px-4">
                         <div className="font-semibold text-white text-sm">{s.title}</div>
-                        <Badge variant="gold" className="text-[10px] mt-1">{s.category}</Badge>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          <Badge variant="gold" className="text-[10px]">{s.category}</Badge>
+                          {inferServiceKind(s) === 'invitation' && (
+                            <Badge variant="outline" className="text-[10px] border-violet-400/40 text-violet-300">
+                              Invitation
+                            </Badge>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3 px-4">
                         <div className="font-bold text-white">{formatPrice(s.price)}</div>
@@ -327,7 +339,7 @@ export default function AdminPrestationsPage() {
             <Input required value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-zinc-400 block mb-1.5 font-medium">Catégorie</label>
               <select value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} className={`w-full ${selectClass}`}>
@@ -337,6 +349,25 @@ export default function AdminPrestationsPage() {
                 <option value="Événement">Événement</option>
               </select>
             </div>
+            <div>
+              <label className="text-zinc-400 block mb-1.5 font-medium">Type de prestation</label>
+              <select
+                value={formData.serviceKind}
+                onChange={(e) => setFormData({ ...formData, serviceKind: e.target.value as ServiceKind })}
+                className={`w-full ${selectClass}`}
+              >
+                <option value="photo">{SERVICE_KIND_LABELS.photo}</option>
+                <option value="invitation">{SERVICE_KIND_LABELS.invitation}</option>
+              </select>
+              <p className="text-[10px] text-zinc-500 mt-1.5 leading-relaxed">
+                {formData.serviceKind === 'invitation'
+                  ? 'Redirige vers la commande d’invitation RSVP (templates, partage, stats).'
+                  : 'Redirige vers la réservation de séance photo (date, acompte, contrat).'}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-zinc-400 block mb-1.5 font-medium">Publication</label>
               <select

@@ -89,11 +89,24 @@ const SecuritySettingsFields = dynamic(
   { loading: () => <div className="h-32 animate-pulse rounded-xl bg-zinc-900/40" /> }
 );
 
+type SettingsTabId =
+  | 'appearance'
+  | 'home'
+  | 'portfolio'
+  | 'prestations'
+  | 'legal'
+  | 'general'
+  | 'booking'
+  | 'payments'
+  | 'watermark'
+  | 'security'
+  | 'integrations';
+
 export default function AdminSettingsPage() {
   const { settings: globalSettings, updateSettings } = useSettings();
   const { mode: themeMode } = useTheme();
 
-  const [activeTab, setActiveTab] = useState<'appearance' | 'home' | 'portfolio' | 'prestations' | 'legal' | 'general' | 'booking' | 'payments' | 'watermark' | 'security' | 'integrations'>('general');
+  const [activeTab, setActiveTab] = useState<SettingsTabId>('general');
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
@@ -105,7 +118,9 @@ export default function AdminSettingsPage() {
   const watermarkLogoFileInputRef = useRef<HTMLInputElement>(null);
   const [settings, setSettings] = useState(globalSettings);
   const settingsRef = useRef(settings);
-  settingsRef.current = settings;
+  useEffect(() => {
+    settingsRef.current = settings;
+  }, [settings]);
   const [geocodingMap, setGeocodingMap] = useState(false);
   const [mapPersistStatus, setMapPersistStatus] = useState<MapPersistStatus>('idle');
   const studioMap = resolveStudioMap(settings);
@@ -293,8 +308,8 @@ export default function AdminSettingsPage() {
       } else {
         setSyncStatus('Synchronisation terminée.');
       }
-    } catch (e: any) {
-      setSyncStatus(`Erreur de synchronisation : ${e.message || e}`);
+    } catch (e: unknown) {
+      setSyncStatus(`Erreur de synchronisation : ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
@@ -356,7 +371,7 @@ export default function AdminSettingsPage() {
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id as SettingsTabId)}
               className={`px-4 py-2.5 rounded-xl font-semibold text-xs transition-all flex items-center space-x-2 whitespace-nowrap cursor-pointer ${
                 activeTab === tab.id
                   ? 'bg-amber-400 text-zinc-950 shadow-md shadow-amber-400/20'

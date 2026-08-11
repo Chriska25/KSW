@@ -103,9 +103,11 @@ export function StudioMapPicker({
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState('');
 
-  onChangeRef.current = onChange;
-  onPersistRef.current = onPersist;
-  valueRef.current = value;
+  useEffect(() => {
+    onChangeRef.current = onChange;
+    onPersistRef.current = onPersist;
+    valueRef.current = value;
+  }, [onChange, onPersist, value]);
 
   const emitCoords = (lat: number, lng: number, zoom?: number) => {
     const coords: StudioMapCoords = {

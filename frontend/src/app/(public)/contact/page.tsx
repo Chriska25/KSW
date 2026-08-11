@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Mail,
   Phone,
@@ -32,7 +32,10 @@ import { useGalleries } from '@/context/gallery-context';
 export default function ContactPage() {
   const { settings } = useSettings();
   const { publicPhotos } = useGalleries();
-  const formStartedAt = React.useRef(Date.now());
+  const formStartedAt = React.useRef(0);
+  React.useEffect(() => {
+    formStartedAt.current = Date.now();
+  }, []);
 
   const ambiancePhotos = React.useMemo(
     () =>

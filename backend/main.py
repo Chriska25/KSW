@@ -176,7 +176,26 @@ def validate_security_on_startup():
     _ensure_user_presence_columns()
     _ensure_invitation_guest_preferences_column()
     _ensure_invitation_link_schedule_columns()
+    _ensure_service_kind_column()
+    _ensure_invitation_guest_check_in_columns()
     ensure_pending_auth_table()
+
+
+def _ensure_invitation_guest_check_in_columns() -> None:
+    from sqlalchemy import inspect, text
+
+    try:
+        insp = inspect(engine)
+        if "invitation_guests" not in insp.get_table_names():
+            return
+        cols = {c["name"] for c in insp.get_columns("invitation_guests")}
+        with engine.begin() as conn:
+            if "check_in_token" not in cols:
+                conn.execute(text("ALTER TABLE invitation_guests ADD COLUMN check_in_token VARCHAR"))
+            if "checked_in_at" not in cols:
+                conn.execute(text("ALTER TABLE invitation_guests ADD COLUMN checked_in_at TIMESTAMP"))
+    except Exception as exc:
+        print(f"[MIGRATION] check_in sur invitation_guests: {exc}")
 
 
 def _ensure_invitation_guest_preferences_column() -> None:
@@ -193,6 +212,51 @@ def _ensure_invitation_guest_preferences_column() -> None:
             conn.execute(text("ALTER TABLE invitation_guests ADD COLUMN preferences JSON"))
     except Exception as exc:
         print(f"[MIGRATION] preferences sur invitation_guests: {exc}")
+
+
+def _ensure_service_kind_column() -> None:
+    from sqlalchemy import inspect, text
+
+    try:
+        insp = inspect(engine)
+        if "services" not in insp.get_table_names():
+            return
+        cols = {c["name"] for c in insp.get_columns("services")}
+        if "service_kind" in cols:
+            return
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE services ADD COLUMN service_kind VARCHAR DEFAULT 'photo'"))
+    except Exception as exc:
+        print(f"[MIGRATION] service_kind sur services: {exc}")
+
+
+def _service_kind_from_item(item: Dict[str, Any]) -> str:
+    raw = item.get("serviceKind") or item.get("service_kind")
+    if raw == "invitation":
+        return "invitation"
+    title = str(item.get("title", "")).lower()
+    category = str(item.get("category", "")).lower()
+    if "invitation" in f"{title} {category}":
+        return "invitation"
+    return "photo"
+
+
+def _service_to_dict(srv: Service) -> Dict[str, Any]:
+    kind = getattr(srv, "service_kind", None) or "photo"
+    return {
+        "id": srv.id,
+        "title": srv.title,
+        "category": srv.category,
+        "price": srv.price,
+        "depositPercentage": srv.deposit_percentage or 30,
+        "durationMinutes": srv.duration_minutes or 120,
+        "photosCount": srv.photos_count or 20,
+        "coverImage": srv.cover_image,
+        "isActive": srv.is_active,
+        "serviceKind": kind if kind in {"photo", "invitation"} else "photo",
+        "seoTitle": srv.seo_title,
+        "seoDescription": srv.seo_description,
+    }
 
 
 def _ensure_invitation_link_schedule_columns() -> None:
@@ -583,7 +647,8 @@ def sync_from_local(payload: SyncFromLocalPayload, db: Session = Depends(get_db)
                     duration_minutes=safe_int(dur_min, 120),
                     photos_count=safe_int(pts_cnt, 20),
                     cover_image=cov_img,
-                    is_active=bool(is_act)
+                    is_active=bool(is_act),
+                    service_kind=_service_kind_from_item(item),
                 ))
 
         # 3. Purge & Sync Galleries
@@ -1219,22 +1284,7 @@ def admin_client_activity(
 @app.get("/api/v1/services")
 def list_services(db: Session = Depends(get_db)):
     services = db.query(Service).all()
-    res = []
-    for srv in services:
-        res.append({
-            "id": srv.id,
-            "title": srv.title,
-            "category": srv.category,
-            "price": srv.price,
-            "depositPercentage": srv.deposit_percentage or 30,
-            "durationMinutes": srv.duration_minutes or 120,
-            "photosCount": srv.photos_count or 20,
-            "coverImage": srv.cover_image,
-            "isActive": srv.is_active,
-            "seoTitle": srv.seo_title,
-            "seoDescription": srv.seo_description
-        })
-    return {"data": res}
+    return {"data": [_service_to_dict(srv) for srv in services]}
 
 @app.post("/api/v1/admin/services")
 def create_service(req: ServiceCreate, db: Session = Depends(get_db), _admin: User = Depends(require_admin_user)):
@@ -2797,6 +2847,7 @@ def _build_admin_backup_payload(db: Session) -> Dict[str, Any]:
                 "photos_count": int(service.photos_count or 0),
                 "cover_image": service.cover_image,
                 "is_active": bool(service.is_active),
+                "service_kind": getattr(service, "service_kind", None) or "photo",
             }
         )
 
@@ -2965,6 +3016,7 @@ def _restore_services_from_backup(db: Session, items: List[Dict[str, Any]], medi
                 photos_count=safe_int(pts_cnt, 20),
                 cover_image=cov_img,
                 is_active=bool(is_act),
+                service_kind=_service_kind_from_item(item),
             )
         )
         count += 1
