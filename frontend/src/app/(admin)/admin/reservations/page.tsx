@@ -175,7 +175,7 @@ export default function AdminReservationsDashboardPage() {
         </p>
       )}
 
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <Card className="glass-panel border-amber-400/30">
           <CardContent className="pt-5">
             <div className="flex items-center justify-between">
@@ -271,7 +271,7 @@ export default function AdminReservationsDashboardPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
             {stats.weekDays.map((day) => {
               const selected = day.date === selectedDate;
               return (
@@ -311,7 +311,7 @@ export default function AdminReservationsDashboardPage() {
           <CardContent className="space-y-6">
             <SlotGrid day={selectedDay} />
             {selectedDay.bookings.length > 0 && (
-              <div className="rounded-xl border border-zinc-800 overflow-hidden">
+              <div className="responsive-table-wrap rounded-xl border border-zinc-800">
                 <table className="w-full text-sm">
                   <thead className="bg-zinc-950/80 text-xs uppercase text-zinc-500">
                     <tr>

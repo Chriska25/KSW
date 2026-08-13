@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { AppLink } from '@/components/navigation/app-link';
 import { ArrowLeft, KeyRound } from 'lucide-react';
+import { ButtonLink } from '@/components/navigation/button-link';
 import { Button } from '@/components/ui/button';
 import { StudioLogo } from '@/components/brand/studio-logo';
 import { ClientSidebar } from '@/components/client/client-sidebar';
@@ -86,11 +87,9 @@ export function ClientShell({
                   <KeyRound className="h-3.5 w-3.5 mr-1" /> Autre clé
                 </Button>
               </AppLink>
-              <AppLink href="/">
-                <Button variant="ghost" size="sm" className="text-zinc-400 text-xs">
-                  <ArrowLeft className="h-3.5 w-3.5 mr-1" /> Site
-                </Button>
-              </AppLink>
+              <ButtonLink href="/" variant="ghost" size="sm" className="text-zinc-400 text-xs">
+                <ArrowLeft className="h-3.5 w-3.5 mr-1" /> Site
+              </ButtonLink>
             </div>
           </div>
         </header>

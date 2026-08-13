@@ -11,7 +11,7 @@ import {
   X,
   Zap,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ButtonLink } from '@/components/navigation/button-link';
 import { Input } from '@/components/ui/input';
 import { StudioLogo } from '@/components/brand/studio-logo';
 import {
@@ -233,11 +233,15 @@ export function AdminSidebar({ onCloseMobile }: { onCloseMobile?: () => void }) 
       </div>
 
       <div className="p-4 border-t border-zinc-800 shrink-0 space-y-2">
-        <AppLink href="/" onClick={onCloseMobile}>
-          <Button variant="ghost" size="sm" className="w-full justify-start text-xs text-zinc-400 hover:text-white">
-            <ArrowLeft className="h-3.5 w-3.5 mr-2" /> Retour au site public
-          </Button>
-        </AppLink>
+        <ButtonLink
+          href="/"
+          onClick={onCloseMobile}
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start text-xs text-zinc-400 hover:text-white"
+        >
+          <ArrowLeft className="h-3.5 w-3.5 mr-2" /> Retour au site public
+        </ButtonLink>
       </div>
     </aside>
   );

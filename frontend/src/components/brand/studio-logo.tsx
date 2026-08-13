@@ -9,9 +9,15 @@ interface StudioLogoProps {
   className?: string;
   size?: 'sm' | 'md' | 'lg';
   showSubtitle?: boolean;
+  onNavigate?: () => void;
 }
 
-export function StudioLogo({ className = '', size = 'md', showSubtitle = true }: StudioLogoProps) {
+export function StudioLogo({
+  className = '',
+  size = 'md',
+  showSubtitle = true,
+  onNavigate,
+}: StudioLogoProps) {
   const { settings } = useSettings();
 
   const firstPart = settings.studioNameFirstPart || 'STUDIO';
@@ -24,7 +30,7 @@ export function StudioLogo({ className = '', size = 'md', showSubtitle = true }:
   const titleTextSize = size === 'sm' ? 'text-base' : size === 'lg' ? 'text-2xl' : 'text-xl';
 
   return (
-    <AppLink href="/" className={`flex items-center space-x-3.5 group select-none ${className}`}>
+    <AppLink href="/" onClick={onNavigate} className={`flex items-center space-x-3.5 group select-none ${className}`}>
       {/* Glowing Gold Box with Camera Icon */}
       <div className={`${iconBoxSize} bg-zinc-950 border-2 border-amber-400 text-amber-400 flex items-center justify-center shadow-lg shadow-amber-500/25 group-hover:scale-105 group-hover:shadow-amber-400/40 transition-all duration-300 shrink-0`}>
         <Camera className={iconSize} />

@@ -64,8 +64,25 @@ body {
   background-color: var(--color-zinc-950);
   color: var(--color-zinc-100);
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
-  overflow-x: hidden;
+  overflow-x: clip;
   transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Conteneurs & tableaux adaptés mobile / tablette / desktop */
+.responsive-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+
+.responsive-table-wrap table {
+  min-width: 36rem;
+}
+
+@media (min-width: 768px) {
+  .responsive-table-wrap table {
+    min-width: 100%;
+  }
 }
 
 .glass-panel {

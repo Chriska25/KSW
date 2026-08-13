@@ -110,7 +110,7 @@ export default function PortfolioPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/30 via-zinc-950/75 to-zinc-950" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_20%,_rgba(251,191,36,0.12),_transparent_50%)]" />
 
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-16">
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 pb-16">
           <Badge variant="gold" className="mb-5 px-4 py-1.5 text-[10px] uppercase tracking-[0.2em]">
             <Sparkles className="h-3.5 w-3.5 mr-2 inline" />
             {portfolio.heroBadge}

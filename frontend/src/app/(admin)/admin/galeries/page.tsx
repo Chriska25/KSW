@@ -850,9 +850,9 @@ export default function AdminGaleriesPage() {
       />
 
       {/* Workspace : liste galeries | albums + photos */}
-      <div className="flex flex-col xl:flex-row gap-5 min-h-[calc(100vh-10rem)]">
+      <div className="flex flex-col lg:flex-row gap-5 min-h-[calc(100dvh-10rem)]">
         {/* Colonne gauche — navigateur de galeries */}
-        <aside className="w-full xl:w-72 shrink-0 flex flex-col gap-3">
+        <aside className="w-full lg:w-72 shrink-0 flex flex-col gap-3">
           <div className="relative">
             <Search className="h-4 w-4 absolute left-3 top-3 text-zinc-500" />
             <Input
@@ -866,7 +866,7 @@ export default function AdminGaleriesPage() {
             Nom, client, clé d&apos;accès, n° facture, réf. réservation
           </p>
 
-          <div className="flex-1 overflow-y-auto space-y-2 max-h-[420px] xl:max-h-[calc(100vh-14rem)] pr-1 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto space-y-2 max-h-[50vh] sm:max-h-[420px] lg:max-h-[calc(100dvh-14rem)] pr-1 custom-scrollbar">
             {filteredActiveGalleries.length === 0 ? (
               <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4 text-center text-xs text-zinc-500">
                 Aucune galerie ne correspond à « {searchGalleryQuery} »
@@ -1130,7 +1130,7 @@ export default function AdminGaleriesPage() {
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-3 space-y-1.5 max-h-[280px] lg:max-h-[calc(100vh-20rem)] custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-3 space-y-1.5 max-h-[45vh] sm:max-h-[320px] lg:max-h-[calc(100dvh-20rem)] custom-scrollbar">
               <button
                 type="button"
                 onClick={() => setSelectedAlbumFilter('all')}

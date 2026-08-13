@@ -45,7 +45,7 @@ export default function BlogDetailPage() {
 
   if (loading) {
     return (
-      <div className="pt-32 pb-20">
+      <div className="pt-8 sm:pt-12 pb-20">
         <LoadingState message="Chargement de l'article…" />
       </div>
     );

@@ -16,6 +16,7 @@ import {
   MailPlus,
   CreditCard,
   MessageSquare,
+  ChevronLeft,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -161,8 +162,8 @@ export default function AdminClientsPage() {
         />
       </div>
 
-      <div className="grid lg:grid-cols-5 gap-6">
-        <div className="lg:col-span-2 space-y-4">
+      <div className="grid md:grid-cols-5 gap-4 md:gap-6">
+        <div className={`md:col-span-2 space-y-4 ${selectedId ? 'hidden md:block' : ''}`}>
           <div className="flex flex-col sm:flex-row gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
@@ -225,7 +226,7 @@ export default function AdminClientsPage() {
           </div>
         </div>
 
-        <div className="lg:col-span-3">
+        <div className={`md:col-span-3 ${!selectedId ? 'hidden md:block' : ''}`}>
           {!selectedId ? (
             <Card className="glass-panel">
               <CardContent className="py-16 text-center text-zinc-500 text-sm">
@@ -236,6 +237,15 @@ export default function AdminClientsPage() {
             <LoadingState message="Chargement de l'activité…" />
           ) : (
             <div className="space-y-4">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="md:hidden text-zinc-400 -ml-2"
+                onClick={() => setSelectedId(null)}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" /> Retour à la liste
+              </Button>
               <Card className="glass-panel">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-lg text-white flex items-center gap-2">
@@ -257,7 +267,7 @@ export default function AdminClientsPage() {
                 </CardContent>
               </Card>
 
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
                 <MiniStat label="Réservations" value={detail.stats.bookings} />
                 <MiniStat label="Galeries" value={detail.stats.galleries} />
                 <MiniStat label="Invitations" value={detail.stats.invitations} />

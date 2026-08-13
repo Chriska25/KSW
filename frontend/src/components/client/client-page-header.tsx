@@ -45,7 +45,7 @@ export function ClientPageHeader({
         </div>
 
         {(actions || badges) && (
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0 sm:pt-0.5">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0 sm:pt-0.5 w-full sm:w-auto [&>*]:max-w-full">
             {badges}
             {actions}
           </div>

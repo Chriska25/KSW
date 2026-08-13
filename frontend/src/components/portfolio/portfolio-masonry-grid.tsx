@@ -19,10 +19,10 @@ interface PortfolioMasonryGridProps {
 
 function layoutClass(index: number, photo: PhotoItem): { grid: string; kenburns: boolean } {
   if (photo.isCover || photo.isFavorite) {
-    if (index % 5 === 0) return { grid: 'md:col-span-2 md:row-span-2', kenburns: false };
-    if (index % 7 === 0) return { grid: 'md:col-span-2', kenburns: false };
+    if (index % 5 === 0) return { grid: 'sm:col-span-2 sm:row-span-2', kenburns: false };
+    if (index % 7 === 0) return { grid: 'sm:col-span-2', kenburns: false };
   }
-  if (index % 6 === 2) return { grid: 'md:col-span-2', kenburns: false };
+  if (index % 6 === 2) return { grid: 'sm:col-span-2', kenburns: false };
   return { grid: '', kenburns: false };
 }
 
@@ -111,7 +111,7 @@ export function PortfolioMasonryGrid({ photos, onPhotoClick }: PortfolioMasonryG
 
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-3 auto-rows-[220px] gap-4 md:gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 auto-rows-[200px] sm:auto-rows-[220px] gap-3 sm:gap-4 md:gap-5">
         {visiblePhotos.map((photo, index) => (
           <PortfolioPhotoCard
             key={photo.id}

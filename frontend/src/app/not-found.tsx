@@ -1,9 +1,8 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
-import { Camera, Home, ArrowLeft, Search, Sparkles } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Camera, Home, Sparkles } from 'lucide-react';
+import { ButtonLink } from '@/components/navigation/button-link';
 import { Badge } from '@/components/ui/badge';
 
 export default function NotFound() {
@@ -33,19 +32,20 @@ export default function NotFound() {
 
       {/* Action Buttons */}
       <div className="flex flex-wrap items-center justify-center gap-4 z-10">
-        <Link href="/">
-          <Button variant="gold" size="lg" className="space-x-2 font-bold">
-            <Home className="h-4 w-4" />
-            <span>Retour à l'Accueil</span>
-          </Button>
-        </Link>
+        <ButtonLink href="/" variant="gold" size="lg" className="space-x-2 font-bold">
+          <Home className="h-4 w-4" />
+          <span>Retour à l'Accueil</span>
+        </ButtonLink>
 
-        <Link href="/portfolio">
-          <Button variant="outline" size="lg" className="space-x-2 border-zinc-800 text-zinc-300 hover:text-amber-400">
-            <Camera className="h-4 w-4" />
-            <span>Explorer le Portfolio</span>
-          </Button>
-        </Link>
+        <ButtonLink
+          href="/portfolio"
+          variant="outline"
+          size="lg"
+          className="space-x-2 border-zinc-800 text-zinc-300 hover:text-amber-400"
+        >
+          <Camera className="h-4 w-4" />
+          <span>Explorer le Portfolio</span>
+        </ButtonLink>
       </div>
 
       {/* Footnote */}

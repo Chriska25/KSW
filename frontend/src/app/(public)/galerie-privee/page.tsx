@@ -137,7 +137,7 @@ function GaleriePriveeForm() {
 
 export default function GaleriePriveeUnlockPage() {
   return (
-    <Suspense fallback={<div className="pt-32 text-center text-zinc-500 text-sm">Chargement…</div>}>
+    <Suspense fallback={<div className="pt-8 sm:pt-12 text-center text-zinc-500 text-sm">Chargement…</div>}>
       <GaleriePriveeForm />
     </Suspense>
   );

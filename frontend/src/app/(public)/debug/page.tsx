@@ -127,7 +127,7 @@ export default function DebugPage() {
   }, []);
 
   return (
-    <div className="pt-32 pb-20 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+    <div className="pt-8 sm:pt-12 pb-20 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>

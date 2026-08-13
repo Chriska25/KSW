@@ -13,7 +13,7 @@ export default async function PublicLayout({ children }: { children: React.React
       <div className="min-h-screen flex flex-col justify-between bg-zinc-950 text-zinc-100">
         <VisitTracker />
         <PublicHeader />
-        <main className="flex-grow flex flex-col">{children}</main>
+        <main className="flex-grow flex flex-col pt-16 sm:pt-20">{children}</main>
         <PublicFooter />
       </div>
     </PublicServicesProvider>

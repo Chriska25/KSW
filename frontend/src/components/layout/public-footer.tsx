@@ -89,15 +89,15 @@ export function PublicFooter() {
             <ul className="space-y-3 text-zinc-300">
               <li className="flex items-start space-x-2.5">
                 <MapPin className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
-                <span>{settings.address}</span>
+                <span className="break-words">{settings.address}</span>
               </li>
               <li className="flex items-center space-x-2.5">
                 <Phone className="h-4 w-4 text-amber-400 shrink-0" />
-                <span>{settings.phone}</span>
+                <span className="break-all sm:break-normal">{settings.phone}</span>
               </li>
               <li className="flex items-center space-x-2.5">
                 <Mail className="h-4 w-4 text-amber-400 shrink-0" />
-                <span>{settings.contactEmail}</span>
+                <span className="break-all">{settings.contactEmail}</span>
               </li>
               <li className="flex items-center space-x-2.5 pt-2 text-amber-400 font-bold">
                 <Award className="h-4 w-4 text-amber-400 shrink-0" />

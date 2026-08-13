@@ -42,7 +42,7 @@ export function ServicePackagesGrid() {
 
   if (packages.length === 0) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
         {[1, 2, 3].map((i) => (
           <div key={i} className="h-[520px] rounded-3xl bg-zinc-900/50 border border-zinc-800 animate-pulse" />
         ))}
@@ -86,7 +86,7 @@ export function ServicePackagesGrid() {
           Aucune prestation dans cette catégorie pour le moment.
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
           {filtered.map((pkg, index) => (
             <ServicePackageCard
               key={pkg.id}

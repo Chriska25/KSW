@@ -13,6 +13,7 @@ import {
   Users,
   Search,
   QrCode,
+  ChevronLeft,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -247,8 +248,8 @@ export default function AdminInvitationsPage() {
         }
       />
 
-      <div className="grid lg:grid-cols-5 gap-6">
-        <div className="lg:col-span-2 space-y-4">
+      <div className="grid md:grid-cols-5 gap-4 md:gap-6">
+        <div className={`md:col-span-2 space-y-4 ${selectedId ? 'hidden md:block' : ''}`}>
           <div className="flex flex-col sm:flex-row gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
@@ -321,7 +322,7 @@ export default function AdminInvitationsPage() {
           </div>
         </div>
 
-        <div className="lg:col-span-3">
+        <div className={`md:col-span-3 ${!selectedId ? 'hidden md:block' : ''}`}>
           {!selectedId ? (
             <Card className="glass-panel">
               <CardContent className="py-16 text-center text-zinc-500 text-sm">
@@ -332,6 +333,15 @@ export default function AdminInvitationsPage() {
             <LoadingState message="Chargement du détail…" />
           ) : (
             <div className="space-y-4">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="md:hidden text-zinc-400 -ml-2"
+                onClick={() => setSelectedId(null)}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" /> Retour à la liste
+              </Button>
               <Card className="glass-panel">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-lg text-white">{detail.organizerNames}</CardTitle>
@@ -376,7 +386,7 @@ export default function AdminInvitationsPage() {
               </Card>
 
               {detail.stats && (
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
                   <StatCard label="Réponses" value={detail.stats.totalResponses} />
                   <StatCard label="Présents" value={detail.stats.confirmed} />
                   <StatCard label="Absents" value={detail.stats.declined} />
@@ -473,8 +483,8 @@ export default function AdminInvitationsPage() {
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent className="overflow-x-auto">
-                  <table className="w-full text-xs">
+                <CardContent className="responsive-table-wrap">
+                  <table className="w-full text-xs min-w-[720px]">
                     <thead>
                       <tr className="text-zinc-500 border-b border-zinc-800">
                         <th className="text-left py-2 pr-2">Invité</th>

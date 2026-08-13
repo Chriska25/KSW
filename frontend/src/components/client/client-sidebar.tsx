@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AppLink } from '@/components/navigation/app-link';
 import { usePathname, useRouter } from 'next/navigation';
 import { ArrowLeft, ChevronDown, ExternalLink, LogOut, Search, X } from 'lucide-react';
+import { ButtonLink } from '@/components/navigation/button-link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { StudioLogo } from '@/components/brand/studio-logo';
@@ -274,11 +275,15 @@ export function ClientSidebar({
             </Button>
           </AppLink>
         )}
-        <AppLink href="/" onClick={onCloseMobile}>
-          <Button variant="ghost" size="sm" className="w-full justify-start text-xs text-zinc-400">
-            <ArrowLeft className="h-3.5 w-3.5 mr-2" /> Retour au site public
-          </Button>
-        </AppLink>
+        <ButtonLink
+          href="/"
+          onClick={onCloseMobile}
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start text-xs text-zinc-400"
+        >
+          <ArrowLeft className="h-3.5 w-3.5 mr-2" /> Retour au site public
+        </ButtonLink>
       </div>
     </aside>
   );

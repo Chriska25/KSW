@@ -37,11 +37,11 @@ export function AdminModal({ open, onClose, title, children, size = 'lg', footer
 
   return (
     <div
-      className="fixed inset-0 z-[999998] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-[999998] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
       onClick={onClose}
     >
       <Card
-        className={`glass-panel w-full ${sizeClasses[size]} border-amber-400/30 max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-200`}
+        className={`glass-panel w-full ${sizeClasses[size]} border-amber-400/30 max-h-[92dvh] sm:max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-200 rounded-t-2xl sm:rounded-2xl`}
         onClick={(e) => e.stopPropagation()}
       >
         <CardHeader className="flex flex-row items-center justify-between border-b border-zinc-800 pb-3 shrink-0">
@@ -57,7 +57,7 @@ export function AdminModal({ open, onClose, title, children, size = 'lg', footer
         </CardHeader>
         <CardContent className="overflow-y-auto flex-1 py-5">{children}</CardContent>
         {footer && (
-          <div className="px-6 py-4 border-t border-zinc-800 shrink-0 flex justify-end gap-3">{footer}</div>
+          <div className="px-4 sm:px-6 py-4 border-t border-zinc-800 shrink-0 flex flex-wrap justify-end gap-2 sm:gap-3">{footer}</div>
         )}
       </Card>
     </div>

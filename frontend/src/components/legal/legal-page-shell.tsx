@@ -5,7 +5,7 @@ import { LegalBodyRenderer } from '@/components/legal/legal-body-renderer';
 import type { LegalTemplateVars } from '@/lib/legal-page-content';
 import { ArrowLeft } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { ButtonLink } from '@/components/navigation/button-link';
 
 interface LegalSection {
   title: string;
@@ -33,11 +33,9 @@ export function LegalPageShell({
   return (
     <div className="pt-28 pb-20 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
       <div className="space-y-4">
-        <Link href="/">
-          <Button variant="ghost" size="sm" className="text-zinc-400 -ml-2 mb-2">
-            <ArrowLeft className="h-4 w-4 mr-1" /> Retour au site
-          </Button>
-        </Link>
+        <ButtonLink href="/" variant="ghost" size="sm" className="text-zinc-400 -ml-2 mb-2">
+          <ArrowLeft className="h-4 w-4 mr-1" /> Retour au site
+        </ButtonLink>
         <Badge variant="gold">{badge}</Badge>
         <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">{title}</h1>
         <p className="text-zinc-400 text-sm leading-relaxed">{subtitle}</p>
