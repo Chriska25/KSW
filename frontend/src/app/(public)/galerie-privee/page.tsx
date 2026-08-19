@@ -75,24 +75,24 @@ function GaleriePriveeForm() {
   return (
     <div className="pt-28 pb-20 max-w-md mx-auto w-full px-4 space-y-8">
       <div className="text-center space-y-3">
-        <div className="h-16 w-16 rounded-2xl bg-amber-400/10 text-amber-400 flex items-center justify-center mx-auto gold-border-glow">
+        <div className="h-16 w-16 rounded-2xl bg-primary-muted text-primary flex items-center justify-center mx-auto">
           <Lock className="h-8 w-8" />
         </div>
-        <Badge variant="gold">Accès par clé</Badge>
-        <h1 className="text-3xl font-extrabold text-white">
-          Ouvrir votre <span className="gold-gradient-text">galerie privée</span>
+        <Badge variant="primary">Accès par clé</Badge>
+        <h1 className="text-3xl font-extrabold text-foreground">
+          Ouvrir votre <span className="text-primary">galerie privée</span>
         </h1>
-        <p className="text-zinc-400 text-xs leading-relaxed">
+        <p className="text-muted-foreground text-xs leading-relaxed">
           Entrez la clé reçue par {settings.studioName}. Aucune connexion requise — le mot de passe n&apos;est demandé que si la galerie en possède un.
         </p>
       </div>
 
-      <Card className="glass-panel border-amber-400/30 p-6">
+      <Card className="border-primary/30 p-6">
         <form onSubmit={handleUnlock} className="space-y-4 text-xs">
           <div>
-            <label className="text-zinc-400 block mb-1 font-semibold">Clé d&apos;accès</label>
+            <label className="text-muted-foreground block mb-1 font-semibold">Clé d&apos;accès</label>
             <div className="relative">
-              <Key className="h-4 w-4 absolute left-3 top-3.5 text-zinc-500" />
+              <Key className="h-4 w-4 absolute left-3 top-3.5 text-muted-foreground" />
               <Input
                 required
                 placeholder="Ex: SOPHIE-ALEX-2026"
@@ -104,7 +104,7 @@ function GaleriePriveeForm() {
           </div>
 
           <div>
-            <label className="text-zinc-400 block mb-1 font-semibold">Mot de passe (optionnel)</label>
+            <label className="text-muted-foreground block mb-1 font-semibold">Mot de passe (optionnel)</label>
             <Input
               type="password"
               placeholder="Uniquement si indiqué par le studio"
@@ -116,19 +116,19 @@ function GaleriePriveeForm() {
 
           {error && <p className="text-rose-400 text-[11px] font-medium">{error}</p>}
 
-          <Button type="submit" variant="gold" size="lg" className="w-full font-bold" disabled={loading}>
+          <Button type="submit" variant="primary" size="lg" className="w-full font-bold" disabled={loading}>
             {loading ? 'Ouverture…' : 'Accéder à la galerie'}
             {!loading && <ArrowRight className="h-4 w-4 ml-2" />}
           </Button>
         </form>
       </Card>
 
-      <div className="text-center text-[11px] text-zinc-500 space-y-1">
+      <div className="text-center text-[11px] text-muted-foreground space-y-1">
         <p className="flex items-center justify-center gap-1">
-          <ShieldCheck className="h-3.5 w-3.5 text-amber-400" /> Lien direct : <code className="text-amber-400/80">/galerie/VOTRE-CLE</code>
+          <ShieldCheck className="h-3.5 w-3.5 text-primary" /> Lien direct : <code className="text-primary/80">/galerie/VOTRE-CLE</code>
         </p>
         {isDevMode() && (
-          <p>Démo : clé <code className="text-amber-400/80">SOPHIE-ALEX-2026</code> — mot de passe <code className="text-amber-400/80">Love2026!</code></p>
+          <p>Démo : clé <code className="text-primary/80">SOPHIE-ALEX-2026</code> — mot de passe <code className="text-primary/80">Love2026!</code></p>
         )}
       </div>
     </div>
@@ -137,7 +137,7 @@ function GaleriePriveeForm() {
 
 export default function GaleriePriveeUnlockPage() {
   return (
-    <Suspense fallback={<div className="pt-8 sm:pt-12 text-center text-zinc-500 text-sm">Chargement…</div>}>
+    <Suspense fallback={<div className="pt-8 sm:pt-12 text-center text-muted-foreground text-sm">Chargement…</div>}>
       <GaleriePriveeForm />
     </Suspense>
   );

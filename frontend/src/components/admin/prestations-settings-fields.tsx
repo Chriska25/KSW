@@ -34,21 +34,21 @@ function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-zinc-300 block font-semibold text-xs">{label}</label>
+      <label className="text-foreground block font-semibold text-xs">{label}</label>
       {multiline ? (
         <textarea
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           rows={3}
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-400/40"
+          className="w-full rounded-xl border border-border bg-surface-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         />
       ) : (
         <Input
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="bg-zinc-950 text-white"
+          className="bg-surface-muted text-foreground"
         />
       )}
     </div>
@@ -75,10 +75,10 @@ export function PrestationsSettingsFields({ settings, onChange }: PrestationsSet
 
   return (
     <div className="space-y-6">
-      <Card className="glass-panel">
+      <Card className="">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            <Package className="h-5 w-5 text-amber-400" /> Page Prestations — en-tête
+            <Package className="h-5 w-5 text-primary" /> Page Prestations — en-tête
           </CardTitle>
           <CardDescription>Textes et photos de la bannière sur /prestations.</CardDescription>
         </CardHeader>
@@ -113,10 +113,10 @@ export function PrestationsSettingsFields({ settings, onChange }: PrestationsSet
         </CardContent>
       </Card>
 
-      <Card className="glass-panel border-amber-400/20">
+      <Card className="border-primary/20">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            <ListOrdered className="h-5 w-5 text-amber-400" /> Parcours client
+            <ListOrdered className="h-5 w-5 text-primary" /> Parcours client
           </CardTitle>
           <CardDescription>
             Section « Comment réserver » affichée sous le catalogue des formules.
@@ -130,8 +130,8 @@ export function PrestationsSettingsFields({ settings, onChange }: PrestationsSet
           />
 
           {content.processSteps.map((step, index) => (
-            <div key={index} className="p-4 rounded-xl border border-zinc-800 bg-zinc-950/80 space-y-3">
-              <span className="text-[10px] font-mono text-amber-400/80 tracking-[0.3em]">
+            <div key={index} className="p-4 rounded-xl border border-border bg-surface-muted space-y-3">
+              <span className="text-[10px] font-mono text-primary/80 tracking-[0.3em]">
                 ÉTAPE 0{index + 1}
               </span>
               <Field
@@ -150,7 +150,7 @@ export function PrestationsSettingsFields({ settings, onChange }: PrestationsSet
         </CardContent>
       </Card>
 
-      <p className="text-[11px] text-zinc-500 px-1">
+      <p className="text-[11px] text-muted-foreground px-1">
         Les formules et tarifs proviennent du catalogue Admin → Prestations. Pensez à enregistrer pour publier les textes et photos.
       </p>
     </div>

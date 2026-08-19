@@ -59,7 +59,7 @@ export default function GuestPassPage() {
 
   if (error || !pass) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-surface-muted flex items-center justify-center p-6">
         <ErrorState title="Billet indisponible" message={error || 'QR code invalide.'} />
       </div>
     );
@@ -68,13 +68,13 @@ export default function GuestPassPage() {
   const passUrl = pass.passUrl || (typeof window !== 'undefined' ? `${window.location.origin}/invitation/pass/${token}` : '');
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center p-4 sm:p-6">
-      <div className="w-full max-w-md rounded-3xl border border-zinc-800 bg-zinc-950/90 shadow-2xl overflow-hidden">
-        <div className="px-6 pt-8 pb-4 text-center space-y-3 border-b border-zinc-800/80">
+    <div className="min-h-screen bg-surface-muted text-zinc-100 flex items-center justify-center p-4 sm:p-6">
+      <div className="w-full max-w-md rounded-3xl border border-border bg-surface-muted/90 shadow-2xl overflow-hidden">
+        <div className="px-6 pt-8 pb-4 text-center space-y-3 border-b border-border/80">
           {checkingIn ? (
-            <Loader2 className="h-14 w-14 mx-auto text-amber-400 animate-spin" />
+            <Loader2 className="h-14 w-14 mx-auto text-primary animate-spin" />
           ) : (
-            <CheckCircle2 className={`h-14 w-14 mx-auto ${alreadyCheckedIn ? 'text-zinc-400' : 'text-emerald-400'}`} />
+            <CheckCircle2 className={`h-14 w-14 mx-auto ${alreadyCheckedIn ? 'text-muted-foreground' : 'text-emerald-400'}`} />
           )}
           <Badge variant={alreadyCheckedIn && pass.checkedInAt ? 'outline' : 'success'} className="text-[10px]">
             {checkingIn
@@ -83,35 +83,35 @@ export default function GuestPassPage() {
                 ? 'Entrée déjà enregistrée'
                 : 'Entrée validée'}
           </Badge>
-          <h1 className="text-2xl font-bold text-white">{pass.fullName}</h1>
-          <p className="text-sm text-zinc-400">{pass.organizerNames}</p>
+          <h1 className="text-2xl font-bold text-foreground">{pass.fullName}</h1>
+          <p className="text-sm text-muted-foreground">{pass.organizerNames}</p>
           {pass.eventTypeLabel && (
-            <p className="text-xs text-amber-400/90 uppercase tracking-wider">{pass.eventTypeLabel}</p>
+            <p className="text-xs text-primary/90 uppercase tracking-wider">{pass.eventTypeLabel}</p>
           )}
         </div>
 
         <div className="px-6 py-5 space-y-4 text-sm">
           <div className="flex items-start gap-3">
-            <Calendar className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+            <Calendar className="h-4 w-4 text-primary shrink-0 mt-0.5" />
             <div>
-              <p className="text-zinc-500 text-xs">Date</p>
-              <p className="text-white">{formatDisplayDate(pass.eventDate)}{pass.eventTime ? ` · ${pass.eventTime}` : ''}</p>
+              <p className="text-muted-foreground text-xs">Date</p>
+              <p className="text-foreground">{formatDisplayDate(pass.eventDate)}{pass.eventTime ? ` · ${pass.eventTime}` : ''}</p>
             </div>
           </div>
           {pass.venue && (
             <div className="flex items-start gap-3">
-              <MapPin className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+              <MapPin className="h-4 w-4 text-primary shrink-0 mt-0.5" />
               <div>
-                <p className="text-zinc-500 text-xs">Lieu</p>
-                <p className="text-white">{pass.venue}</p>
+                <p className="text-muted-foreground text-xs">Lieu</p>
+                <p className="text-foreground">{pass.venue}</p>
               </div>
             </div>
           )}
           <div className="flex items-start gap-3">
-            <Users className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+            <Users className="h-4 w-4 text-primary shrink-0 mt-0.5" />
             <div>
-              <p className="text-zinc-500 text-xs">Personnes</p>
-              <p className="text-white">
+              <p className="text-muted-foreground text-xs">Personnes</p>
+              <p className="text-foreground">
                 {pass.guestCount} personne{pass.guestCount > 1 ? 's' : ''}
                 {pass.companions?.length ? ` · ${pass.companions.join(', ')}` : ''}
               </p>
@@ -119,8 +119,8 @@ export default function GuestPassPage() {
           </div>
         </div>
 
-        <div className="px-6 pb-8 flex flex-col items-center gap-3 border-t border-zinc-800/80 pt-6">
-          <div className="flex items-center gap-2 text-xs text-zinc-500">
+        <div className="px-6 pb-8 flex flex-col items-center gap-3 border-t border-border/80 pt-6">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <QrCode className="h-3.5 w-3.5" />
             QR personnel
           </div>
@@ -128,11 +128,11 @@ export default function GuestPassPage() {
           <img
             src={qrCodeImageUrl(passUrl, 180)}
             alt="QR code billet"
-            className="rounded-xl border border-zinc-800 bg-white p-2"
+            className="rounded-xl border border-border bg-white p-2"
             width={180}
             height={180}
           />
-          <p className="text-[11px] text-zinc-500 text-center leading-relaxed max-w-xs">
+          <p className="text-[11px] text-muted-foreground text-center leading-relaxed max-w-xs">
             Ce QR code est unique à cette acceptation. Imprimez-le sur l&apos;invitation papier pour le contrôle à l&apos;entrée.
           </p>
         </div>

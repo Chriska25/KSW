@@ -24,27 +24,31 @@ export function StudioLogo({
   const secondPart = settings.studioNameSecondPart || 'LUMIÈRE';
   const subtitle = settings.studioSubtitle || 'HAUTE PHOTOGRAPHIE';
 
-  // Tailles du logo
-  const iconBoxSize = size === 'sm' ? 'h-9 w-9 rounded-xl' : size === 'lg' ? 'h-14 w-14 rounded-2xl' : 'h-11 w-11 rounded-2xl';
-  const iconSize = size === 'sm' ? 'h-4 w-4' : size === 'lg' ? 'h-7 w-7' : 'h-5 w-5';
-  const titleTextSize = size === 'sm' ? 'text-base' : size === 'lg' ? 'text-2xl' : 'text-xl';
+  const iconBoxSize =
+    size === 'sm' ? 'h-9 w-9 rounded-lg' : size === 'lg' ? 'h-12 w-12 rounded-lg' : 'h-10 w-10 rounded-lg';
+  const iconSize = size === 'sm' ? 'h-4 w-4' : size === 'lg' ? 'h-6 w-6' : 'h-5 w-5';
+  const titleTextSize = size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-xl' : 'text-base';
 
   return (
-    <AppLink href="/" onClick={onNavigate} className={`flex items-center space-x-3.5 group select-none ${className}`}>
-      {/* Glowing Gold Box with Camera Icon */}
-      <div className={`${iconBoxSize} bg-zinc-950 border-2 border-amber-400 text-amber-400 flex items-center justify-center shadow-lg shadow-amber-500/25 group-hover:scale-105 group-hover:shadow-amber-400/40 transition-all duration-300 shrink-0`}>
-        <Camera className={iconSize} />
+    <AppLink
+      href="/"
+      onClick={onNavigate}
+      className={`flex items-center gap-3 group select-none ${className}`}
+    >
+      <div
+        className={`${iconBoxSize} bg-surface border border-border text-primary flex items-center justify-center shrink-0 transition-colors group-hover:border-primary/40`}
+      >
+        <Camera className={iconSize} aria-hidden />
       </div>
 
-      {/* Two-Color Dual Typography */}
-      <div className="flex flex-col justify-center">
-        <div className={`${titleTextSize} font-black tracking-wider uppercase leading-none flex items-center space-x-1.5`}>
-          <span className="text-white">{firstPart}</span>
-          <span className="text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.3)]">{secondPart}</span>
+      <div className="flex flex-col justify-center min-w-0">
+        <div className={`${titleTextSize} font-semibold tracking-wide uppercase leading-none flex items-center gap-1.5`}>
+          <span className="text-foreground">{firstPart}</span>
+          <span className="text-primary">{secondPart}</span>
         </div>
 
         {showSubtitle && (
-          <span className="text-[10px] font-mono tracking-[0.25em] text-zinc-400 uppercase mt-1 block leading-none">
+          <span className="text-caption uppercase tracking-widest mt-1 block leading-none truncate">
             {subtitle}
           </span>
         )}

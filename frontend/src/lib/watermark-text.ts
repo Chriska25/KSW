@@ -12,12 +12,12 @@ export function buildWatermarkLabel(
   let suffix = (settings.watermarkText || 'Épreuve sécurisée').trim();
   suffix = suffix.replace(/^©\s*/i, '').trim();
 
-  // Texte complet déjà saisi par l'admin (ex. "STUDIO LUMIÈRE • ÉPREUVE SÉCURISÉE")
+  // Texte complet déjà saisi par l'admin (ex."STUDIO LUMIÈRE • ÉPREUVE SÉCURISÉE")
   if (suffix.includes('•')) {
     return suffix.startsWith('©') ? suffix.toUpperCase() : `© ${suffix.toUpperCase()}`;
   }
 
-  // Ancien format "© KSW Studio - Épreuve confidentielle"
+  // Ancien format"© KSW Studio - Épreuve confidentielle"
   if (suffix.includes(' - ')) {
     suffix = suffix.split(' - ').pop()?.trim() || suffix;
   }

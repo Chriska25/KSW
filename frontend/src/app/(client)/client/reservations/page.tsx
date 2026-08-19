@@ -61,19 +61,19 @@ function ClientReservationsContent() {
               <span>Actualiser</span>
             </Button>
             <Link href="/reservation">
-              <Button variant="gold" size="sm">Nouvelle réservation</Button>
+              <Button variant="primary" size="sm">Nouvelle réservation</Button>
             </Link>
           </>
         }
       />
 
       {error && (
-        <p className="text-rose-400 text-sm rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3">
+        <p className="text-danger text-sm rounded-xl border border-danger/30 bg-danger/10 px-4 py-3">
           {error}
         </p>
       )}
 
-      <Card className="glass-panel">
+      <Card className="">
         <CardHeader>
           <CardTitle className="text-lg">Historique</CardTitle>
           <CardDescription>{bookings.length} demande(s) enregistrée(s)</CardDescription>
@@ -81,22 +81,22 @@ function ClientReservationsContent() {
         <CardContent className="space-y-4">
           {bookings.length === 0 ? (
             <div className="text-center py-12 space-y-4">
-              <CalendarDays className="h-12 w-12 text-zinc-600 mx-auto" />
-              <p className="text-sm text-zinc-400">Aucune réservation pour le moment.</p>
+              <CalendarDays className="h-12 w-12 text-muted-foreground mx-auto" />
+              <p className="text-sm text-muted-foreground">Aucune réservation pour le moment.</p>
               <Link href="/reservation">
-                <Button variant="gold" size="sm">Réserver une séance</Button>
+                <Button variant="primary" size="sm">Réserver une séance</Button>
               </Link>
             </div>
           ) : (
             bookings.map((b) => (
               <div
                 key={b.id}
-                className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-5 space-y-3"
+                className="rounded-xl border border-border bg-surface-muted p-5 space-y-3"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <h3 className="font-bold text-white">{b.serviceTitle}</h3>
-                    <p className="text-xs text-zinc-400 mt-1">
+                    <h3 className="font-bold text-foreground">{b.serviceTitle}</h3>
+                    <p className="text-xs text-muted-foreground mt-1">
                       {b.date} à {b.time}
                       {b.reference ? ` • Réf. ${b.reference}` : ''}
                     </p>
@@ -107,24 +107,24 @@ function ClientReservationsContent() {
                 </div>
 
                 <div className="grid sm:grid-cols-3 gap-3 text-xs">
-                  <div className="p-3 rounded-lg bg-zinc-900/80 border border-zinc-800">
-                    <p className="text-zinc-500">Total TTC</p>
-                    <p className="font-bold text-white mt-0.5">{formatPrice(b.totalPrice || 0)}</p>
+                  <div className="p-3 rounded-lg bg-surface-muted border border-border">
+                    <p className="text-muted-foreground">Total TTC</p>
+                    <p className="font-bold text-foreground mt-0.5">{formatPrice(b.totalPrice || 0)}</p>
                   </div>
-                  <div className="p-3 rounded-lg bg-zinc-900/80 border border-zinc-800">
-                    <p className="text-zinc-500">Acompte</p>
-                    <p className="font-bold text-amber-400 mt-0.5">{formatPrice(b.depositAmount || 0)}</p>
+                  <div className="p-3 rounded-lg bg-surface-muted border border-border">
+                    <p className="text-muted-foreground">Acompte</p>
+                    <p className="font-bold text-primary mt-0.5">{formatPrice(b.depositAmount || 0)}</p>
                   </div>
-                  <div className="p-3 rounded-lg bg-zinc-900/80 border border-zinc-800">
-                    <p className="text-zinc-500">Créée le</p>
-                    <p className="font-semibold text-zinc-300 mt-0.5">{b.createdAt || '—'}</p>
+                  <div className="p-3 rounded-lg bg-surface-muted border border-border">
+                    <p className="text-muted-foreground">Créée le</p>
+                    <p className="font-semibold text-foreground mt-0.5">{b.createdAt || '—'}</p>
                   </div>
                 </div>
 
                 {b.paymentStatus !== 'paid' && (
                   <div className="flex flex-wrap gap-2 pt-1">
                     <Link href="/reservation">
-                      <Button variant="gold" size="sm" className="text-xs h-8">
+                      <Button variant="primary" size="sm" className="text-xs h-8">
                         <CreditCard className="h-3.5 w-3.5 mr-1" />
                         Régler l&apos;acompte
                       </Button>
@@ -133,7 +133,7 @@ function ClientReservationsContent() {
                 )}
 
                 {b.invoiceNumber && (
-                  <Link href="/client/documents" className="inline-flex items-center text-[11px] text-amber-400 hover:underline">
+                  <Link href="/client/documents" className="inline-flex items-center text-[11px] text-primary hover:underline">
                     Facture {b.invoiceNumber} <ExternalLink className="h-3 w-3 ml-1" />
                   </Link>
                 )}

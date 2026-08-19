@@ -14,6 +14,15 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableEmpty,
+} from '@/components/ui/table';
 import { useSettings } from '@/context/settings-context';
 import { LoadingState } from '@/components/common/loading-state';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
@@ -23,7 +32,7 @@ import { getApiErrorMessage } from '@/lib/api-error';
 
 const DashboardCharts = dynamic(() => import('@/components/admin/dashboard-charts'), {
   ssr: false,
-  loading: () => <div className="h-72 animate-pulse rounded-xl bg-zinc-900/40" />,
+  loading: () => <div className="h-72 animate-pulse rounded-lg bg-surface-muted" />,
 });
 
 export default function AdminDashboardPage() {
@@ -61,7 +70,7 @@ export default function AdminDashboardPage() {
 
   if (!stats) {
     return (
-      <p className="text-rose-400 text-sm">{error || 'Données indisponibles.'}</p>
+      <p className="text-danger text-sm">{error || 'Données indisponibles.'}</p>
     );
   }
 
@@ -77,74 +86,74 @@ export default function AdminDashboardPage() {
               Actualiser
             </Button>
             <Link href="/admin/reservations">
-              <Button variant="gold" size="sm">Voir réservations</Button>
+              <Button variant="primary" size="sm">Voir réservations</Button>
             </Link>
           </>
         }
       />
 
       {error && (
-        <p className="text-amber-400 text-xs rounded-xl border border-amber-400/30 bg-amber-400/5 px-4 py-3">{error}</p>
+        <p className="text-small text-warning rounded-lg border border-warning/30 bg-warning-muted px-4 py-3">{error}</p>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-        <Card className="glass-panel border-amber-400/30">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-semibold text-zinc-400 uppercase">CA du mois</CardTitle>
-            <DollarSign className="h-4 w-4 text-amber-400" />
+            <CardTitle className="text-caption font-semibold uppercase">CA du mois</CardTitle>
+            <DollarSign className="h-4 w-4 text-primary" aria-hidden />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-extrabold text-white">{formatPrice(stats.monthlyRevenue)}</div>
-            <div className="text-xs text-zinc-400 mt-1">{stats.confirmedBookingsCount} réservation(s) confirmée(s)</div>
+            <div className="text-2xl font-semibold text-foreground tabular-nums">{formatPrice(stats.monthlyRevenue)}</div>
+            <div className="text-caption mt-1">{stats.confirmedBookingsCount} réservation(s) confirmée(s)</div>
           </CardContent>
         </Card>
 
-        <Card className="glass-panel">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-semibold text-zinc-400 uppercase">Acomptes encaissés</CardTitle>
-            <TrendingUp className="h-4 w-4 text-emerald-400" />
+            <CardTitle className="text-caption font-semibold uppercase">Acomptes encaissés</CardTitle>
+            <TrendingUp className="h-4 w-4 text-success" aria-hidden />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-extrabold text-white">{formatPrice(stats.depositsCollected)}</div>
-            <div className="text-xs text-emerald-400 mt-1">Via Stripe Checkout</div>
+            <div className="text-2xl font-semibold text-foreground tabular-nums">{formatPrice(stats.depositsCollected)}</div>
+            <div className="text-caption mt-1 text-success">Via Stripe Checkout</div>
           </CardContent>
         </Card>
 
-        <Card className="glass-panel">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-semibold text-zinc-400 uppercase">Séances à venir</CardTitle>
-            <Calendar className="h-4 w-4 text-amber-400" />
+            <CardTitle className="text-caption font-semibold uppercase">Séances à venir</CardTitle>
+            <Calendar className="h-4 w-4 text-primary" aria-hidden />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-extrabold text-white">{stats.upcomingBookingsCount}</div>
-            <div className="text-xs text-amber-400/90 font-medium mt-1">{stats.pendingBookingsCount} en attente</div>
+            <div className="text-2xl font-semibold text-foreground tabular-nums">{stats.upcomingBookingsCount}</div>
+            <div className="text-caption mt-1">{stats.pendingBookingsCount} en attente</div>
           </CardContent>
         </Card>
 
-        <Card className="glass-panel">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-semibold text-zinc-400 uppercase">Clients & leads</CardTitle>
-            <Users className="h-4 w-4 text-amber-400" />
+            <CardTitle className="text-caption font-semibold uppercase">Clients & leads</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" aria-hidden />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-extrabold text-white">{stats.activeClientsCount}</div>
-            <div className="text-xs text-zinc-400 mt-1">+{stats.newLeadsCount} message(s) contact (30 j)</div>
+            <div className="text-2xl font-semibold text-foreground tabular-nums">{stats.activeClientsCount}</div>
+            <div className="text-caption mt-1">+{stats.newLeadsCount} message(s) contact (30 j)</div>
           </CardContent>
         </Card>
 
-        <Card className="glass-panel border-emerald-400/20">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-semibold text-zinc-400 uppercase">Visites aujourd&apos;hui</CardTitle>
-            <Eye className="h-4 w-4 text-emerald-400" />
+            <CardTitle className="text-caption font-semibold uppercase">Visites aujourd&apos;hui</CardTitle>
+            <Eye className="h-4 w-4 text-success" aria-hidden />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-extrabold text-white">{todayViews ?? '—'}</div>
-            <div className="text-xs text-zinc-400 mt-1">
+            <div className="text-2xl font-semibold text-foreground tabular-nums">{todayViews ?? '—'}</div>
+            <div className="text-caption mt-1">
               {todayUniqueVisitors != null
                 ? `${todayUniqueVisitors} visiteur(s) unique(s)`
                 : 'Compteur site public'}
             </div>
-            <Link href="/admin/analytics" className="text-xs text-emerald-400/90 hover:text-emerald-300 mt-2 inline-block">
+            <Link href="/admin/analytics" className="text-caption text-primary hover:underline mt-2 inline-block">
               Voir le trafic →
             </Link>
           </CardContent>
@@ -155,59 +164,63 @@ export default function AdminDashboardPage() {
         <DashboardCharts stats={stats} formatPrice={formatPrice} currencySymbol={currencySymbol} />
       )}
 
-      <Card className="glass-panel space-y-4">
+      <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-xl">Dernières réservations</CardTitle>
+            <CardTitle>Dernières réservations</CardTitle>
             <CardDescription>Flux entrant depuis le tunnel public.</CardDescription>
           </div>
-          <Badge variant="gold">Live API</Badge>
+          <Badge variant="accent">Live API</Badge>
         </CardHeader>
         <CardContent>
           {stats.recentBookings.length === 0 ? (
-            <p className="text-zinc-500 text-sm text-center py-6">Aucune réservation.</p>
+            <p className="text-muted-foreground text-sm text-center py-6">Aucune réservation.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-zinc-300">
-                <thead className="bg-zinc-950/80 text-xs font-semibold uppercase text-zinc-400 border-b border-zinc-800">
-                  <tr>
-                    <th className="py-3 px-4">Référence</th>
-                    <th className="py-3 px-4">Client</th>
-                    <th className="py-3 px-4">Prestation</th>
-                    <th className="py-3 px-4">Date</th>
-                    <th className="py-3 px-4">Montant / Acompte</th>
-                    <th className="py-3 px-4">Statut</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-800/60">
-                  {stats.recentBookings.map((b) => (
-                    <tr key={b.id} className="hover:bg-zinc-900/40 transition-colors">
-                      <td className="py-3.5 px-4 font-mono text-xs text-amber-400">{b.reference}</td>
-                      <td className="py-3.5 px-4 font-semibold text-white">{b.client}</td>
-                      <td className="py-3.5 px-4 text-zinc-300">{b.service}</td>
-                      <td className="py-3.5 px-4 text-zinc-400">{b.date}</td>
-                      <td className="py-3.5 px-4">
-                        <div className="font-bold text-white">{formatPrice(b.amount)}</div>
-                        <div className="text-xs text-amber-400/80">
-                          Acompte: {formatPrice(b.depositPaid)}
-                          {b.paymentStatus === 'paid' ? ' ✓' : ''}
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <Badge variant={b.status === 'Confirmé' ? 'success' : 'warning'}>{b.status}</Badge>
-                      </td>
-                      <td className="py-3.5 px-4 text-right">
-                        <Link href="/admin/reservations">
-                          <Button variant="ghost" size="sm" className="text-xs">
-                            Gérer <ArrowUpRight className="h-3.5 w-3.5 ml-1" />
-                          </Button>
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="responsive-table-wrap -mx-5 sm:-mx-6">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Référence</TableHead>
+                    <TableHead>Client</TableHead>
+                    <TableHead>Prestation</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Montant / Acompte</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {stats.recentBookings.length === 0 ? (
+                    <TableEmpty colSpan={7} message="Aucune réservation." />
+                  ) : (
+                    stats.recentBookings.map((b) => (
+                      <TableRow key={b.id}>
+                        <TableCell className="font-mono text-xs text-primary">{b.reference}</TableCell>
+                        <TableCell className="font-medium">{b.client}</TableCell>
+                        <TableCell className="text-muted-foreground">{b.service}</TableCell>
+                        <TableCell className="text-muted-foreground">{b.date}</TableCell>
+                        <TableCell>
+                          <div className="font-medium tabular-nums">{formatPrice(b.amount)}</div>
+                          <div className="text-caption">
+                            Acompte: {formatPrice(b.depositPaid)}
+                            {b.paymentStatus === 'paid' ? ' ✓' : ''}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={b.status === 'Confirmé' ? 'success' : 'warning'}>{b.status}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Link href="/admin/reservations">
+                            <Button variant="ghost" size="sm" className="text-xs">
+                              Gérer <ArrowUpRight className="h-3.5 w-3.5 ml-1" aria-hidden />
+                            </Button>
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
             </div>
           )}
         </CardContent>

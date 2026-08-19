@@ -89,9 +89,8 @@ export async function updateUserProfile(payload: ProfileUpdatePayload): Promise<
     avatar_url: payload.avatarUrl,
   });
   const profile = normalizeProfile(res.data?.data || {});
-  const token = getToken();
-  if (token) {
-    persistSession(token, profileToAuthUser(profile));
+  if (getSession()) {
+    persistSession('', profileToAuthUser(profile));
   }
   return profile;
 }

@@ -56,13 +56,13 @@ function renderInlineText(text: string, vars: LegalTemplateVars): React.ReactNod
       const label =
         path === '/legal' ? 'Mentions légales' : path === '/privacy' ? 'Politique de confidentialité' : 'Contact';
       parts.push(
-        <Link key={`link-${key++}`} href={path} className="text-amber-400 hover:underline">
+        <Link key={`link-${key++}`} href={path} className="text-primary hover:underline">
           {label}
         </Link>
       );
     } else if (kind === 'email') {
       parts.push(
-        <a key={`mail-${key++}`} href={`mailto:${matchText}`} className="text-amber-400 hover:underline">
+        <a key={`mail-${key++}`} href={`mailto:${matchText}`} className="text-primary hover:underline">
           {matchText}
         </a>
       );
@@ -71,7 +71,7 @@ function renderInlineText(text: string, vars: LegalTemplateVars): React.ReactNod
         <a
           key={`url-${key++}`}
           href={matchText}
-          className="text-amber-400 hover:underline"
+          className="text-primary hover:underline"
           target="_blank"
           rel="noopener noreferrer"
         >

@@ -2,7 +2,14 @@
 .env
 .env.local
 .env.*.local
+.env.production
+.env.staging
+.env.development
+!.env.example
 *.pem
+*.key
+*.p12
+secrets/
 
 # Python
 backend/venv/

@@ -18,11 +18,21 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableEmpty,
+} from '@/components/ui/table';
 import { useSettings } from '@/context/settings-context';
 import { useAdminToast } from '@/components/admin/admin-toast';
 import { galleryAccessUrl } from '@/lib/gallery-access-path';
 import { LoadingState } from '@/components/common/loading-state';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
+import { AdminModal } from '@/components/admin/admin-modal';
 import {
   fetchAdminBookings,
   mapBookingToRow,
@@ -255,16 +265,16 @@ export default function AdminReservationsPage() {
       />
 
       {loadError && (
-        <p className="text-rose-400 text-sm rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3">
+        <p className="text-small text-danger rounded-lg border border-danger/25 bg-danger-muted px-4 py-3" role="alert">
           {loadError}
         </p>
       )}
 
-      <div className="glass-panel p-4 rounded-2xl border-zinc-800 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="surface rounded-lg p-4 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="relative w-full md:w-80">
-          <Search className="h-4 w-4 absolute left-3 top-3 text-zinc-500" />
+          <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-hidden />
           <Input
-            placeholder="Rechercher par référence, client..."
+            placeholder="Rechercher par référence, client…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-9 h-10 text-xs"
@@ -279,11 +289,12 @@ export default function AdminReservationsPage() {
           ].map((btn) => (
             <button
               key={btn.id}
+              type="button"
               onClick={() => setStatusFilter(btn.id)}
-              className={`px-4 py-2 text-xs font-semibold rounded-xl border transition-all cursor-pointer ${
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors cursor-pointer ${
                 statusFilter === btn.id
-                  ? 'border-amber-400 bg-amber-400 text-zinc-950'
-                  : 'border-zinc-800 glass-panel text-zinc-300 hover:border-zinc-700'
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-border bg-surface-muted text-muted-foreground hover:text-foreground hover:border-primary/30'
               }`}
             >
               {btn.label}
@@ -292,85 +303,85 @@ export default function AdminReservationsPage() {
         </div>
       </div>
 
-      <Card className="glass-panel space-y-4">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Agenda & Demandes ({filteredBookings.length})</CardTitle>
+          <CardTitle>Agenda & demandes ({filteredBookings.length})</CardTitle>
           <CardDescription>Réservations enregistrées via le site public (Stripe, Mobile Money).</CardDescription>
         </CardHeader>
         <CardContent>
           {filteredBookings.length === 0 ? (
-            <p className="text-zinc-500 text-sm text-center py-8">Aucune réservation pour le moment.</p>
+            <p className="text-muted-foreground text-sm text-center py-8">Aucune réservation pour le moment.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-zinc-300">
-                <thead className="bg-zinc-950/80 text-xs font-semibold uppercase text-zinc-400 border-b border-zinc-800">
-                  <tr>
-                    <th className="py-3 px-4">Réf.</th>
-                    <th className="py-3 px-4">Client</th>
-                    <th className="py-3 px-4">Prestation</th>
-                    <th className="py-3 px-4">Date</th>
-                    <th className="py-3 px-4">Tarif / Acompte</th>
-                    <th className="py-3 px-4">Statut</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-800/60">
-                  {filteredBookings.map((b) => (
-                    <tr key={b.id} className="hover:bg-zinc-900/40 transition-colors">
-                      <td className="py-3.5 px-4 font-mono text-xs text-amber-400">{b.reference}</td>
-                      <td className="py-3.5 px-4">
-                        <div className="font-semibold text-white">{b.clientName}</div>
-                        <div className="text-xs text-zinc-500">{b.clientEmail}</div>
-                        {b.galleryAccessKey && (
-                          <div className="text-[10px] text-amber-400/80 mt-1 font-mono flex items-center gap-1">
-                            <Key className="h-3 w-3" /> {b.galleryAccessKey}
-                          </div>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4">{b.serviceTitle}</td>
-                      <td className="py-3.5 px-4 text-xs">
-                        <div className="flex items-center text-white">
-                          <CalendarIcon className="h-3.5 w-3.5 mr-1 text-amber-400" /> {b.date}
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Réf.</TableHead>
+                  <TableHead>Client</TableHead>
+                  <TableHead>Prestation</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Tarif / Acompte</TableHead>
+                  <TableHead>Statut</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredBookings.map((b) => (
+                  <TableRow key={b.id}>
+                    <TableCell className="font-mono text-xs text-primary">{b.reference}</TableCell>
+                    <TableCell>
+                      <div className="font-medium text-foreground">{b.clientName}</div>
+                      <div className="text-caption">{b.clientEmail}</div>
+                      {b.galleryAccessKey && (
+                        <div className="text-caption mt-1 font-mono flex items-center gap-1 text-primary">
+                          <Key className="h-3 w-3" aria-hidden /> {b.galleryAccessKey}
                         </div>
-                        <div className="flex items-center text-zinc-400">
-                          <Clock className="h-3.5 w-3.5 mr-1 text-amber-400" /> {b.startTime}
+                      )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{b.serviceTitle}</TableCell>
+                    <TableCell className="text-xs">
+                      <div className="flex items-center text-foreground gap-1">
+                        <CalendarIcon className="h-3.5 w-3.5 text-primary" aria-hidden /> {b.date}
+                      </div>
+                      <div className="flex items-center text-muted-foreground gap-1 mt-0.5">
+                        <Clock className="h-3.5 w-3.5" aria-hidden /> {b.startTime}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-medium tabular-nums">{formatPrice(b.totalAmount)}</div>
+                      <div className="text-caption text-success">Acompte: {formatPrice(b.depositAmount)}</div>
+                      {b.paymentStatus === 'paid' && (
+                        <div className="text-caption text-success mt-0.5">
+                          {b.paymentMethod === 'Mobile Money' ? 'Mobile Money ✓' : 'Stripe ✓'}
                         </div>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <div className="font-extrabold text-white">{formatPrice(b.totalAmount)}</div>
-                        <div className="text-xs text-emerald-400">Acompte: {formatPrice(b.depositAmount)}</div>
-                        {b.paymentStatus === 'paid' && (
-                          <div className="text-[10px] text-emerald-400 mt-0.5">
-                            {b.paymentMethod === 'Mobile Money' ? 'Mobile Money ✓' : 'Stripe ✓'}
-                          </div>
-                        )}
-                        {b.paymentStatus === 'mobile_money_pending' && (
-                          <div className="text-[10px] text-amber-400 mt-0.5">
-                            Mobile Money en attente
-                            {b.mobileMoneyReference ? ` • ${b.mobileMoneyReference}` : ''}
-                          </div>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <Badge
-                          variant={
-                            b.status === 'confirmed'
-                              ? 'success'
-                              : b.status === 'pending'
-                                ? 'warning'
-                                : 'outline'
-                          }
-                        >
-                          {b.status === 'confirmed'
-                            ? 'Confirmé'
+                      )}
+                      {b.paymentStatus === 'mobile_money_pending' && (
+                        <div className="text-caption text-warning mt-0.5">
+                          Mobile Money en attente
+                          {b.mobileMoneyReference ? ` • ${b.mobileMoneyReference}` : ''}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          b.status === 'confirmed'
+                            ? 'success'
                             : b.status === 'pending'
-                              ? 'En attente'
-                              : b.status === 'completed'
-                                ? 'Effectué'
-                                : 'Annulé'}
-                        </Badge>
-                      </td>
-                      <td className="py-3.5 px-4 text-right space-x-2">
+                              ? 'warning'
+                              : 'outline'
+                        }
+                      >
+                        {b.status === 'confirmed'
+                          ? 'Confirmé'
+                          : b.status === 'pending'
+                            ? 'En attente'
+                            : b.status === 'completed'
+                              ? 'Effectué'
+                              : 'Annulé'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex flex-wrap justify-end gap-1">
                         <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(b)}>
                           <Edit className="h-3.5 w-3.5 mr-1" /> Modifier
                         </Button>
@@ -379,7 +390,7 @@ export default function AdminReservationsPage() {
                         </Button>
                         {b.paymentStatus === 'mobile_money_pending' && (
                           <Button
-                            variant="gold"
+                            variant="primary"
                             size="sm"
                             onClick={() => handleOpenMobileMoneyConfirm(b)}
                           >
@@ -387,7 +398,7 @@ export default function AdminReservationsPage() {
                           </Button>
                         )}
                         {b.status === 'pending' && (
-                          <Button variant="gold" size="sm" onClick={() => handleUpdateStatus(b.id, 'confirmed')}>
+                          <Button variant="primary" size="sm" onClick={() => handleUpdateStatus(b.id, 'confirmed')}>
                             Valider
                           </Button>
                         )}
@@ -418,247 +429,223 @@ export default function AdminReservationsPage() {
                             Suppr.
                           </Button>
                         )}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {isEditModalOpen && editingBooking && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <Card className="glass-panel max-w-lg w-full border-amber-400/40">
-            <CardHeader className="flex flex-row items-center justify-between border-b border-zinc-800 pb-3">
-              <CardTitle className="text-xl">Modifier {editingBooking.reference}</CardTitle>
-              <button type="button" onClick={() => setIsEditModalOpen(false)} className="text-zinc-400 hover:text-white">
-                ✕
-              </button>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSaveEdit} className="space-y-4 text-xs">
-                <Input
-                  required
-                  value={editForm.clientName || ''}
-                  onChange={(e) => setEditForm({ ...editForm, clientName: e.target.value })}
-                  placeholder="Nom client"
-                />
-                <Input
-                  type="email"
-                  required
-                  value={editForm.clientEmail || ''}
-                  onChange={(e) => setEditForm({ ...editForm, clientEmail: e.target.value })}
-                  placeholder="Email"
-                />
-                <Input
-                  required
-                  value={editForm.serviceTitle || ''}
-                  onChange={(e) => setEditForm({ ...editForm, serviceTitle: e.target.value })}
-                  placeholder="Prestation"
-                />
-                <div className="grid grid-cols-2 gap-4">
-                  <Input type="date" value={editForm.date || ''} onChange={(e) => setEditForm({ ...editForm, date: e.target.value })} />
-                  <Input value={editForm.startTime || ''} onChange={(e) => setEditForm({ ...editForm, startTime: e.target.value })} placeholder="Heure" />
-                </div>
-                <div className="flex justify-end gap-3 pt-2">
-                  <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)}>
-                    Annuler
-                  </Button>
-                  <Button type="submit" variant="gold" disabled={saving}>
-                    {saving ? 'Enregistrement…' : 'Enregistrer'}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      <AdminModal
+        open={isEditModalOpen && !!editingBooking}
+        onClose={() => setIsEditModalOpen(false)}
+        title={editingBooking ? `Modifier ${editingBooking.reference}` : 'Modifier'}
+        size="md"
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)}>
+              Annuler
+            </Button>
+            <Button type="submit" form="edit-booking-form" variant="primary" disabled={saving}>
+              {saving ? 'Enregistrement…' : 'Enregistrer'}
+            </Button>
+          </>
+        }
+      >
+        <form id="edit-booking-form" onSubmit={handleSaveEdit} className="space-y-4 text-sm">
+          <Input
+            required
+            value={editForm.clientName || ''}
+            onChange={(e) => setEditForm({ ...editForm, clientName: e.target.value })}
+            placeholder="Nom client"
+          />
+          <Input
+            type="email"
+            required
+            value={editForm.clientEmail || ''}
+            onChange={(e) => setEditForm({ ...editForm, clientEmail: e.target.value })}
+            placeholder="Email"
+          />
+          <Input
+            required
+            value={editForm.serviceTitle || ''}
+            onChange={(e) => setEditForm({ ...editForm, serviceTitle: e.target.value })}
+            placeholder="Prestation"
+          />
+          <div className="grid grid-cols-2 gap-4">
+            <Input type="date" value={editForm.date || ''} onChange={(e) => setEditForm({ ...editForm, date: e.target.value })} />
+            <Input value={editForm.startTime || ''} onChange={(e) => setEditForm({ ...editForm, startTime: e.target.value })} placeholder="Heure" />
+          </div>
+        </form>
+      </AdminModal>
 
-      {mmConfirmBooking && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <Card className="glass-panel max-w-md w-full border-amber-400/40">
-            <CardHeader className="flex flex-row items-center justify-between border-b border-zinc-800 pb-3">
-              <div>
-                <CardTitle className="text-xl">Valider le paiement Mobile Money</CardTitle>
-                <CardDescription className="mt-1">
-                  {mmConfirmBooking.reference} — {mmConfirmBooking.clientName}
-                </CardDescription>
-              </div>
-              <button
-                type="button"
-                onClick={() => setMmConfirmBooking(null)}
-                className="text-zinc-400 hover:text-white"
-              >
-                ✕
-              </button>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleConfirmMobileMoney} className="space-y-4 text-sm">
-                <div className="p-3 rounded-xl border border-zinc-800 bg-zinc-950 space-y-2 text-xs">
+      <AdminModal
+        open={!!mmConfirmBooking}
+        onClose={() => setMmConfirmBooking(null)}
+        title="Valider le paiement Mobile Money"
+        size="md"
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => setMmConfirmBooking(null)}>
+              Annuler
+            </Button>
+            <Button
+              type="submit"
+              form="mm-confirm-form"
+              variant="primary"
+              disabled={!mmConfirmBooking || confirmingPaymentId === mmConfirmBooking.id || !mmConfirmReference.trim()}
+            >
+              {mmConfirmBooking && confirmingPaymentId === mmConfirmBooking.id
+                ? 'Validation…'
+                : 'Valider et confirmer'}
+            </Button>
+          </>
+        }
+      >
+        {mmConfirmBooking && (
+          <>
+            <p className="text-sm text-muted-foreground mb-4">
+              {mmConfirmBooking.reference} — {mmConfirmBooking.clientName}
+            </p>
+            <form id="mm-confirm-form" onSubmit={handleConfirmMobileMoney} className="space-y-4 text-sm">
+              <div className="p-3 rounded-lg border border-border bg-surface-muted space-y-2 text-xs">
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted-foreground">Réf. déclarée par le client</span>
+                  <code className="text-primary font-mono">
+                    {mmConfirmBooking.mobileMoneyReference || '—'}
+                  </code>
+                </div>
+                {mmConfirmBooking.mobileMoneyPhone && (
                   <div className="flex justify-between gap-3">
-                    <span className="text-zinc-400">Réf. déclarée par le client</span>
-                    <code className="text-amber-400 font-mono">
-                      {mmConfirmBooking.mobileMoneyReference || '—'}
-                    </code>
+                    <span className="text-muted-foreground">Numéro Mobile Money</span>
+                    <span className="text-foreground">{mmConfirmBooking.mobileMoneyPhone}</span>
                   </div>
-                  {mmConfirmBooking.mobileMoneyPhone && (
-                    <div className="flex justify-between gap-3">
-                      <span className="text-zinc-400">Numéro Mobile Money</span>
-                      <span className="text-white">{mmConfirmBooking.mobileMoneyPhone}</span>
+                )}
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted-foreground">Acompte attendu</span>
+                  <span className="text-success font-semibold">
+                    {formatPrice(mmConfirmBooking.depositAmount)}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-caption font-medium text-muted-foreground block mb-1.5">
+                  Référence de transaction à vérifier
+                </label>
+                <Input
+                  required
+                  placeholder="Ex: TXN-123456789"
+                  value={mmConfirmReference}
+                  onChange={(e) => {
+                    setMmConfirmReference(e.target.value);
+                    setMmConfirmError('');
+                  }}
+                  className="font-mono"
+                />
+                <p className="text-caption text-muted-foreground mt-1">
+                  Saisissez la référence reçue sur votre compte Mobile Money.
+                </p>
+              </div>
+
+              {mmConfirmError && (
+                <p className="text-danger text-xs rounded-lg border border-danger/30 bg-danger-muted px-3 py-2">
+                  {mmConfirmError}
+                </p>
+              )}
+            </form>
+          </>
+        )}
+      </AdminModal>
+
+      <AdminModal
+        open={!!galleryModalBooking}
+        onClose={() => setGalleryModalBooking(null)}
+        title={galleryModalBooking ? `Galerie — ${galleryModalBooking.reference}` : 'Galerie'}
+        size="md"
+      >
+        {galleryModalBooking && (
+          <div className="space-y-4 text-sm">
+            <p className="text-muted-foreground">
+              {galleryModalBooking.clientName} • {galleryModalBooking.serviceTitle}
+            </p>
+            {galleryLoading ? (
+              <p className="text-muted-foreground text-center py-6">Chargement de la galerie…</p>
+            ) : galleryAccess ? (
+              <>
+                <div className="p-4 rounded-lg border border-border bg-surface-muted space-y-3">
+                  <div className="font-semibold text-foreground">{galleryAccess.title}</div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-muted-foreground text-xs">Lien d&apos;accès</span>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <code className="text-foreground font-mono text-caption truncate max-w-[180px]">
+                        {galleryAccessUrl(galleryAccess.accessKey).replace(/^https?:\/\//, '')}
+                      </code>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard('Lien galerie', galleryAccessUrl(galleryAccess.accessKey))}
+                        className="text-muted-foreground hover:text-primary shrink-0"
+                        title="Copier le lien complet"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-muted-foreground text-xs">Clé d&apos;accès</span>
+                    <div className="flex items-center gap-2">
+                      <code className="text-primary font-mono text-xs">{galleryAccess.accessKey}</code>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard('Clé', galleryAccess.accessKey)}
+                        className="text-muted-foreground hover:text-primary"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                  {galleryAccess.password && (
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground text-xs">Mot de passe</span>
+                      <div className="flex items-center gap-2">
+                        <code className="text-foreground font-mono text-xs">{galleryAccess.password}</code>
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard('Mot de passe', galleryAccess.password || '')}
+                          className="text-muted-foreground hover:text-primary"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </div>
                   )}
-                  <div className="flex justify-between gap-3">
-                    <span className="text-zinc-400">Acompte attendu</span>
-                    <span className="text-emerald-400 font-semibold">
-                      {formatPrice(mmConfirmBooking.depositAmount)}
-                    </span>
-                  </div>
                 </div>
-
-                <div>
-                  <label className="text-xs text-zinc-400 block mb-1 font-semibold">
-                    Référence de transaction à vérifier
-                  </label>
-                  <Input
-                    required
-                    placeholder="Ex: TXN-123456789"
-                    value={mmConfirmReference}
-                    onChange={(e) => {
-                      setMmConfirmReference(e.target.value);
-                      setMmConfirmError('');
-                    }}
-                    className="font-mono"
-                  />
-                  <p className="text-[11px] text-zinc-500 mt-1">
-                    Saisissez la référence reçue sur votre compte Mobile Money. Elle doit correspondre à celle du client.
-                  </p>
-                </div>
-
-                {mmConfirmError && (
-                  <p className="text-rose-400 text-xs rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2">
-                    {mmConfirmError}
-                  </p>
-                )}
-
-                <div className="flex justify-end gap-3 pt-1">
-                  <Button type="button" variant="outline" onClick={() => setMmConfirmBooking(null)}>
-                    Annuler
-                  </Button>
+                <div className="flex flex-wrap gap-2">
                   <Button
-                    type="submit"
-                    variant="gold"
-                    disabled={confirmingPaymentId === mmConfirmBooking.id || !mmConfirmReference.trim()}
+                    variant="primary"
+                    size="sm"
+                    disabled={sendingGalleryEmail}
+                    onClick={handleSendGalleryAccess}
                   >
-                    {confirmingPaymentId === mmConfirmBooking.id
-                      ? 'Validation…'
-                      : 'Valider et confirmer la séance'}
+                    <Mail className="h-3.5 w-3.5 mr-1" />
+                    {sendingGalleryEmail ? 'Envoi…' : `Envoyer à ${galleryModalBooking.clientEmail}`}
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleManageGalleryPhotos}>
+                    <ExternalLink className="h-3.5 w-3.5 mr-1" />
+                    Gérer les photos
                   </Button>
                 </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {galleryModalBooking && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <Card className="glass-panel max-w-lg w-full border-amber-400/40">
-            <CardHeader className="flex flex-row items-center justify-between border-b border-zinc-800 pb-3">
-              <div>
-                <CardTitle className="text-xl flex items-center gap-2">
-                  <Key className="h-5 w-5 text-amber-400" />
-                  Galerie — {galleryModalBooking.reference}
-                </CardTitle>
-                <CardDescription className="mt-1">
-                  {galleryModalBooking.clientName} • {galleryModalBooking.serviceTitle}
-                </CardDescription>
-              </div>
-              <button
-                type="button"
-                onClick={() => setGalleryModalBooking(null)}
-                className="text-zinc-400 hover:text-white"
-              >
-                ✕
-              </button>
-            </CardHeader>
-            <CardContent className="space-y-4 text-sm">
-              {galleryLoading ? (
-                <p className="text-zinc-400 text-center py-6">Chargement de la galerie…</p>
-              ) : galleryAccess ? (
-                <>
-                  <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-950 space-y-3">
-                    <div className="font-semibold text-white">{galleryAccess.title}</div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-zinc-400 text-xs">Lien d&apos;accès</span>
-                      <div className="flex items-center gap-2 min-w-0">
-                        <code className="text-zinc-300 font-mono text-[10px] truncate max-w-[180px]">
-                          {galleryAccessUrl(galleryAccess.accessKey).replace(/^https?:\/\//, '')}
-                        </code>
-                        <button
-                          type="button"
-                          onClick={() => copyToClipboard('Lien galerie', galleryAccessUrl(galleryAccess.accessKey))}
-                          className="text-zinc-500 hover:text-amber-400 shrink-0"
-                          title="Copier le lien complet"
-                        >
-                          <Copy className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-zinc-400 text-xs">Clé d&apos;accès</span>
-                      <div className="flex items-center gap-2">
-                        <code className="text-amber-400 font-mono text-xs">{galleryAccess.accessKey}</code>
-                        <button
-                          type="button"
-                          onClick={() => copyToClipboard('Clé', galleryAccess.accessKey)}
-                          className="text-zinc-500 hover:text-amber-400"
-                        >
-                          <Copy className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                    {galleryAccess.password && (
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-zinc-400 text-xs">Mot de passe</span>
-                        <div className="flex items-center gap-2">
-                          <code className="text-white font-mono text-xs">{galleryAccess.password}</code>
-                          <button
-                            type="button"
-                            onClick={() => copyToClipboard('Mot de passe', galleryAccess.password || '')}
-                            className="text-zinc-500 hover:text-amber-400"
-                          >
-                            <Copy className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="gold"
-                      size="sm"
-                      disabled={sendingGalleryEmail}
-                      onClick={handleSendGalleryAccess}
-                    >
-                      <Mail className="h-3.5 w-3.5 mr-1" />
-                      {sendingGalleryEmail ? 'Envoi…' : `Envoyer à ${galleryModalBooking.clientEmail}`}
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={handleManageGalleryPhotos}>
-                      <ExternalLink className="h-3.5 w-3.5 mr-1" />
-                      Gérer les photos
-                    </Button>
-                  </div>
-                  <p className="text-[11px] text-zinc-500">
-                    La galerie est créée automatiquement à la réservation. Ajoutez les photos de séance depuis l&apos;espace Galeries.
-                  </p>
-                </>
-              ) : null}
-            </CardContent>
-          </Card>
-        </div>
-      )}
+                <p className="text-caption text-muted-foreground">
+                  La galerie est créée automatiquement à la réservation. Ajoutez les photos depuis l&apos;espace Galeries.
+                </p>
+              </>
+            ) : null}
+          </div>
+        )}
+      </AdminModal>
     </div>
   );
 }

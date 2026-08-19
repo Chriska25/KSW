@@ -235,22 +235,21 @@ def _require_public_token(inv: ElectronicInvitation) -> str:
 
 
 def _save_pdf_template_bytes(content: bytes, invitation_id: str) -> str:
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    from storage_backend import get_media_storage
+
+    storage = get_media_storage(UPLOAD_DIR)
     filename = f"invitation-template-{invitation_id}.pdf"
-    path = os.path.join(UPLOAD_DIR, filename)
-    with open(path, "wb") as handle:
-        handle.write(content)
-    return f"/uploads/{filename}"
+    return storage.put_bytes(filename, content, "application/pdf")
 
 
 def _load_pdf_template_bytes(template_url: str) -> bytes:
-    if not template_url.startswith("/uploads/"):
-        raise HTTPException(status_code=400, detail="Modèle PDF invalide.")
-    path = os.path.join(UPLOAD_DIR, template_url.replace("/uploads/", "", 1))
-    if not os.path.isfile(path):
+    from storage_backend import get_media_storage
+
+    storage = get_media_storage(UPLOAD_DIR)
+    data = storage.get_bytes(template_url)
+    if not data:
         raise HTTPException(status_code=404, detail="Modèle PDF introuvable.")
-    with open(path, "rb") as handle:
-        return handle.read()
+    return data
 
 
 def _append_manual_notification(db: Session, title: str, message: str, ntype: str = "invitation") -> None:

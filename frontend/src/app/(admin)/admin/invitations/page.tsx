@@ -19,6 +19,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableEmpty,
+} from '@/components/ui/table';
 import { LoadingState } from '@/components/common/loading-state';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { useAdminToast } from '@/components/admin/admin-toast';
@@ -252,24 +262,24 @@ export default function AdminInvitationsPage() {
         <div className={`md:col-span-2 space-y-4 ${selectedId ? 'hidden md:block' : ''}`}>
           <div className="flex flex-col sm:flex-row gap-2">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Rechercher client, organisateur…"
-                className="pl-9 bg-zinc-900"
+                className="pl-9"
               />
             </div>
-            <select
+            <Select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
+              className="text-sm w-full sm:w-auto"
             >
               <option value="all">Tous les statuts</option>
               {INVITATION_STATUS_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
-            </select>
+            </Select>
           </div>
 
           <div className="space-y-2 max-h-[70vh] overflow-y-auto pr-1">
@@ -278,14 +288,14 @@ export default function AdminInvitationsPage() {
                 key={inv.id}
                 type="button"
                 onClick={() => setSelectedId(inv.id)}
-                className={`w-full text-left p-4 rounded-xl border transition-colors ${
+                className={`w-full text-left p-4 rounded-lg border transition-colors ${
                   selectedId === inv.id
-                    ? 'border-amber-400/40 bg-amber-400/5'
-                    : 'border-zinc-800 bg-zinc-900/40 hover:border-zinc-700'
+                    ? 'border-primary/40 bg-primary-muted'
+                    : 'border-border bg-surface hover:border-primary/40'
                 }`}
               >
                 <div className="flex justify-between gap-2 mb-1">
-                  <span className="text-white font-medium text-sm truncate">{inv.organizerNames}</span>
+                  <span className="text-foreground font-medium text-sm truncate">{inv.organizerNames}</span>
                   <div className="flex items-center gap-1 shrink-0">
                     {inv.publicToken && (
                       <Badge
@@ -312,20 +322,20 @@ export default function AdminInvitationsPage() {
                     </Badge>
                   </div>
                 </div>
-                <p className="text-zinc-500 text-xs">{inv.clientName} — {inv.eventTypeLabel}</p>
-                <p className="text-zinc-600 text-[11px] mt-1">{inv.eventDate} · {inv.guestResponsesCount ?? 0} réponses</p>
+                <p className="text-muted-foreground text-xs">{inv.clientName} — {inv.eventTypeLabel}</p>
+                <p className="text-caption text-muted-foreground mt-1">{inv.eventDate} · {inv.guestResponsesCount ?? 0} réponses</p>
               </button>
             ))}
             {list.length === 0 && (
-              <p className="text-zinc-500 text-sm text-center py-8">Aucune demande.</p>
+              <p className="text-muted-foreground text-sm text-center py-8">Aucune demande.</p>
             )}
           </div>
         </div>
 
         <div className={`md:col-span-3 ${!selectedId ? 'hidden md:block' : ''}`}>
           {!selectedId ? (
-            <Card className="glass-panel">
-              <CardContent className="py-16 text-center text-zinc-500 text-sm">
+            <Card>
+              <CardContent className="py-16 text-center text-muted-foreground text-sm">
                 Sélectionnez une demande pour la gérer.
               </CardContent>
             </Card>
@@ -337,15 +347,15 @@ export default function AdminInvitationsPage() {
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="md:hidden text-zinc-400 -ml-2"
+                className="md:hidden text-muted-foreground -ml-2"
                 onClick={() => setSelectedId(null)}
               >
                 <ChevronLeft className="h-4 w-4 mr-1" /> Retour à la liste
               </Button>
-              <Card className="glass-panel">
+              <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg text-white">{detail.organizerNames}</CardTitle>
-                  <p className="text-zinc-500 text-xs">
+                  <CardTitle className="text-h2">{detail.organizerNames}</CardTitle>
+                  <p className="text-muted-foreground text-xs">
                     Client : {detail.clientName} ({detail.clientEmail}) · {detail.eventTypeLabel} · {detail.eventDate}
                   </p>
                 </CardHeader>
@@ -353,12 +363,12 @@ export default function AdminInvitationsPage() {
                   <div className="flex flex-wrap gap-2">
                     {detail.status === 'pending' && (
                       <>
-                        <Button size="sm" variant="gold" onClick={handleValidate}><Check className="h-4 w-4 mr-1" /> Valider</Button>
+                        <Button size="sm" variant="primary" onClick={handleValidate}><Check className="h-4 w-4 mr-1" /> Valider</Button>
                         <Button size="sm" variant="outline" onClick={handleReject}><X className="h-4 w-4 mr-1" /> Refuser</Button>
                       </>
                     )}
                     {!detail.publicToken && detail.status !== 'pending' && detail.status !== 'rejected' && (
-                      <Button size="sm" variant="gold" onClick={handleGenerateLink}><Link2 className="h-4 w-4 mr-1" /> Générer le lien</Button>
+                      <Button size="sm" variant="primary" onClick={handleGenerateLink}><Link2 className="h-4 w-4 mr-1" /> Générer le lien</Button>
                     )}
                   </div>
 
@@ -396,9 +406,9 @@ export default function AdminInvitationsPage() {
               )}
 
               {detail.stats && detail.stats.totalResponses > 0 && (
-                <Card className="glass-panel">
+                <Card>
                   <CardHeader className="pb-0">
-                    <CardTitle className="text-sm text-white">Répartition des réponses</CardTitle>
+                    <CardTitle className="text-sm">Répartition des réponses</CardTitle>
                   </CardHeader>
                   <CardContent className="h-48">
                     <InvitationRsvpChart
@@ -419,10 +429,10 @@ export default function AdminInvitationsPage() {
               )}
 
               {detail.publicToken && (
-                <Card className="glass-panel">
+                <Card>
                   <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                    <CardTitle className="text-sm text-white flex items-center gap-2">
-                      <QrCode className="h-4 w-4 text-amber-400" /> QR Code
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <QrCode className="h-4 w-4 text-primary" /> QR Code
                     </CardTitle>
                     <a href={qrCodeImageUrl(publicUrl)} download={`invitation-${detail.publicToken}.png`}>
                       <Button size="sm" variant="outline" type="button">Télécharger</Button>
@@ -430,27 +440,27 @@ export default function AdminInvitationsPage() {
                   </CardHeader>
                   <CardContent className="flex justify-center">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={qrCodeImageUrl(publicUrl)} alt="QR Code invitation" className="rounded-lg border border-zinc-800" width={200} height={200} />
+                    <img src={qrCodeImageUrl(publicUrl)} alt="QR Code invitation" className="rounded-lg border border-border" width={200} height={200} />
                   </CardContent>
                 </Card>
               )}
 
-              <Card className="glass-panel">
+              <Card>
                 <CardHeader className="pb-2 flex flex-row flex-wrap items-center justify-between gap-2">
-                  <CardTitle className="text-sm text-white flex items-center gap-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
                     <Users className="h-4 w-4" /> Invités ({filteredGuests.length})
                   </CardTitle>
-                  <div className="flex gap-2">
-                    <select
+                  <div className="flex flex-wrap gap-2">
+                    <Select
                       value={guestFilter}
                       onChange={(e) => setGuestFilter(e.target.value as typeof guestFilter)}
-                      className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-white"
+                      className="text-xs w-auto min-w-[120px]"
                     >
                       <option value="all">Tous</option>
                       <option value="yes">Confirmés</option>
                       <option value="no">Refusés</option>
                       <option value="maybe">En attente</option>
-                    </select>
+                    </Select>
                     <Button
                       size="sm"
                       variant="outline"
@@ -483,66 +493,67 @@ export default function AdminInvitationsPage() {
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent className="responsive-table-wrap">
-                  <table className="w-full text-xs min-w-[720px]">
-                    <thead>
-                      <tr className="text-zinc-500 border-b border-zinc-800">
-                        <th className="text-left py-2 pr-2">Invité</th>
-                        <th className="text-left py-2 pr-2">Tél.</th>
-                        <th className="text-left py-2 pr-2">Réponse</th>
-                        <th className="text-left py-2 pr-2">Pers.</th>
-                        <th className="text-left py-2 pr-2">Repas / Boisson</th>
-                        <th className="text-left py-2 pr-2">QR billet</th>
-                        <th className="text-left py-2">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredGuests.map((g: InvitationGuest) => (
-                        <tr key={g.id} className="border-b border-zinc-800/50 text-zinc-300">
-                          <td className="py-2 pr-2">{g.fullName}</td>
-                          <td className="py-2 pr-2">{g.phone || '—'}</td>
-                          <td className="py-2 pr-2">{guestResponseLabel(g.response)}</td>
-                          <td className="py-2 pr-2">{g.guestCount}</td>
-                          <td className="py-2 pr-2 text-zinc-400 text-[11px]">
-                            {formatGuestPreferencesSummary(g.preferences)}
-                          </td>
-                          <td className="py-2 pr-2">
-                            {g.response === 'yes' && g.checkInToken ? (
-                              <div className="flex items-center gap-2">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                  src={qrCodeImageUrl(guestPassUrl(g.checkInToken), 64)}
-                                  alt=""
-                                  className="rounded border border-zinc-800 bg-white p-0.5"
-                                  width={40}
-                                  height={40}
-                                />
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  type="button"
-                                  className="h-7 px-2 text-[10px]"
-                                  onClick={() => void downloadGuestPassPdf(detail.id, g.id)}
-                                >
-                                  PDF
-                                </Button>
-                              </div>
-                            ) : (
-                              <span className="text-zinc-600">—</span>
-                            )}
-                          </td>
-                          <td className="py-2">
-                            <Button size="sm" variant="ghost" className="text-rose-400 h-7 px-2" onClick={() => handleDeleteGuest(g.id)}>
-                              Suppr.
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {filteredGuests.length === 0 && (
-                    <p className="text-zinc-500 text-center py-6">Aucun invité pour ce filtre.</p>
-                  )}
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Invité</TableHead>
+                        <TableHead>Tél.</TableHead>
+                        <TableHead>Réponse</TableHead>
+                        <TableHead>Pers.</TableHead>
+                        <TableHead>Repas / boisson</TableHead>
+                        <TableHead>QR billet</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredGuests.length === 0 ? (
+                        <TableEmpty colSpan={7} message="Aucun invité pour ce filtre." />
+                      ) : (
+                        filteredGuests.map((g: InvitationGuest) => (
+                          <TableRow key={g.id}>
+                            <TableCell className="text-xs">{g.fullName}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{g.phone || '—'}</TableCell>
+                            <TableCell className="text-xs">{guestResponseLabel(g.response)}</TableCell>
+                            <TableCell className="text-xs tabular-nums">{g.guestCount}</TableCell>
+                            <TableCell className="text-caption text-muted-foreground">
+                              {formatGuestPreferencesSummary(g.preferences)}
+                            </TableCell>
+                            <TableCell>
+                              {g.response === 'yes' && g.checkInToken ? (
+                                <div className="flex items-center gap-2">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img
+                                    src={qrCodeImageUrl(guestPassUrl(g.checkInToken), 64)}
+                                    alt=""
+                                    className="rounded border border-border bg-white p-0.5"
+                                    width={40}
+                                    height={40}
+                                  />
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    type="button"
+                                    className="h-7 px-2 text-caption"
+                                    onClick={() => void downloadGuestPassPdf(detail.id, g.id)}
+                                  >
+                                    PDF
+                                  </Button>
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Button size="sm" variant="ghost" className="text-destructive h-7 px-2" onClick={() => handleDeleteGuest(g.id)}>
+                                Suppr.
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
                 </CardContent>
               </Card>
             </div>
@@ -555,9 +566,9 @@ export default function AdminInvitationsPage() {
 
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-3">
-      <p className="text-[10px] text-zinc-500 uppercase tracking-wider">{label}</p>
-      <p className="text-xl font-bold text-white">{value}</p>
+    <div className="rounded-lg border border-border bg-surface-muted p-3">
+      <p className="text-caption text-muted-foreground uppercase tracking-wider">{label}</p>
+      <p className="text-xl font-semibold text-foreground tabular-nums">{value}</p>
     </div>
   );
 }

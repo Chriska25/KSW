@@ -157,7 +157,7 @@ export function UserProfileEditor({
   const displayName = `${firstName} ${lastName}`.trim() || profile?.name || 'Utilisateur';
 
   if (loading) {
-    return <p className="text-zinc-500 text-sm py-12 text-center">Chargement du profil…</p>;
+    return <p className="text-muted-foreground text-sm py-12 text-center">Chargement du profil…</p>;
   }
 
   if (loadError) {
@@ -172,22 +172,22 @@ export function UserProfileEditor({
     <div className="space-y-8 max-w-2xl mx-auto">
       {!hideHeader && (
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white flex items-center gap-2">
-            <User className="h-7 w-7 text-amber-400" />
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground flex items-center gap-2">
+            <User className="h-7 w-7 text-primary" />
             {title.includes(' ') ? (
               <>
                 {title.split(' ')[0]}{' '}
-                <span className="gold-gradient-text">{title.split(' ').slice(1).join(' ')}</span>
+                <span className="text-primary">{title.split(' ').slice(1).join(' ')}</span>
               </>
             ) : (
-              <span className="gold-gradient-text">{title}</span>
+              <span className="text-primary">{title}</span>
             )}
           </h1>
-          <p className="text-zinc-400 text-sm mt-1">{subtitle}</p>
+          <p className="text-muted-foreground text-sm mt-1">{subtitle}</p>
         </div>
       )}
 
-      <Card className="glass-panel">
+      <Card className="">
         <CardHeader>
           <CardTitle className="text-lg">Identité & photo</CardTitle>
           <CardDescription>Nom affiché sur vos galeries, réservations et factures.</CardDescription>
@@ -196,12 +196,12 @@ export function UserProfileEditor({
           <form onSubmit={handleSaveProfile} className="space-y-5 text-xs">
             <div className="flex flex-col sm:flex-row gap-5 items-start">
               <div className="flex flex-col items-center gap-3 shrink-0">
-                <div className="relative h-24 w-24 rounded-full border-2 border-zinc-700 bg-zinc-900 overflow-hidden flex items-center justify-center">
+                <div className="relative h-24 w-24 rounded-full border-2 border-border bg-surface-muted overflow-hidden flex items-center justify-center">
                   {avatarPreview ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={avatarPreview} alt="" className="h-full w-full object-cover" />
                   ) : (
-                    <span className="text-2xl font-bold text-amber-400">
+                    <span className="text-2xl font-bold text-primary">
                       {getProfileInitials(displayName)}
                     </span>
                   )}
@@ -209,7 +209,7 @@ export function UserProfileEditor({
                     type="button"
                     onClick={() => avatarInputRef.current?.click()}
                     disabled={avatarUploading}
-                    className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center text-white"
+                    className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center text-foreground"
                     aria-label="Changer la photo"
                   >
                     <Camera className="h-6 w-6" />
@@ -238,7 +238,7 @@ export function UserProfileEditor({
                       variant="ghost"
                       size="sm"
                       onClick={() => setAvatarUrl('')}
-                      className="text-zinc-400"
+                      className="text-muted-foreground"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
@@ -249,25 +249,25 @@ export function UserProfileEditor({
               <div className="flex-1 space-y-4 w-full">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-zinc-400 block mb-1 font-semibold">Prénom</label>
+                    <label className="text-muted-foreground block mb-1 font-semibold">Prénom</label>
                     <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
                   </div>
                   <div>
-                    <label className="text-zinc-400 block mb-1 font-semibold">Nom</label>
+                    <label className="text-muted-foreground block mb-1 font-semibold">Nom</label>
                     <Input value={lastName} onChange={(e) => setLastName(e.target.value)} required />
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-zinc-400 block mb-1 font-semibold flex items-center gap-1.5">
+                  <label className="text-muted-foreground block mb-1 font-semibold flex items-center gap-1.5">
                     <Mail className="h-3.5 w-3.5" /> Email
                   </label>
                   <Input value={profile?.email || ''} disabled className="opacity-70 cursor-not-allowed" />
-                  <p className="text-[11px] text-zinc-500 mt-1">L&apos;email ne peut pas être modifié ici. Contactez l&apos;administrateur si besoin.</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">L&apos;email ne peut pas être modifié ici. Contactez l&apos;administrateur si besoin.</p>
                 </div>
 
                 <div>
-                  <label className="text-zinc-400 block mb-1 font-semibold flex items-center gap-1.5">
+                  <label className="text-muted-foreground block mb-1 font-semibold flex items-center gap-1.5">
                     <Phone className="h-3.5 w-3.5" /> Téléphone
                   </label>
                   <Input
@@ -298,7 +298,7 @@ export function UserProfileEditor({
               </p>
             )}
 
-            <Button type="submit" variant="gold" size="sm" disabled={savingProfile} className="space-x-2">
+            <Button type="submit" variant="primary" size="sm" disabled={savingProfile} className="space-x-2">
               <Save className="h-4 w-4" />
               <span>{savingProfile ? 'Enregistrement…' : 'Enregistrer le profil'}</span>
             </Button>
@@ -307,7 +307,7 @@ export function UserProfileEditor({
       </Card>
 
       {showTheme && (
-        <Card className="glass-panel">
+        <Card className="">
           <CardHeader>
             <CardTitle className="text-lg">Apparence</CardTitle>
             <CardDescription>
@@ -320,10 +320,10 @@ export function UserProfileEditor({
         </Card>
       )}
 
-      <Card className="glass-panel">
+      <Card className="">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            <Lock className="h-5 w-5 text-amber-400" />
+            <Lock className="h-5 w-5 text-primary" />
             Changer le mot de passe
           </CardTitle>
           <CardDescription>Minimum 8 caractères recommandés.</CardDescription>
@@ -331,7 +331,7 @@ export function UserProfileEditor({
         <CardContent>
           <form onSubmit={handlePasswordSubmit} className="space-y-4 text-xs">
             <div>
-              <label className="text-zinc-400 block mb-1 font-semibold">Mot de passe actuel</label>
+              <label className="text-muted-foreground block mb-1 font-semibold">Mot de passe actuel</label>
               <Input
                 type="password"
                 value={currentPassword}
@@ -341,7 +341,7 @@ export function UserProfileEditor({
               />
             </div>
             <div>
-              <label className="text-zinc-400 block mb-1 font-semibold">Nouveau mot de passe</label>
+              <label className="text-muted-foreground block mb-1 font-semibold">Nouveau mot de passe</label>
               <Input
                 type="password"
                 value={newPassword}
@@ -352,7 +352,7 @@ export function UserProfileEditor({
               />
             </div>
             <div>
-              <label className="text-zinc-400 block mb-1 font-semibold">Confirmer le nouveau mot de passe</label>
+              <label className="text-muted-foreground block mb-1 font-semibold">Confirmer le nouveau mot de passe</label>
               <Input
                 type="password"
                 value={confirmPassword}

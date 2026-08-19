@@ -47,7 +47,7 @@ def generate_all_gallery_thumbnails(
             url = str(p.get("url") or "")
             stats["photosSeen"] += 1
 
-            if not url.startswith("/uploads/"):
+            if not (url.startswith("/uploads/") or url.startswith("http://") or url.startswith("https://")):
                 stats["skipped"] += 1
                 next_photos.append(p)
                 continue

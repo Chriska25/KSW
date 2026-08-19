@@ -26,7 +26,7 @@ export function resolveStudioCurrency(currencyStr?: string | null): string {
   return raw || DEFAULT_CURRENCY;
 }
 
-/** Parse "EUR (€)", "XOF (FCFA)", "USD" depuis les paramètres studio. */
+/** Parse"EUR (€)","XOF (FCFA)","USD" depuis les paramètres studio. */
 export function parseCurrencySetting(currencyStr?: string): ParsedCurrency {
   const raw = resolveStudioCurrency(currencyStr);
   const parenMatch = raw.match(/^([A-Za-z]{3})\s*\((.+)\)$/);

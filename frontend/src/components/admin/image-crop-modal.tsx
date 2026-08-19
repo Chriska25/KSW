@@ -100,7 +100,7 @@ export function ImageCropModal({
           <Button type="button" variant="outline" onClick={onClose}>
             Annuler
           </Button>
-          <Button type="button" variant="gold" onClick={handleConfirm} disabled={processing}>
+          <Button type="button" variant="primary" onClick={handleConfirm} disabled={processing}>
             <Check className="h-4 w-4 mr-1.5" />
             {processing ? 'Traitement…' : 'Appliquer le recadrage'}
           </Button>
@@ -108,19 +108,19 @@ export function ImageCropModal({
       }
     >
       <div className="space-y-5">
-        <p className="text-xs text-zinc-400">
+        <p className="text-xs text-muted-foreground">
           Glissez l&apos;image pour ajuster le cadrage.
           {formatLabel ? (
             <>
               {' '}
               Format recommandé :{' '}
-              <span className="text-amber-400 font-semibold">{formatLabel}</span>.
+              <span className="text-primary font-semibold">{formatLabel}</span>.
             </>
           ) : null}
         </p>
 
         <div
-          className="relative mx-auto rounded-xl overflow-hidden border border-zinc-700 bg-zinc-950 select-none touch-none"
+          className="relative mx-auto rounded-xl overflow-hidden border border-border bg-surface-muted select-none touch-none"
           style={{ width: VIEWPORT_W, height: VIEWPORT_H, cursor: dragging ? 'grabbing' : 'grab' }}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
@@ -154,14 +154,14 @@ export function ImageCropModal({
                 top: (VIEWPORT_H - cropH) / 2,
               }}
             />
-            <div className="absolute bottom-2 left-2 text-[10px] font-mono text-amber-400/80 bg-zinc-950/80 px-2 py-0.5 rounded">
+            <div className="absolute bottom-2 left-2 text-[10px] font-mono text-primary/80 bg-surface-muted px-2 py-0.5 rounded">
               {formatLabel || 'Recadrage'}
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-4 px-2">
-          <ZoomOut className="h-4 w-4 text-zinc-500 shrink-0" />
+          <ZoomOut className="h-4 w-4 text-muted-foreground shrink-0" />
           <input
             type="range"
             min={1}
@@ -171,7 +171,7 @@ export function ImageCropModal({
             onChange={(e) => setZoom(Number(e.target.value))}
             className="flex-1 accent-amber-400 h-1.5"
           />
-          <ZoomIn className="h-4 w-4 text-zinc-500 shrink-0" />
+          <ZoomIn className="h-4 w-4 text-muted-foreground shrink-0" />
           <Button
             type="button"
             variant="ghost"

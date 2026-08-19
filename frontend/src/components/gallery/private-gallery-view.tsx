@@ -342,19 +342,19 @@ export function PrivateGalleryView({
     return (
       <div className="max-w-md mx-auto py-12 space-y-6">
         <div className="text-center space-y-3">
-          <div className="h-14 w-14 rounded-2xl bg-amber-400/10 text-amber-400 flex items-center justify-center mx-auto gold-border-glow">
+          <div className="h-14 w-14 rounded-2xl bg-primary-muted text-primary flex items-center justify-center mx-auto">
             <Lock className="h-7 w-7" />
           </div>
-          <Badge variant="gold">Accès sécurisé</Badge>
-          <h1 className="text-xl font-bold text-white">Mot de passe requis</h1>
-          <p className="text-sm text-zinc-400">
-            La clé <span className="font-mono text-amber-400/90">{accessKey}</span> est valide. Saisissez le mot de passe reçu avec votre galerie.
+          <Badge variant="primary">Accès sécurisé</Badge>
+          <h1 className="text-xl font-bold text-foreground">Mot de passe requis</h1>
+          <p className="text-sm text-muted-foreground">
+            La clé <span className="font-mono text-primary/90">{accessKey}</span> est valide. Saisissez le mot de passe reçu avec votre galerie.
           </p>
         </div>
 
-        <form onSubmit={handlePasswordSubmit} className="glass-panel border border-amber-400/20 rounded-2xl p-6 space-y-4">
+        <form onSubmit={handlePasswordSubmit} className="border border-primary/20 rounded-2xl p-6 space-y-4">
           <div>
-            <label className="text-zinc-400 block mb-1 text-xs font-semibold">Mot de passe</label>
+            <label className="text-muted-foreground block mb-1 text-xs font-semibold">Mot de passe</label>
             <Input
               type="password"
               autoFocus
@@ -365,14 +365,14 @@ export function PrivateGalleryView({
             />
           </div>
           {error && <p className="text-rose-400 text-[11px] font-medium">{error}</p>}
-          <Button type="submit" variant="gold" size="lg" className="w-full font-bold" disabled={unlocking}>
+          <Button type="submit" variant="primary" size="lg" className="w-full font-bold" disabled={unlocking}>
             {unlocking ? 'Vérification…' : 'Accéder à la galerie'}
           </Button>
         </form>
 
         <div className="text-center">
           <Link href={`/galerie-privee?key=${encodeURIComponent(accessKey)}`}>
-            <Button variant="ghost" size="sm" className="text-zinc-400">
+            <Button variant="ghost" size="sm" className="text-muted-foreground">
               <Key className="h-4 w-4 mr-1" /> Modifier la clé
             </Button>
           </Link>
@@ -385,13 +385,13 @@ export function PrivateGalleryView({
     const isExpired = error?.includes('expiré');
     return (
       <div className="max-w-lg mx-auto py-16 text-center space-y-4">
-        <AlertCircle className="h-12 w-12 text-amber-400 mx-auto" />
-        <h1 className="text-xl font-bold text-white">{isExpired ? 'Galerie expirée' : 'Accès impossible'}</h1>
-        <p className="text-sm text-zinc-400">{error || 'Galerie non trouvée'}</p>
+        <AlertCircle className="h-12 w-12 text-primary mx-auto" />
+        <h1 className="text-xl font-bold text-foreground">{isExpired ? 'Galerie expirée' : 'Accès impossible'}</h1>
+        <p className="text-sm text-muted-foreground">{error || 'Galerie non trouvée'}</p>
         <div className="flex flex-wrap justify-center gap-2">
           {isExpired && settings.contactEmail && (
             <a href={`mailto:${settings.contactEmail}`}>
-              <Button variant="gold" size="sm">Contacter le studio</Button>
+              <Button variant="primary" size="sm">Contacter le studio</Button>
             </a>
           )}
           <Link href={backHref}>
@@ -405,24 +405,24 @@ export function PrivateGalleryView({
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
       {/* Hero cinématique */}
-      <section className="relative min-h-[42vh] flex items-end overflow-hidden rounded-3xl border border-amber-400/15">
+      <section className="relative min-h-[42vh] flex items-end overflow-hidden rounded-3xl border border-primary/15">
         <HeroBackgroundSlideshow images={heroImages} intervalMs={7000} />
         <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/20 via-zinc-950/70 to-zinc-950" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_80%_10%,_rgba(212,175,55,0.12),_transparent_50%)]" />
 
         <div className="relative z-10 w-full p-6 sm:p-8 lg:p-10 space-y-6">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="gold" className="px-3 py-1">
+            <Badge variant="primary" className="px-3 py-1">
               <Sparkles className="h-3.5 w-3.5 mr-1.5 inline" />
               Galerie privée HD
             </Badge>
-            <span className="text-[11px] font-mono text-zinc-400">{accessKey}</span>
+            <span className="text-[11px] font-mono text-muted-foreground">{accessKey}</span>
           </div>
 
           <div className="space-y-2 max-w-3xl">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight">{gallery.title}</h1>
-            <p className="text-sm text-zinc-300 flex flex-wrap items-center gap-x-2 gap-y-1">
-              <Calendar className="h-4 w-4 text-amber-400 shrink-0" />
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-foreground tracking-tight">{gallery.title}</h1>
+            <p className="text-sm text-foreground flex flex-wrap items-center gap-x-2 gap-y-1">
+              <Calendar className="h-4 w-4 text-primary shrink-0" />
               <span>Client : {gallery.clientName}</span>
               {gallery.expiresAt && (
                 <>
@@ -440,8 +440,8 @@ export function PrivateGalleryView({
               { value: String(activeAlbumsCount || 1), label: 'Albums' },
             ].map((stat) => (
               <div key={stat.label}>
-                <div className="text-2xl font-extrabold text-white">{stat.value}</div>
-                <div className="text-[11px] uppercase tracking-wider text-zinc-500">{stat.label}</div>
+                <div className="text-2xl font-extrabold text-foreground">{stat.value}</div>
+                <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{stat.label}</div>
               </div>
             ))}
           </div>
@@ -449,14 +449,14 @@ export function PrivateGalleryView({
       </section>
 
       {/* Barre d'actions */}
-      <div className="glass-panel p-5 sm:p-6 rounded-2xl border border-zinc-800/90 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="p-5 sm:p-6 rounded-2xl border border-border/90 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex items-start gap-3 min-w-0">
-          <div className="h-10 w-10 rounded-xl bg-amber-400/10 flex items-center justify-center text-amber-400 shrink-0">
+          <div className="h-10 w-10 rounded-xl bg-primary-muted flex items-center justify-center text-primary shrink-0">
             <ShieldCheck className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-white">Livraison haute définition</p>
-            <p className="text-xs text-zinc-400 mt-0.5">
+            <p className="text-sm font-semibold text-foreground">Livraison haute définition</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
               Téléchargez toutes vos photos en ZIP ou une par une. Vos favoris sont mémorisés sur cet appareil.
             </p>
           </div>
@@ -467,9 +467,9 @@ export function PrivateGalleryView({
             variant="outline"
             size="sm"
             onClick={() => setActiveAlbum(activeAlbum === 'fav' ? 'all' : 'fav')}
-            className={activeAlbum === 'fav' ? 'border-amber-400/50 text-amber-400' : ''}
+            className={activeAlbum === 'fav' ? 'border-primary/50 text-primary' : ''}
           >
-            <Heart className={`h-4 w-4 mr-1 ${favoritesCount ? 'fill-amber-400 text-amber-400' : ''}`} />
+            <Heart className={`h-4 w-4 mr-1 ${favoritesCount ? 'fill-primary text-primary' : ''}`} />
             Favoris ({favoritesCount})
           </Button>
           <PrivateGalleryDownloadActions
@@ -490,10 +490,10 @@ export function PrivateGalleryView({
             setDownloadAuthRequired(false);
             await handleDownloadZip();
           }}
-          className="glass-panel p-4 rounded-2xl border border-amber-400/30 flex flex-col sm:flex-row gap-3 items-stretch sm:items-end"
+          className="p-4 rounded-2xl border border-primary/30 flex flex-col sm:flex-row gap-3 items-stretch sm:items-end"
         >
           <div className="flex-1">
-            <label className="text-[11px] font-semibold text-zinc-400 block mb-1">
+            <label className="text-[11px] font-semibold text-muted-foreground block mb-1">
               Mot de passe pour télécharger
             </label>
             <Input
@@ -505,7 +505,7 @@ export function PrivateGalleryView({
               className="h-10"
             />
           </div>
-          <Button type="submit" variant="gold" size="sm" className="shrink-0">
+          <Button type="submit" variant="primary" size="sm" className="shrink-0">
             Télécharger le ZIP
           </Button>
         </form>
@@ -520,8 +520,8 @@ export function PrivateGalleryView({
               onClick={() => setActiveAlbum(tab.id)}
               className={`px-4 py-2 text-[11px] font-semibold rounded-full border transition-all cursor-pointer ${
                 activeAlbum === tab.id
-                  ? 'border-amber-400/80 bg-amber-400/10 text-amber-300'
-                  : 'border-zinc-800 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200'
+                  ? 'border-primary/80 bg-primary-muted text-primary'
+                  : 'border-border text-muted-foreground hover:border-zinc-600 hover:text-zinc-200'
               }`}
             >
               {tab.label}
@@ -531,11 +531,11 @@ export function PrivateGalleryView({
       )}
 
       {filteredPhotos.length === 0 ? (
-        <div className="text-center py-20 space-y-4 rounded-3xl border border-dashed border-zinc-800">
+        <div className="text-center py-20 space-y-4 rounded-3xl border border-dashed border-border">
           <ImageIcon className="h-12 w-12 text-zinc-600 mx-auto" />
-          <p className="text-sm text-zinc-400">Aucune photo dans cette sélection.</p>
+          <p className="text-sm text-muted-foreground">Aucune photo dans cette sélection.</p>
           {activeAlbum === 'fav' && (
-            <p className="text-xs text-zinc-500">Cliquez sur le cœur d&apos;une photo pour l&apos;ajouter à vos favoris.</p>
+            <p className="text-xs text-muted-foreground">Cliquez sur le cœur d&apos;une photo pour l&apos;ajouter à vos favoris.</p>
           )}
         </div>
       ) : (
@@ -562,7 +562,7 @@ export function PrivateGalleryView({
 
       <div className="flex justify-center pt-4">
         <Link href={backHref}>
-          <Button variant="ghost" size="sm" className="text-zinc-400">
+          <Button variant="ghost" size="sm" className="text-muted-foreground">
             <ArrowLeft className="h-4 w-4 mr-1" /> {backLabel}
           </Button>
         </Link>

@@ -11,6 +11,15 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableEmpty,
+} from '@/components/ui/table';
 import { LoadingState } from '@/components/common/loading-state';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { useAdminToast } from '@/components/admin/admin-toast';
@@ -121,7 +130,7 @@ export default function AdminNotificationsPage() {
             <Button variant="outline" size="sm" onClick={handleTestEmail} disabled={testingEmail}>
               {testingEmail ? 'Envoi…' : 'Test email SMTP'}
             </Button>
-            <Button variant="gold" size="sm" onClick={handleSendTest} disabled={testing} className="space-x-2">
+            <Button variant="primary" size="sm" onClick={handleSendTest} disabled={testing} className="space-x-2">
               <Send className="h-4 w-4" />
               <span>{testing ? 'Envoi…' : 'Test journal'}</span>
             </Button>
@@ -129,41 +138,47 @@ export default function AdminNotificationsPage() {
         }
       />
 
-      <div className="rounded-xl border border-zinc-800 bg-zinc-950/50 px-4 py-3 text-xs text-zinc-400">
+      <div className="rounded-lg border border-border bg-surface-muted px-4 py-3 text-xs text-muted-foreground">
         Les emails transactionnels (contact, réservation, paiement) partent via SMTP si configuré
-        (variables <code className="text-amber-400">SMTP_HOST</code>, <code className="text-amber-400">SMTP_USER</code>,{' '}
-        <code className="text-amber-400">SMTP_PASSWORD</code> ou onglet Sécurité des paramètres).
+        (variables <code className="text-primary">SMTP_HOST</code>, <code className="text-primary">SMTP_USER</code>,{' '}
+        <code className="text-primary">SMTP_PASSWORD</code> ou onglet Sécurité des paramètres).
         SMS/WhatsApp restent désactivés.
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="glass-panel p-5 flex items-center gap-3 border-zinc-800">
-          <Calendar className="h-5 w-5 text-amber-400" />
-          <div>
-            <div className="font-bold text-white text-sm">Réservations</div>
-            <div className="text-[11px] text-zinc-400">{history.filter((h) => h.type === 'booking').length} événement(s)</div>
-          </div>
+        <Card>
+          <CardContent className="pt-6 flex items-center gap-3">
+            <Calendar className="h-5 w-5 text-primary shrink-0" />
+            <div>
+              <div className="font-semibold text-foreground text-sm">Réservations</div>
+              <div className="text-caption text-muted-foreground">{history.filter((h) => h.type === 'booking').length} événement(s)</div>
+            </div>
+          </CardContent>
         </Card>
-        <Card className="glass-panel p-5 flex items-center gap-3 border-zinc-800">
-          <CreditCard className="h-5 w-5 text-emerald-400" />
-          <div>
-            <div className="font-bold text-white text-sm">Paiements Stripe</div>
-            <div className="text-[11px] text-zinc-400">{history.filter((h) => h.type === 'payment').length} acompte(s)</div>
-          </div>
+        <Card>
+          <CardContent className="pt-6 flex items-center gap-3">
+            <CreditCard className="h-5 w-5 text-success shrink-0" />
+            <div>
+              <div className="font-semibold text-foreground text-sm">Paiements Stripe</div>
+              <div className="text-caption text-muted-foreground">{history.filter((h) => h.type === 'payment').length} acompte(s)</div>
+            </div>
+          </CardContent>
         </Card>
-        <Card className="glass-panel p-5 flex items-center gap-3 border-zinc-800">
-          <MessageSquare className="h-5 w-5 text-amber-400" />
-          <div>
-            <div className="font-bold text-white text-sm">Messages contact</div>
-            <div className="text-[11px] text-zinc-400">{history.filter((h) => h.type === 'contact').length} lead(s)</div>
-          </div>
+        <Card>
+          <CardContent className="pt-6 flex items-center gap-3">
+            <MessageSquare className="h-5 w-5 text-primary shrink-0" />
+            <div>
+              <div className="font-semibold text-foreground text-sm">Messages contact</div>
+              <div className="text-caption text-muted-foreground">{history.filter((h) => h.type === 'contact').length} lead(s)</div>
+            </div>
+          </CardContent>
         </Card>
       </div>
 
-      <Card className="glass-panel space-y-4">
+      <Card>
         <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <CardTitle className="text-xl">Historique ({filteredHistory.length})</CardTitle>
+            <CardTitle className="text-h2">Historique ({filteredHistory.length})</CardTitle>
             <CardDescription>Événements enregistrés depuis la base de données.</CardDescription>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -178,10 +193,10 @@ export default function AdminNotificationsPage() {
                 key={btn.id}
                 type="button"
                 onClick={() => setSelectedType(btn.id)}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all cursor-pointer ${
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${
                   selectedType === btn.id
-                    ? 'border-amber-400 bg-amber-400 text-zinc-950'
-                    : 'border-zinc-800 text-zinc-300 hover:border-zinc-700'
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border text-muted-foreground hover:border-primary/40 hover:text-foreground'
                 }`}
               >
                 {btn.label}
@@ -191,48 +206,43 @@ export default function AdminNotificationsPage() {
         </CardHeader>
 
         <CardContent>
-          {filteredHistory.length === 0 ? (
-            <p className="text-zinc-500 text-sm text-center py-8">Aucune notification pour le moment.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-zinc-300">
-                <thead className="bg-zinc-950/80 text-xs font-semibold uppercase text-zinc-400 border-b border-zinc-800">
-                  <tr>
-                    <th className="py-3 px-4">Type</th>
-                    <th className="py-3 px-4">Destinataire</th>
-                    <th className="py-3 px-4">Titre</th>
-                    <th className="py-3 px-4">Message</th>
-                    <th className="py-3 px-4">Statut</th>
-                    <th className="py-3 px-4 text-right">Date</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-800/60">
-                  {filteredHistory.map((h) => {
-                    const Icon = typeIcon(h.type);
-                    return (
-                      <tr
-                        key={h.id}
-                        className={`hover:bg-zinc-900/40 transition-colors ${!h.read ? 'bg-amber-400/5' : ''}`}
-                      >
-                        <td className="py-3.5 px-4">
-                          <Icon className="h-4 w-4 text-amber-400" />
-                        </td>
-                        <td className="py-3.5 px-4 font-semibold text-white text-xs">{h.recipient}</td>
-                        <td className="py-3.5 px-4 font-bold text-amber-400 text-xs">{h.title}</td>
-                        <td className="py-3.5 px-4 text-xs text-zinc-300 max-w-xs truncate">{h.message}</td>
-                        <td className="py-3.5 px-4">
-                          <Badge variant={h.read ? 'outline' : 'gold'}>
-                            {h.read ? 'Lu' : 'Nouveau'}
-                          </Badge>
-                        </td>
-                        <td className="py-3.5 px-4 text-right text-xs text-zinc-400">{h.createdAt}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-10" />
+                <TableHead>Destinataire</TableHead>
+                <TableHead>Titre</TableHead>
+                <TableHead>Message</TableHead>
+                <TableHead>Statut</TableHead>
+                <TableHead className="text-right">Date</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredHistory.length === 0 ? (
+                <TableEmpty colSpan={6} message="Aucune notification pour le moment." />
+              ) : (
+                filteredHistory.map((h) => {
+                  const Icon = typeIcon(h.type);
+                  return (
+                    <TableRow key={h.id} className={!h.read ? 'bg-primary-muted/50' : undefined}>
+                      <TableCell>
+                        <Icon className="h-4 w-4 text-primary" />
+                      </TableCell>
+                      <TableCell className="font-medium text-xs">{h.recipient}</TableCell>
+                      <TableCell className="font-semibold text-primary text-xs">{h.title}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground max-w-xs truncate">{h.message}</TableCell>
+                      <TableCell>
+                        <Badge variant={h.read ? 'outline' : 'accent'}>
+                          {h.read ? 'Lu' : 'Nouveau'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right text-xs text-muted-foreground">{h.createdAt}</TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </div>

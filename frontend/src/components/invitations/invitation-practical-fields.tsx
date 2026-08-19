@@ -96,7 +96,7 @@ export function InvitationPracticalFields({
 
   return (
     <div className="space-y-5">
-      <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4 space-y-4">
+      <div className="rounded-xl border border-border bg-surface-muted/60 p-4 space-y-4">
         <p className="text-zinc-200 font-medium text-sm">Paramètres RSVP</p>
         <Field
           icon={CalendarClock}
@@ -106,7 +106,7 @@ export function InvitationPracticalFields({
           onChange={(v) => patch({ rsvpDeadline: v })}
           hint="Après cette date, le formulaire de confirmation sera automatiquement désactivé."
         />
-        <label className="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer">
+        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
           <input
             type="checkbox"
             checked={phoneRequired}
@@ -117,7 +117,7 @@ export function InvitationPracticalFields({
         </label>
         <div>
           <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
-            <label className="text-zinc-400 text-xs">
+            <label className="text-muted-foreground text-xs">
               Liste des invités autorisés ({value.invitedGuestNames?.length || 0})
             </label>
             <div className="flex flex-wrap gap-2">
@@ -125,7 +125,7 @@ export function InvitationPracticalFields({
                 type="button"
                 variant="outline"
                 size="sm"
-                className="h-7 text-[10px] border-zinc-700"
+                className="h-7 text-[10px] border-border"
                 onClick={() => downloadGuestListTemplate()}
               >
                 <Download className="h-3 w-3 mr-1" /> Modèle CSV
@@ -134,7 +134,7 @@ export function InvitationPracticalFields({
                 type="button"
                 variant="outline"
                 size="sm"
-                className="h-7 text-[10px] border-zinc-700"
+                className="h-7 text-[10px] border-border"
                 disabled={importing}
                 onClick={() => fileRef.current?.click()}
               >
@@ -169,9 +169,9 @@ export function InvitationPracticalFields({
             }
             rows={5}
             placeholder={'Sophie Dupont\nAlexandre Marc\nMarie Lambert'}
-            className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-white text-sm resize-y placeholder:text-zinc-600 font-mono"
+            className="w-full rounded-lg border border-border bg-surface-muted px-3 py-2 text-foreground text-sm resize-y placeholder:text-zinc-600 font-mono"
           />
-          <label className="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer mt-2">
+          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer mt-2">
             <input
               type="checkbox"
               checked={Boolean(value.restrictRsvpToGuestList)}
@@ -187,9 +187,9 @@ export function InvitationPracticalFields({
         </div>
       </div>
 
-      <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4 space-y-4">
+      <div className="rounded-xl border border-border bg-surface-muted/60 p-4 space-y-4">
         <p className="text-zinc-200 font-medium text-sm">Lieux & horaires (optionnel)</p>
-        <p className="text-zinc-500 text-xs -mt-2">Pour séparer cérémonie et réception (mariage).</p>
+        <p className="text-muted-foreground text-xs -mt-2">Pour séparer cérémonie et réception (mariage).</p>
         <div className="grid sm:grid-cols-2 gap-3">
           <Field
             icon={Church}
@@ -220,7 +220,7 @@ export function InvitationPracticalFields({
         </div>
       </div>
 
-      <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4 space-y-4">
+      <div className="rounded-xl border border-border bg-surface-muted/60 p-4 space-y-4">
         <p className="text-zinc-200 font-medium text-sm">Informations pratiques pour vos invités</p>
         <Field
           icon={Car}
@@ -308,8 +308,8 @@ function Field({
 }) {
   return (
     <div>
-      <label className="text-zinc-400 text-xs block mb-1 flex items-center gap-1.5">
-        <Icon className="h-3.5 w-3.5 text-amber-400/80" />
+      <label className="text-muted-foreground text-xs block mb-1 flex items-center gap-1.5">
+        <Icon className="h-3.5 w-3.5 text-primary/80" />
         {label}
       </label>
       {multiline ? (
@@ -318,7 +318,7 @@ function Field({
           onChange={(e) => onChange(e.target.value)}
           rows={2}
           placeholder={placeholder}
-          className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-white text-sm resize-none placeholder:text-zinc-600"
+          className="w-full rounded-lg border border-border bg-surface-muted px-3 py-2 text-foreground text-sm resize-none placeholder:text-zinc-600"
         />
       ) : (
         <Input
@@ -326,7 +326,7 @@ function Field({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="bg-zinc-900 text-sm"
+          className="bg-surface-muted text-sm"
         />
       )}
       {hint && <p className="text-zinc-600 text-[11px] mt-1">{hint}</p>}

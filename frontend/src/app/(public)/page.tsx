@@ -33,22 +33,22 @@ export default function HomePage() {
         />
 
         <div className="relative max-w-5xl mx-auto px-4 text-center space-y-8 z-10">
-          <Badge variant="gold" className="px-4 py-1.5 text-xs font-semibold uppercase tracking-widest">
+          <Badge variant="primary" className="px-4 py-1.5 text-xs font-semibold uppercase tracking-widest">
             <Sparkles className="h-3.5 w-3.5 mr-2 inline" /> {home.heroBadge}
           </Badge>
 
-          <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold text-white tracking-tight leading-[1.1]">
+          <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold text-foreground tracking-tight leading-[1.1]">
             {home.heroTitleLine1} <br />
-            <span className="gold-gradient-text">{home.heroTitleHighlight}</span>
+            <span className="text-primary">{home.heroTitleHighlight}</span>
           </h1>
 
-          <p className="max-w-2xl mx-auto text-lg sm:text-xl text-zinc-300 font-light leading-relaxed">
+          <p className="max-w-2xl mx-auto text-lg sm:text-xl text-foreground font-light leading-relaxed">
             {home.heroSubtitle}
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
             <Link href="/reservation">
-              <Button variant="gold" size="lg" className="w-full sm:w-auto space-x-3 px-8 text-base">
+              <Button variant="primary" size="lg" className="w-full sm:w-auto space-x-3 px-8 text-base">
                 <Calendar className="h-5 w-5" />
                 <span>{home.heroCtaPrimary}</span>
                 <ArrowRight className="h-4 w-4" />
@@ -56,23 +56,23 @@ export default function HomePage() {
             </Link>
             <Link href="/portfolio">
               <Button variant="outline" size="lg" className="w-full sm:w-auto space-x-2 px-8 text-base">
-                <Camera className="h-5 w-5 text-amber-400" />
+                <Camera className="h-5 w-5 text-primary" />
                 <span>{home.heroCtaSecondary}</span>
               </Button>
             </Link>
           </div>
 
-          <div className="pt-10 flex flex-wrap items-center justify-center gap-8 text-xs text-zinc-400 border-t border-zinc-800/80">
+          <div className="pt-10 flex flex-wrap items-center justify-center gap-8 text-xs text-muted-foreground border-t border-border/80">
             <div className="flex items-center space-x-2">
-              <Award className="h-4 w-4 text-amber-400" />
+              <Award className="h-4 w-4 text-primary" />
               <span>{home.trustBadge1}</span>
             </div>
             <div className="flex items-center space-x-2">
-              <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
+              <Star className="h-4 w-4 text-primary fill-amber-400" />
               <span>{home.trustBadge2}</span>
             </div>
             <div className="flex items-center space-x-2">
-              <Shield className="h-4 w-4 text-amber-400" />
+              <Shield className="h-4 w-4 text-primary" />
               <span>{home.trustBadge3}</span>
             </div>
           </div>
@@ -81,11 +81,11 @@ export default function HomePage() {
 
       {/* 2. STATS COUNTER BAR */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="glass-panel rounded-3xl p-8 grid grid-cols-2 md:grid-cols-4 gap-8 text-center border-amber-500/20">
+        <div className="rounded-3xl p-8 grid grid-cols-2 md:grid-cols-4 gap-8 text-center border-amber-500/20">
           {home.stats.map((stat, index) => (
             <div key={index}>
-              <div className="text-3xl md:text-4xl font-extrabold gold-gradient-text">{stat.value}</div>
-              <div className="text-xs uppercase tracking-wider text-zinc-400 mt-1">{stat.label}</div>
+              <div className="text-3xl md:text-4xl font-extrabold text-primary">{stat.value}</div>
+              <div className="text-xs uppercase tracking-wider text-muted-foreground mt-1">{stat.label}</div>
             </div>
           ))}
         </div>
@@ -94,23 +94,23 @@ export default function HomePage() {
       {/* 3. PRESTATIONS */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
         <div className="text-center space-y-4 max-w-2xl mx-auto">
-          <Badge variant="gold">{home.servicesBadge}</Badge>
-          <h2 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">
+          <Badge variant="primary">{home.servicesBadge}</Badge>
+          <h2 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight">
             {home.servicesTitleLine1} <br />
-            <span className="gold-gradient-text">{home.servicesTitleHighlight}</span>
+            <span className="text-primary">{home.servicesTitleHighlight}</span>
           </h2>
-          <p className="text-zinc-400 text-sm">{home.servicesSubtitle}</p>
+          <p className="text-muted-foreground text-sm">{home.servicesSubtitle}</p>
         </div>
 
         <ServicePackagesGrid />
       </section>
 
       {/* 4. TESTIMONIALS — contenu fixe */}
-      <section className="bg-zinc-900/40 py-16 border-y border-zinc-800/80">
+      <section className="bg-surface-muted/40 py-16 border-y border-border/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
           <div className="text-center space-y-3">
-            <Badge variant="gold">Témoignages Clients</Badge>
-            <h2 className="text-3xl font-bold text-white">Ce qu&apos;ils disent du Studio</h2>
+            <Badge variant="primary">Témoignages Clients</Badge>
+            <h2 className="text-3xl font-bold text-foreground">Ce qu&apos;ils disent du Studio</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -134,16 +134,16 @@ export default function HomePage() {
                 stars: 5,
               },
             ].map((t, idx) => (
-              <Card key={idx} className="glass-panel space-y-4">
+              <Card key={idx} className="space-y-4">
                 <div className="flex items-center space-x-1">
                   {[...Array(t.stars)].map((_, i) => (
-                    <Star key={i} className="h-4 w-4 text-amber-400 fill-amber-400" />
+                    <Star key={i} className="h-4 w-4 text-primary fill-amber-400" />
                   ))}
                 </div>
-                <p className="text-sm text-zinc-300 italic leading-relaxed">&quot;{t.text}&quot;</p>
-                <div className="pt-4 border-t border-zinc-800/80">
-                  <div className="font-semibold text-white">{t.name}</div>
-                  <div className="text-xs text-zinc-400">{t.event}</div>
+                <p className="text-sm text-foreground italic leading-relaxed">&quot;{t.text}&quot;</p>
+                <div className="pt-4 border-t border-border/80">
+                  <div className="font-semibold text-foreground">{t.name}</div>
+                  <div className="text-xs text-muted-foreground">{t.event}</div>
                 </div>
               </Card>
             ))}
@@ -153,16 +153,16 @@ export default function HomePage() {
 
       {/* 5. CTA */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="relative rounded-3xl glass-panel-gold p-10 md:p-16 overflow-hidden text-center space-y-6 border-amber-400/40">
+        <div className="relative rounded-3xl -gold p-10 md:p-16 overflow-hidden text-center space-y-6 border-primary/30">
           <div className="max-w-2xl mx-auto space-y-4">
-            <h2 className="text-3xl md:text-4xl font-extrabold text-white">
+            <h2 className="text-3xl md:text-4xl font-extrabold text-foreground">
               {home.ctaTitleLine1}{' '}
-              <span className="gold-gradient-text">{home.ctaTitleHighlight}</span>
+              <span className="text-primary">{home.ctaTitleHighlight}</span>
             </h2>
-            <p className="text-zinc-300 text-sm md:text-base">{home.ctaSubtitle}</p>
+            <p className="text-foreground text-sm md:text-base">{home.ctaSubtitle}</p>
             <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link href="/reservation">
-                <Button variant="gold" size="lg" className="px-8 space-x-2">
+                <Button variant="primary" size="lg" className="px-8 space-x-2">
                   <Calendar className="h-5 w-5" />
                   <span>{home.ctaButtonPrimary}</span>
                 </Button>

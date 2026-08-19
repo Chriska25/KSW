@@ -6,6 +6,7 @@ import { ShieldCheck, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { LoadingState } from '@/components/common/loading-state';
 import { useAuth, isAdminUser } from '@/hooks/use-auth';
 import { safeRedirect } from '@/lib/safe-redirect';
@@ -40,7 +41,6 @@ function Verify2FAForm() {
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!userId) return;
-
     try {
       const res = await verify2FA(userId, code);
       if (isAdminUser(res.user)) {
@@ -67,9 +67,9 @@ function Verify2FAForm() {
 
   if (!userId) {
     return (
-      <Card className="glass-panel p-6 text-center text-sm text-zinc-400">
+      <Card className="p-6 text-center text-small text-muted-foreground">
         Session 2FA invalide.{' '}
-        <button type="button" onClick={() => router.replace('/login')} className="text-amber-400 underline">
+        <button type="button" onClick={() => router.replace('/login')} className="text-primary underline">
           Retour à la connexion
         </button>
       </Card>
@@ -77,17 +77,17 @@ function Verify2FAForm() {
   }
 
   return (
-    <Card className="glass-panel border-amber-400/50 gold-border-glow text-center">
+    <Card className="text-center">
       <CardHeader className="space-y-3">
-        <div className="h-12 w-12 rounded-full bg-amber-400/10 text-amber-400 flex items-center justify-center mx-auto">
-          <ShieldCheck className="h-6 w-6" />
+        <div className="h-12 w-12 rounded-lg bg-primary-muted text-primary flex items-center justify-center mx-auto">
+          <ShieldCheck className="h-6 w-6" aria-hidden />
         </div>
-        <CardTitle className="text-2xl font-bold">Double authentification</CardTitle>
-        <CardDescription>
+        <CardTitle className="text-h1">Double authentification</CardTitle>
+        <CardDescription className="text-left sm:text-center">
           {deliveryEmail ? (
             <>
               Entrez le code à 6 chiffres envoyé à{' '}
-              <strong className="text-amber-400">{deliveryEmail}</strong> (vérifiez aussi les spams).
+              <strong className="text-foreground">{deliveryEmail}</strong> (vérifiez aussi les spams).
             </>
           ) : (
             <>Entrez le code à 6 chiffres envoyé à votre adresse email.</>
@@ -98,37 +98,44 @@ function Verify2FAForm() {
       <CardContent>
         <form onSubmit={handleVerify} className="space-y-4">
           {error && (
-            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs">
+            <div className="p-3 rounded-lg bg-danger-muted border border-danger/25 text-danger text-small text-left" role="alert">
               {error}
             </div>
           )}
 
           {resendMessage && (
-            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs">
+            <div className="p-3 rounded-lg bg-success-muted border border-success/25 text-success text-small text-left" role="status">
               {resendMessage}
             </div>
           )}
 
-          <Input
-            required
-            maxLength={6}
-            inputMode="numeric"
-            className="text-center font-mono text-xl tracking-widest"
-            placeholder="123456"
-            value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-          />
+          <div>
+            <Label htmlFor="verify-2fa-code" className="sr-only">
+              Code à 6 chiffres
+            </Label>
+            <Input
+              id="verify-2fa-code"
+              required
+              maxLength={6}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              className="text-center font-mono text-lg tracking-widest"
+              placeholder="123456"
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+            />
+          </div>
 
-          <Button type="submit" variant="gold" size="lg" className="w-full justify-center" disabled={loading}>
+          <Button type="submit" variant="primary" size="lg" className="w-full" disabled={loading}>
             {loading ? 'Vérification…' : 'Valider le code'}
-            {!loading && <ArrowRight className="h-4 w-4 ml-2" />}
+            {!loading && <ArrowRight className="h-4 w-4" aria-hidden />}
           </Button>
 
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="w-full text-zinc-400 hover:text-amber-400"
+            className="w-full"
             disabled={loading}
             onClick={handleResend}
           >

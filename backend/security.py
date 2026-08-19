@@ -1,8 +1,6 @@
 import hashlib
 import os
 import re
-import time
-from collections import defaultdict
 from functools import lru_cache
 from typing import Dict, Optional, Tuple
 from urllib.parse import urlparse
@@ -24,7 +22,41 @@ STRIPE_CHECKOUT_HOSTS = {"checkout.stripe.com", "pay.stripe.com"}
 BLOCKED_UPLOAD_EXTENSIONS = {
     ".html", ".htm", ".svg", ".js", ".mjs", ".php", ".phtml", ".exe", ".sh", ".bat", ".cmd",
 }
-_rate_buckets: Dict[str, list[float]] = defaultdict(list)
+
+MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", str(25 * 1024 * 1024)))
+MAX_GUEST_UPLOAD_BYTES = int(os.getenv("MAX_GUEST_UPLOAD_BYTES", str(8 * 1024 * 1024)))
+MIN_JWT_SECRET_LENGTH = 32
+MIN_SUPERUSER_PASSWORD_LENGTH = 16
+
+WEAK_PASSWORDS = frozenset(
+    {
+        "password",
+        "password123",
+        "12345678",
+        "123456789",
+        "qwerty123",
+        "admin123",
+        "password123!",
+        "Password123!",
+    }
+)
+
+
+def validate_password_policy(password: str, *, min_length: int = 8) -> None:
+    """Politique mot de passe raisonnable — lève HTTPException si invalide."""
+    clean = (password or "").strip()
+    if len(clean) < min_length:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Le mot de passe doit contenir au moins {min_length} caractères.",
+        )
+    if clean.lower() in WEAK_PASSWORDS:
+        raise HTTPException(status_code=400, detail="Mot de passe trop faible. Choisissez une combinaison plus robuste.")
+    if clean.isdigit() or clean.isalpha():
+        raise HTTPException(
+            status_code=400,
+            detail="Le mot de passe doit mélanger lettres et chiffres (ou symboles).",
+        )
 
 
 def is_production() -> bool:
@@ -39,6 +71,28 @@ def validate_jwt_secret_at_startup() -> None:
     secret = os.getenv("JWT_SECRET_KEY", "ksw-dev-secret-change-in-production")
     if is_production() and (not secret or secret == "ksw-dev-secret-change-in-production"):
         raise RuntimeError("JWT_SECRET_KEY doit être défini en production.")
+    if is_production() and len(secret) < MIN_JWT_SECRET_LENGTH:
+        raise RuntimeError(f"JWT_SECRET_KEY doit contenir au moins {MIN_JWT_SECRET_LENGTH} caractères en production.")
+
+
+def validate_security_at_startup() -> None:
+    """Contrôles de sécurité au démarrage (prod + secrets critiques)."""
+    validate_jwt_secret_at_startup()
+    if not is_production():
+        return
+    super_pwd = (os.getenv("SUPERUSER_PASSWORD") or "").strip()
+    if not super_pwd or len(super_pwd) < MIN_SUPERUSER_PASSWORD_LENGTH:
+        raise RuntimeError(
+            f"SUPERUSER_PASSWORD (≥{MIN_SUPERUSER_PASSWORD_LENGTH} caractères) requis en production."
+        )
+
+
+def enforce_upload_size(size_bytes: int, max_bytes: int = MAX_UPLOAD_BYTES) -> None:
+    if size_bytes <= 0:
+        raise HTTPException(status_code=400, detail="Fichier vide.")
+    if size_bytes > max_bytes:
+        max_mb = max(1, max_bytes // (1024 * 1024))
+        raise HTTPException(status_code=413, detail=f"Fichier trop volumineux (max {max_mb} Mo).")
 
 
 def hash_password(plain: str) -> str:
@@ -100,6 +154,18 @@ def is_origin_allowed(origin: Optional[str]) -> bool:
     return False
 
 
+def security_headers() -> Dict[str, str]:
+    headers = {
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "SAMEORIGIN",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    }
+    if is_production():
+        headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
+    return headers
+
+
 def cors_headers(origin: Optional[str]) -> Dict[str, str]:
     headers = {
         "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
@@ -109,26 +175,13 @@ def cors_headers(origin: Optional[str]) -> Dict[str, str]:
     if origin and is_origin_allowed(origin):
         headers["Access-Control-Allow-Origin"] = origin
         headers["Access-Control-Allow-Credentials"] = "true"
-    elif is_development() and not origin:
-        headers["Access-Control-Allow-Origin"] = "*"
     return headers
 
 
 def check_rate_limit(key: str, *, max_attempts: int = 10, window_seconds: int = 900) -> None:
-    now = time.time()
-    bucket = [t for t in _rate_buckets[key] if now - t < window_seconds]
-    if len(bucket) >= max_attempts:
-        raise HTTPException(status_code=429, detail="Trop de tentatives. Réessayez plus tard.")
-    bucket.append(now)
-    _rate_buckets[key] = bucket
-    if len(_rate_buckets) > 5000:
-        stale_keys = [
-            stale_key
-            for stale_key, timestamps in _rate_buckets.items()
-            if not timestamps or now - timestamps[-1] > window_seconds
-        ]
-        for stale_key in stale_keys[:1000]:
-            _rate_buckets.pop(stale_key, None)
+    from rate_limit_store import check_rate_limit as _check
+
+    _check(key, max_attempts=max_attempts, window_seconds=window_seconds)
 
 
 def resolve_booking_pricing(db: Session, service_id: str, service_title: str = "") -> Tuple[str, float, float]:

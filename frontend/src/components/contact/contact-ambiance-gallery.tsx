@@ -47,9 +47,9 @@ export function ContactAmbianceGallery({ photos }: ContactAmbianceGalleryProps) 
   return (
     <section className="space-y-6">
       <div className="text-center max-w-2xl mx-auto space-y-2 px-4">
-        <p className="text-[11px] uppercase tracking-[0.2em] text-amber-400/90 font-mono">Univers créatif</p>
-        <h2 className="text-2xl sm:text-3xl font-bold text-white">
-          L&apos;ambiance <span className="gold-gradient-text">du studio</span>
+        <p className="text-[11px] uppercase tracking-[0.2em] text-primary/90 font-mono">Univers créatif</p>
+        <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
+          L&apos;ambiance <span className="text-primary">du studio</span>
         </h2>
       </div>
 
@@ -67,7 +67,7 @@ export function ContactAmbianceGallery({ photos }: ContactAmbianceGalleryProps) 
               return (
               <article
                 key={`${photo.url}-${index}`}
-                className="group relative shrink-0 w-[11.5rem] sm:w-[13.5rem] md:w-[15rem] aspect-[3/4] rounded-2xl overflow-hidden border border-zinc-800/80 bg-zinc-950 shadow-lg shadow-black/20"
+                className="group relative shrink-0 w-[11.5rem] sm:w-[13.5rem] md:w-[15rem] aspect-[3/4] rounded-2xl overflow-hidden border border-border/80 bg-surface-muted shadow-lg shadow-black/20"
               >
                 <Image
                   src={src}
@@ -80,7 +80,7 @@ export function ContactAmbianceGallery({ photos }: ContactAmbianceGalleryProps) 
                   className="object-cover transition-transform duration-700 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/10 to-transparent" />
-                <p className="absolute bottom-3 left-3 right-3 text-[11px] font-semibold text-white/90 line-clamp-2 z-[1]">
+                <p className="absolute bottom-3 left-3 right-3 text-[11px] font-semibold text-foreground/90 line-clamp-2 z-[1]">
                   {photo.title}
                 </p>
               </article>

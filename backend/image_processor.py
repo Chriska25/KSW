@@ -13,6 +13,9 @@ from urllib.request import urlopen
 
 from PIL import Image, ImageDraw, ImageFont
 
+Image.MAX_IMAGE_PIXELS = 40_000_000
+from storage_backend import get_media_storage
+
 DEFAULT_MEDIA_SETTINGS: Dict[str, Any] = {
     "studioNameFirstPart": "KSW",
     "studioNameSecondPart": "STUDIO",
@@ -353,27 +356,53 @@ def save_thumbnail_from_image(image: Image.Image, upload_dir: str, source_filena
         thumb = thumb.convert("RGB")
 
     thumb_name = thumb_filename_for(source_filename)
-    thumb_path = os.path.join(upload_dir, thumb_name)
-    thumb.save(thumb_path, "WEBP", quality=72, method=4)
+    buf = io.BytesIO()
+    thumb.save(buf, "WEBP", quality=72, method=4)
+    storage = get_media_storage(upload_dir)
+    return storage.put_bytes(thumb_name, buf.getvalue(), "image/webp")
+
+
+def _filename_from_media_url(url: str) -> Optional[str]:
+    raw = str(url or "").strip()
+    if not raw:
+        return None
+    if raw.startswith("/uploads/"):
+        return os.path.basename(raw.replace("/uploads/", "", 1))
+    if raw.startswith(("http://", "https://")):
+        return os.path.basename(urlparse(raw).path)
+    return None
+
+
+def _thumb_url_for_storage(url: str, upload_dir: str) -> Optional[str]:
+    filename = _filename_from_media_url(url)
+    if not filename:
+        return None
+    thumb_name = thumb_filename_for(filename)
+    storage = get_media_storage(upload_dir)
+    if hasattr(storage, "public_url"):
+        return storage.public_url(thumb_name)
     return f"/uploads/{thumb_name}"
 
 
 def ensure_thumbnail_file(url: str, upload_dir: str) -> Optional[str]:
     """Génère la miniature si absente ; retourne l'URL thumb ou None."""
-    if not url or not str(url).startswith("/uploads/"):
+    if not url:
         return None
-    filename = str(url).replace("/uploads/", "", 1)
-    thumb_name = thumb_filename_for(filename)
-    thumb_path = os.path.join(upload_dir, thumb_name)
-    if os.path.isfile(thumb_path):
-        return f"/uploads/{thumb_name}"
+    storage = get_media_storage(upload_dir)
+    filename = _filename_from_media_url(url)
+    if not filename:
+        return None
 
-    source_path = os.path.join(upload_dir, filename)
-    if not os.path.isfile(source_path):
+    predicted = _thumb_url_for_storage(url, upload_dir)
+    if predicted and storage.exists(predicted):
+        return predicted
+
+    source_bytes = storage.get_bytes(url)
+    if not source_bytes:
         return None
 
     try:
-        with Image.open(source_path) as img:
+        with Image.open(io.BytesIO(source_bytes)) as img:
             img.load()
             return save_thumbnail_from_image(img, upload_dir, filename)
     except Exception as exc:
@@ -387,40 +416,46 @@ def resolve_photo_thumb_url(
     upload_dir: str = "",
 ) -> Optional[str]:
     """Retourne thumbUrl si le fichier existe (sans génération synchrone)."""
+    if not upload_dir:
+        return thumb_url or thumb_url_for(str(url or ""))
+
+    storage = get_media_storage(upload_dir)
     candidates: list[str] = []
-    if thumb_url and str(thumb_url).startswith("/uploads/"):
+    if thumb_url:
         candidates.append(str(thumb_url))
-    predicted = thumb_url_for(str(url or ""))
+    predicted = _thumb_url_for_storage(str(url or ""), upload_dir) or thumb_url_for(str(url or ""))
     if predicted:
         candidates.append(predicted)
 
-    if not upload_dir:
-        return candidates[0] if candidates else None
-
     for candidate in candidates:
-        filename = candidate.replace("/uploads/", "", 1)
-        if os.path.isfile(os.path.join(upload_dir, filename)):
+        if candidate and storage.exists(candidate):
             return candidate
     return None
 
 
 def save_raw_image_bytes(data: bytes, upload_dir: str) -> Tuple[str, int]:
     """Enregistre une image sans filigrane (logo filigrane, assets admin)."""
+    storage = get_media_storage(upload_dir)
     with Image.open(io.BytesIO(data)) as img:
         img.load()
         has_alpha = img.mode in {"RGBA", "LA"} or "transparency" in img.info
         if has_alpha:
             img = img.convert("RGBA")
             filename = f"{uuid.uuid4()}.png"
-            output_path = os.path.join(upload_dir, filename)
-            img.save(output_path, "PNG")
+            buf = io.BytesIO()
+            img.save(buf, "PNG")
+            file_bytes = buf.getvalue()
+            content_type = "image/png"
         else:
             img = img.convert("RGB")
             filename = f"{uuid.uuid4()}.webp"
-            output_path = os.path.join(upload_dir, filename)
-            img.save(output_path, "WEBP", quality=92, method=4)
+            buf = io.BytesIO()
+            img.save(buf, "WEBP", quality=92, method=4)
+            file_bytes = buf.getvalue()
+            content_type = "image/webp"
 
-    return f"/uploads/{filename}", os.path.getsize(output_path)
+    url = storage.put_bytes(filename, file_bytes, content_type)
+    return url, len(file_bytes)
 
 
 def process_image_bytes(
@@ -429,6 +464,7 @@ def process_image_bytes(
     upload_dir: str,
 ) -> Tuple[str, int, str, str]:
     """Enregistre original HD + version filigranée + miniature."""
+    storage = get_media_storage(upload_dir)
     media = normalize_media_settings(settings)
     hd_quality = max(1, min(100, _safe_int(media.get("hdWebpQuality"), 98)))
 
@@ -443,17 +479,20 @@ def process_image_bytes(
             rgb = flat
 
         original_filename = f"{file_id}_original.webp"
-        original_path = os.path.join(upload_dir, original_filename)
-        rgb.save(original_path, "WEBP", quality=hd_quality, method=6)
-        original_url = f"/uploads/{original_filename}"
+        original_buf = io.BytesIO()
+        rgb.save(original_buf, "WEBP", quality=hd_quality, method=6)
+        original_bytes = original_buf.getvalue()
+        original_url = storage.put_bytes(original_filename, original_bytes, "image/webp")
 
         processed = apply_watermark(img, media, upload_dir)
         filename = f"{file_id}.webp"
-        output_path = os.path.join(upload_dir, filename)
-        processed.save(output_path, "WEBP", quality=hd_quality, method=6)
+        output_buf = io.BytesIO()
+        processed.save(output_buf, "WEBP", quality=hd_quality, method=6)
+        output_bytes = output_buf.getvalue()
+        url = storage.put_bytes(filename, output_bytes, "image/webp")
         thumb_url = save_thumbnail_from_image(processed, upload_dir, filename)
 
-    return f"/uploads/{filename}", os.path.getsize(output_path), thumb_url, original_url
+    return url, len(output_bytes), thumb_url, original_url
 
 
 def apply_watermark_to_bytes(
@@ -498,16 +537,20 @@ def should_apply_watermark_at_delivery(photo: Optional[Dict[str, Any]], source_u
 
 
 def infer_original_url_from_hd(url: str, upload_dir: str) -> Optional[str]:
-    """Retrouve `{uuid}_original.webp` à partir de `{uuid}.webp` sur disque."""
-    if not url or not str(url).startswith("/uploads/"):
-        return None
-    filename = str(url).replace("/uploads/", "", 1)
-    if "_original" in filename:
-        return f"/uploads/{filename}"
+    """Retrouve `{uuid}_original.webp` à partir de `{uuid}.webp`."""
+    filename = _filename_from_media_url(url)
+    if not filename or "_original" in filename:
+        return url if filename else None
     stem, ext = os.path.splitext(filename)
-    candidate = f"{stem}_original{ext or '.webp'}"
-    if os.path.isfile(os.path.join(upload_dir, candidate)):
-        return f"/uploads/{candidate}"
+    candidate_name = f"{stem}_original{ext or '.webp'}"
+    storage = get_media_storage(upload_dir)
+    candidate_url = (
+        storage.public_url(candidate_name)
+        if hasattr(storage, "public_url")
+        else f"/uploads/{candidate_name}"
+    )
+    if storage.exists(candidate_url):
+        return candidate_url
     return None
 
 

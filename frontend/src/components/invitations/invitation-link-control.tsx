@@ -112,7 +112,7 @@ export function InvitationLinkControl({
           ) : (
             <Link2Off className="h-4 w-4 text-orange-400 shrink-0" />
           )}
-          <span className="text-sm text-white font-medium">Lien public</span>
+          <span className="text-sm text-foreground font-medium">Lien public</span>
           {statusBadge()}
         </div>
         <Button
@@ -137,7 +137,7 @@ export function InvitationLinkControl({
       </div>
 
       {!compact && (
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-muted-foreground">
           {scheduleText ||
             (linkEffective
               ? 'Le lien et le QR code sont accessibles aux invités. Programmez une date de fin pour l\'arrêt automatique.'
@@ -146,28 +146,28 @@ export function InvitationLinkControl({
       )}
 
       {onUpdateSchedule && !compact && (
-        <div className="rounded-md border border-zinc-800 bg-zinc-950/50 p-3 space-y-3">
-          <div className="flex items-center gap-2 text-xs text-zinc-300 font-medium">
-            <CalendarClock className="h-3.5 w-3.5 text-amber-400" />
+        <div className="rounded-md border border-border bg-surface-muted/50 p-3 space-y-3">
+          <div className="flex items-center gap-2 text-xs text-foreground font-medium">
+            <CalendarClock className="h-3.5 w-3.5 text-primary" />
             Validité automatique du lien
           </div>
           <div className="grid sm:grid-cols-2 gap-3">
-            <label className="block text-xs text-zinc-500">
+            <label className="block text-xs text-muted-foreground">
               Actif à partir du
               <Input
                 type="date"
                 value={activeFrom}
                 onChange={(e) => setActiveFrom(e.target.value)}
-                className="mt-1 bg-zinc-900"
+                className="mt-1 bg-surface-muted"
               />
             </label>
-            <label className="block text-xs text-zinc-500">
+            <label className="block text-xs text-muted-foreground">
               Actif jusqu&apos;au (arrêt auto)
               <Input
                 type="date"
                 value={activeUntil}
                 onChange={(e) => setActiveUntil(e.target.value)}
-                className="mt-1 bg-zinc-900"
+                className="mt-1 bg-surface-muted"
               />
             </label>
           </div>
@@ -193,7 +193,7 @@ export function InvitationLinkControl({
         </div>
       )}
 
-      <div className="p-2.5 rounded-md bg-zinc-900/80 border border-zinc-800 font-mono text-[11px] text-amber-400 break-all">
+      <div className="p-2.5 rounded-md bg-surface-muted/80 border border-border font-mono text-[11px] text-primary break-all">
         {publicUrl}
       </div>
 

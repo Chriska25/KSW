@@ -1133,6 +1133,7 @@ def send_gallery_access_for_gallery(
     *,
     delivery_email: Optional[str] = None,
     booking_reference: str = "",
+    plain_password: Optional[str] = None,
 ) -> tuple[bool, Optional[str]]:
     client_email = (delivery_email or getattr(gallery, "client_email", None) or "").strip()
     if not client_email:
@@ -1143,12 +1144,14 @@ def send_gallery_access_for_gallery(
     if not access_key:
         return False, "Clé d'accès galerie manquante."
 
+    password = (plain_password or getattr(gallery, "password", None) or "").strip()
+
     return _send_gallery_access_notification(
         db,
         client_email=client_email,
         client_label=client_name or "Bonjour",
         access_key=access_key,
-        password=getattr(gallery, "password", None) or "",
+        password=password,
         gallery_title=(getattr(gallery, "title", None) or "Galerie").strip(),
         reference=booking_reference,
     )

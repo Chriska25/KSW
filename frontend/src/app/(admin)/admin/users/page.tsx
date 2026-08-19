@@ -19,7 +19,6 @@ import {
   Mail,
   UserCheck,
   UserX,
-  Sparkles,
   Camera,
   Plus,
   Sliders,
@@ -32,8 +31,19 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Select } from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableEmpty,
+} from '@/components/ui/table';
 import { LoadingState } from '@/components/common/loading-state';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
+import { AdminModal } from '@/components/admin/admin-modal';
 
 export interface UserAccountItem {
   id: string;
@@ -404,12 +414,12 @@ export default function AdminUsersPage() {
         description="Administration de l'équipe, définition des rôles personnalisés et matrice des permissions."
         actions={
           activeTab === 'users' ? (
-            <Button variant="gold" size="sm" onClick={handleOpenAddUser} className="space-x-2">
+            <Button variant="primary" size="sm" onClick={handleOpenAddUser} className="space-x-2">
               <UserPlus className="h-4 w-4" />
               <span>Nouvel Utilisateur</span>
             </Button>
           ) : (
-            <Button variant="gold" size="sm" onClick={handleOpenAddRole} className="space-x-2">
+            <Button variant="primary" size="sm" onClick={handleOpenAddRole} className="space-x-2">
               <Plus className="h-4 w-4" />
               <span>Nouveau Rôle</span>
             </Button>
@@ -417,14 +427,14 @@ export default function AdminUsersPage() {
         }
       />
 
-      {/* Tabs Navigation */}
-      <div className="flex items-center space-x-3 border-b border-zinc-800 pb-3">
+      <div className="flex items-center gap-2 border-b border-border pb-3">
         <button
+          type="button"
           onClick={() => setActiveTab('users')}
-          className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
             activeTab === 'users'
-              ? 'bg-amber-400/10 text-amber-400 border border-amber-400/30'
-              : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
+              ? 'bg-primary text-primary-foreground'
+              : 'text-muted-foreground hover:text-foreground hover:bg-surface-muted'
           }`}
         >
           <Users className="h-4 w-4" />
@@ -432,11 +442,12 @@ export default function AdminUsersPage() {
         </button>
 
         <button
+          type="button"
           onClick={() => setActiveTab('roles')}
-          className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
             activeTab === 'roles'
-              ? 'bg-amber-400/10 text-amber-400 border border-amber-400/30'
-              : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
+              ? 'bg-primary text-primary-foreground'
+              : 'text-muted-foreground hover:text-foreground hover:bg-surface-muted'
           }`}
         >
           <ShieldCheck className="h-4 w-4" />
@@ -447,74 +458,80 @@ export default function AdminUsersPage() {
       {/* TAB 1: USERS LIST */}
       {activeTab === 'users' && (
         <div className="space-y-6">
-          {/* KPI Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
-            <Card className="glass-panel p-5 space-y-2 border-zinc-800">
-              <div className="flex items-center justify-between text-xs text-zinc-400 font-semibold uppercase">
-                <span>Total Utilisateurs</span>
-                <Users className="h-4 w-4 text-amber-400" />
-              </div>
-              <div className="text-3xl font-extrabold text-white">{users.length}</div>
-              <div className="text-xs text-emerald-400 font-medium">Comptes enregistrés BDD</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                <CardTitle className="text-caption font-semibold uppercase">Total utilisateurs</CardTitle>
+                <Users className="h-4 w-4 text-primary" aria-hidden />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-semibold text-foreground tabular-nums">{users.length}</div>
+                <div className="text-caption mt-1">Comptes enregistrés</div>
+              </CardContent>
             </Card>
 
-            <Card className="glass-panel p-5 space-y-2 border-zinc-800">
-              <div className="flex items-center justify-between text-xs text-zinc-400 font-semibold uppercase">
-                <span>Rôles Définis</span>
-                <Shield className="h-4 w-4 text-amber-400" />
-              </div>
-              <div className="text-3xl font-extrabold text-amber-400">{roles.length}</div>
-              <div className="text-xs text-zinc-400 font-medium">Profils de droits</div>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                <CardTitle className="text-caption font-semibold uppercase">Rôles définis</CardTitle>
+                <Shield className="h-4 w-4 text-primary" aria-hidden />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-semibold text-foreground tabular-nums">{roles.length}</div>
+                <div className="text-caption mt-1">Profils de droits</div>
+              </CardContent>
             </Card>
 
-            <Card className="glass-panel p-5 space-y-2 border-zinc-800">
-              <div className="flex items-center justify-between text-xs text-zinc-400 font-semibold uppercase">
-                <span>Sécurité 2FA Activée</span>
-                <ShieldCheck className="h-4 w-4 text-emerald-400" />
-              </div>
-              <div className="text-3xl font-extrabold text-emerald-400">
-                {users.filter((u) => u.twoFactorEnabled).length}
-              </div>
-              <div className="text-xs text-emerald-400 font-medium">Protections Fortes</div>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                <CardTitle className="text-caption font-semibold uppercase">Sécurité 2FA</CardTitle>
+                <ShieldCheck className="h-4 w-4 text-success" aria-hidden />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-semibold text-foreground tabular-nums">
+                  {users.filter((u) => u.twoFactorEnabled).length}
+                </div>
+                <div className="text-caption mt-1 text-success">Protections actives</div>
+              </CardContent>
             </Card>
 
-            <Card className="glass-panel p-5 space-y-2 border-zinc-800">
-              <div className="flex items-center justify-between text-xs text-zinc-400 font-semibold uppercase">
-                <span>Comptes Actifs</span>
-                <UserCheck className="h-4 w-4 text-amber-400" />
-              </div>
-              <div className="text-3xl font-extrabold text-white">
-                {users.filter((u) => u.status === 'active').length}
-              </div>
-              <div className="text-xs text-zinc-400 font-medium">Accès Autorisés</div>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                <CardTitle className="text-caption font-semibold uppercase">Comptes actifs</CardTitle>
+                <UserCheck className="h-4 w-4 text-muted-foreground" aria-hidden />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-semibold text-foreground tabular-nums">
+                  {users.filter((u) => u.status === 'active').length}
+                </div>
+                <div className="text-caption mt-1">Accès autorisés</div>
+              </CardContent>
             </Card>
           </div>
 
-          {/* Users Table */}
-          <Card className="glass-panel space-y-4 border-zinc-800">
+          <Card>
             <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                <CardTitle className="text-xl">Comptes Utilisateurs ({filteredUsers.length})</CardTitle>
+                <CardTitle className="text-h2">Comptes utilisateurs ({filteredUsers.length})</CardTitle>
                 <CardDescription>
-                  Liste détaillée des membres de l'équipe et des accès au studio.
+                  Liste détaillée des membres de l&apos;équipe et des accès au studio.
                 </CardDescription>
               </div>
 
               <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
                 <div className="relative flex-1 sm:w-64">
-                  <Search className="h-4 w-4 absolute left-3 top-3 text-zinc-500" />
+                  <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
                   <Input
-                    placeholder="Rechercher par nom, email..."
+                    placeholder="Rechercher par nom, email…"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-9 h-10 text-xs"
                   />
                 </div>
 
-                <select
+                <Select
                   value={selectedRoleFilter}
                   onChange={(e) => setSelectedRoleFilter(e.target.value)}
-                  className="h-10 rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-xs text-zinc-300 focus:outline-none focus:border-amber-400"
+                  className="w-full sm:w-auto text-xs"
                 >
                   <option value="all">Tous les rôles</option>
                   {roles.map((r) => (
@@ -522,7 +539,7 @@ export default function AdminUsersPage() {
                       {r.name}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
             </CardHeader>
 
@@ -530,94 +547,102 @@ export default function AdminUsersPage() {
               {usersLoading ? (
                 <LoadingState message="Chargement des utilisateurs…" />
               ) : usersError ? (
-                <div className="py-8 text-center text-sm text-red-400">{usersError}</div>
+                <div className="py-8 text-center text-sm text-danger">{usersError}</div>
               ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm text-zinc-300">
-                  <thead className="bg-zinc-950/80 text-xs font-semibold uppercase text-zinc-400 border-b border-zinc-800">
-                    <tr>
-                      <th className="py-3 px-4">Utilisateur</th>
-                      <th className="py-3 px-4">Adresse Email</th>
-                      <th className="py-3 px-4">Rôle Attribué</th>
-                      <th className="py-3 px-4">Sécurité 2FA</th>
-                      <th className="py-3 px-4">Statut</th>
-                      <th className="py-3 px-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-800/60">
-                    {filteredUsers.map((u) => {
-                      const meta = getRoleMeta(u.role);
-                      return (
-                        <tr key={u.id} className="hover:bg-zinc-900/40 transition-colors">
-                          <td className="py-3.5 px-4 font-semibold text-white flex items-center space-x-3">
-                            <div className="h-9 w-9 rounded-full bg-amber-400/10 border border-amber-400/30 flex items-center justify-center text-amber-400 font-extrabold text-sm shrink-0">
-                              {u.name.charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                              <div>{u.name}</div>
-                              <div className="text-[11px] text-zinc-500 font-mono">ID: {u.id}</div>
-                            </div>
-                          </td>
-                          <td className="py-3.5 px-4 text-xs font-mono text-zinc-300">{u.email}</td>
-                          <td className="py-3.5 px-4">
-                            <Badge variant={meta.color} className="text-[10px]">
-                              {meta.label}
-                            </Badge>
-                          </td>
-                          <td className="py-3.5 px-4">
-                            {u.twoFactorEnabled ? (
-                              <span className="inline-flex items-center text-xs text-emerald-400 font-semibold">
-                                <ShieldCheck className="h-3.5 w-3.5 mr-1" /> Activé
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center text-xs text-zinc-500">
-                                <ShieldAlert className="h-3.5 w-3.5 mr-1" /> Désactivé
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-3.5 px-4">
-                            <button onClick={() => handleToggleStatus(u.id)} className="cursor-pointer">
-                              <Badge
-                                variant={
-                                  u.status === 'active'
-                                    ? 'success'
-                                    : u.status === 'pending'
-                                    ? 'warning'
-                                    : 'outline'
-                                }
-                              >
-                                {u.status === 'active'
-                                  ? 'Actif'
-                                  : u.status === 'pending'
-                                  ? 'En attente'
-                                  : 'Suspendu'}
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Utilisateur</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Rôle</TableHead>
+                      <TableHead>2FA</TableHead>
+                      <TableHead>Statut</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUsers.length === 0 ? (
+                      <TableEmpty colSpan={6} message="Aucun utilisateur trouvé." />
+                    ) : (
+                      filteredUsers.map((u) => {
+                        const meta = getRoleMeta(u.role);
+                        return (
+                          <TableRow key={u.id}>
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <div className="h-9 w-9 rounded-full bg-primary-muted border border-primary/25 flex items-center justify-center text-primary font-semibold text-sm shrink-0">
+                                  {u.name.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                  <div className="font-medium text-foreground">{u.name}</div>
+                                  <div className="text-caption font-mono">ID: {u.id}</div>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-mono text-xs text-muted-foreground">{u.email}</TableCell>
+                            <TableCell>
+                              <Badge variant={meta.color} className="text-[10px]">
+                                {meta.label}
                               </Badge>
-                            </button>
-                          </td>
-                          <td className="py-3.5 px-4 text-right space-x-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleOpenEditUser(u)}
-                              className="h-8 w-8 text-zinc-300 hover:text-amber-400"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteUser(u.id)}
-                              className="h-8 w-8 text-destructive hover:text-destructive/80"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                            </TableCell>
+                            <TableCell>
+                              {u.twoFactorEnabled ? (
+                                <span className="inline-flex items-center text-xs text-success font-medium">
+                                  <ShieldCheck className="h-3.5 w-3.5 mr-1" /> Activé
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center text-xs text-muted-foreground">
+                                  <ShieldAlert className="h-3.5 w-3.5 mr-1" /> Désactivé
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <button type="button" onClick={() => handleToggleStatus(u.id)} className="cursor-pointer">
+                                <Badge
+                                  variant={
+                                    u.status === 'active'
+                                      ? 'success'
+                                      : u.status === 'pending'
+                                      ? 'warning'
+                                      : 'outline'
+                                  }
+                                >
+                                  {u.status === 'active'
+                                    ? 'Actif'
+                                    : u.status === 'pending'
+                                    ? 'En attente'
+                                    : 'Suspendu'}
+                                </Badge>
+                              </button>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="inline-flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleOpenEditUser(u)}
+                                  className="h-8 w-8"
+                                  aria-label="Modifier"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDeleteUser(u.id)}
+                                  className="h-8 w-8 text-destructive hover:text-destructive/80"
+                                  aria-label="Supprimer"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
               )}
             </CardContent>
           </Card>
@@ -631,20 +656,21 @@ export default function AdminUsersPage() {
             {roles.map((role) => {
               const assignedCount = users.filter((u) => u.role === role.key).length;
               return (
-                <Card key={role.id} className="glass-panel border-zinc-800 space-y-4 p-6">
+                <Card key={role.id} className="space-y-4">
+                  <CardContent className="p-6 space-y-4">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="h-10 w-10 rounded-xl bg-amber-400/10 border border-amber-400/30 flex items-center justify-center text-amber-400">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-primary-muted border border-primary/25 flex items-center justify-center text-primary">
                         <Shield className="h-5 w-5" />
                       </div>
                       <div>
-                        <div className="font-extrabold text-white text-base flex items-center space-x-2">
+                        <div className="font-semibold text-foreground text-base flex items-center gap-2">
                           <span>{role.name}</span>
                           <Badge variant={role.badgeColor} className="text-[10px]">
                             {role.key}
                           </Badge>
                         </div>
-                        <div className="text-xs text-zinc-400 mt-0.5">{assignedCount} Utilisateur(s) attribué(s)</div>
+                        <div className="text-caption mt-0.5">{assignedCount} utilisateur(s) attribué(s)</div>
                       </div>
                     </div>
 
@@ -653,7 +679,8 @@ export default function AdminUsersPage() {
                         variant="ghost"
                         size="icon"
                         onClick={() => handleOpenEditRole(role)}
-                        className="h-8 w-8 text-zinc-300 hover:text-amber-400"
+                        className="h-8 w-8"
+                        aria-label="Modifier le rôle"
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -668,13 +695,13 @@ export default function AdminUsersPage() {
                     </div>
                   </div>
 
-                  <p className="text-xs text-zinc-300 leading-relaxed border-t border-b border-zinc-800/80 py-3">
+                  <p className="text-sm text-muted-foreground leading-relaxed border-t border-b border-border py-3">
                     {role.description}
                   </p>
 
                   <div className="space-y-2 text-xs">
-                    <div className="font-bold text-zinc-400 uppercase tracking-wider text-[11px]">
-                      Matrice des Droits d'Accès
+                    <div className="font-semibold text-muted-foreground uppercase tracking-wider text-caption">
+                      Matrice des droits d&apos;accès
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <div className={`p-2 rounded-lg border flex items-center justify-between ${role.permissions.managePrestations ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-300' : 'border-zinc-800 text-zinc-500'}`}>
@@ -708,6 +735,7 @@ export default function AdminUsersPage() {
                       </div>
                     </div>
                   </div>
+                  </CardContent>
                 </Card>
               );
             })}
@@ -715,288 +743,208 @@ export default function AdminUsersPage() {
         </div>
       )}
 
-      {/* Modal User */}
-      {isUserModalOpen && (
-        <div className="fixed inset-0 z-[999999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <Card className="glass-panel max-w-lg w-full border-amber-400/40 space-y-4">
-            <CardHeader className="flex flex-row items-center justify-between border-b border-zinc-800 pb-3">
-              <CardTitle className="text-xl">
-                {editingUser ? 'Modifier l\'Utilisateur' : 'Ajouter un Utilisateur'}
-              </CardTitle>
-              <button onClick={() => setIsUserModalOpen(false)} className="text-zinc-400 hover:text-white">
-                ✕
-              </button>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSaveUser} className="space-y-4 text-xs">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-zinc-400 block mb-1 font-semibold">Prénom</label>
-                    <Input
-                      required
-                      value={userFormData.firstName}
-                      onChange={(e) => setUserFormData({ ...userFormData, firstName: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-zinc-400 block mb-1 font-semibold">Nom</label>
-                    <Input
-                      required
-                      value={userFormData.lastName}
-                      onChange={(e) => setUserFormData({ ...userFormData, lastName: e.target.value })}
-                    />
-                  </div>
-                </div>
+      <AdminModal
+        open={isUserModalOpen}
+        onClose={() => setIsUserModalOpen(false)}
+        title={editingUser ?"Modifier l'utilisateur" : 'Ajouter un utilisateur'}
+        size="md"
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => setIsUserModalOpen(false)}>
+              Annuler
+            </Button>
+            <Button type="submit" form="user-form" variant="primary">
+              Enregistrer
+            </Button>
+          </>
+        }
+      >
+        <form id="user-form" onSubmit={handleSaveUser} className="space-y-4 text-sm">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-caption font-medium text-muted-foreground block mb-1.5">Prénom</label>
+              <Input
+                required
+                value={userFormData.firstName}
+                onChange={(e) => setUserFormData({ ...userFormData, firstName: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="text-caption font-medium text-muted-foreground block mb-1.5">Nom</label>
+              <Input
+                required
+                value={userFormData.lastName}
+                onChange={(e) => setUserFormData({ ...userFormData, lastName: e.target.value })}
+              />
+            </div>
+          </div>
 
-                <div>
-                  <label className="text-zinc-400 block mb-1 font-semibold">Adresse Email Officielle</label>
-                  <Input
-                    type="email"
-                    required
-                    value={userFormData.email}
-                    onChange={(e) => setUserFormData({ ...userFormData, email: e.target.value })}
-                  />
-                </div>
+          <div>
+            <label className="text-caption font-medium text-muted-foreground block mb-1.5">Email</label>
+            <Input
+              type="email"
+              required
+              value={userFormData.email}
+              onChange={(e) => setUserFormData({ ...userFormData, email: e.target.value })}
+            />
+          </div>
 
-                <div>
-                  <label className="text-zinc-400 block mb-1 font-semibold">
-                    Mot de passe {editingUser && '(Laisser vide pour ne pas modifier)'}
-                  </label>
-                  <Input
-                    type="password"
-                    required={!editingUser}
-                    placeholder="••••••••••••"
-                    value={userFormData.password}
-                    onChange={(e) => setUserFormData({ ...userFormData, password: e.target.value })}
-                  />
-                </div>
+          <div>
+            <label className="text-caption font-medium text-muted-foreground block mb-1.5">
+              Mot de passe {editingUser && '(laisser vide pour ne pas modifier)'}
+            </label>
+            <Input
+              type="password"
+              required={!editingUser}
+              placeholder="••••••••••••"
+              value={userFormData.password}
+              onChange={(e) => setUserFormData({ ...userFormData, password: e.target.value })}
+            />
+          </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-zinc-400 block mb-1 font-semibold">Rôle & Permissions Attribués</label>
-                    <select
-                      value={userFormData.role}
-                      onChange={(e) => setUserFormData({ ...userFormData, role: e.target.value })}
-                      className="w-full h-11 rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-xs text-zinc-100 focus:outline-none focus:border-amber-400"
-                    >
-                      {roles.map((r) => (
-                        <option key={r.key} value={r.key}>
-                          {r.name} ({r.key})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-caption font-medium text-muted-foreground block mb-1.5">Rôle</label>
+              <Select
+                value={userFormData.role}
+                onChange={(e) => setUserFormData({ ...userFormData, role: e.target.value })}
+                className="text-xs"
+              >
+                {roles.map((r) => (
+                  <option key={r.key} value={r.key}>
+                    {r.name} ({r.key})
+                  </option>
+                ))}
+              </Select>
+            </div>
 
-                  <div>
-                    <label className="text-zinc-400 block mb-1 font-semibold">Statut du Compte</label>
-                    <select
-                      value={userFormData.status}
-                      onChange={(e) =>
-                        setUserFormData({
-                          ...userFormData,
-                          status: e.target.value as 'active' | 'pending' | 'suspended',
-                        })
-                      }
-                      className="w-full h-11 rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-xs text-zinc-100 focus:outline-none focus:border-amber-400"
-                    >
-                      <option value="active">Actif (Accès Autorisé)</option>
-                      <option value="pending">En Attente de Validation</option>
-                      <option value="suspended">Suspendu</option>
-                    </select>
-                  </div>
-                </div>
+            <div>
+              <label className="text-caption font-medium text-muted-foreground block mb-1.5">Statut</label>
+              <Select
+                value={userFormData.status}
+                onChange={(e) =>
+                  setUserFormData({
+                    ...userFormData,
+                    status: e.target.value as 'active' | 'pending' | 'suspended',
+                  })
+                }
+                className="text-xs"
+              >
+                <option value="active">Actif</option>
+                <option value="pending">En attente</option>
+                <option value="suspended">Suspendu</option>
+              </Select>
+            </div>
+          </div>
 
-                <div className="pt-2 flex items-center justify-between border-t border-zinc-800">
-                  <span className="text-zinc-300 font-semibold flex items-center">
-                    <ShieldCheck className="h-4 w-4 text-amber-400 mr-1.5" /> Exiger la Double Authentification (2FA)
-                  </span>
+          <div className="pt-2 flex items-center justify-between border-t border-border">
+            <span className="text-sm font-medium text-foreground flex items-center">
+              <ShieldCheck className="h-4 w-4 text-primary mr-1.5" /> Double authentification (2FA)
+            </span>
+            <input
+              type="checkbox"
+              checked={userFormData.twoFactorEnabled}
+              onChange={(e) => setUserFormData({ ...userFormData, twoFactorEnabled: e.target.checked })}
+              className="h-4 w-4 rounded accent-primary"
+            />
+          </div>
+        </form>
+      </AdminModal>
+
+      <AdminModal
+        open={isRoleModalOpen}
+        onClose={() => setIsRoleModalOpen(false)}
+        title={editingRole ? 'Modifier le rôle' : 'Créer un rôle'}
+        size="md"
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => setIsRoleModalOpen(false)}>
+              Annuler
+            </Button>
+            <Button type="submit" form="role-form" variant="primary">
+              Enregistrer
+            </Button>
+          </>
+        }
+      >
+        <form id="role-form" onSubmit={handleSaveRole} className="space-y-4 text-sm">
+          <div>
+            <label className="text-caption font-medium text-muted-foreground block mb-1.5">Nom du rôle</label>
+            <Input
+              required
+              placeholder="ex: Éditeur retoucheur, Commercial devis…"
+              value={roleFormData.name}
+              onChange={(e) => setRoleFormData({ ...roleFormData, name: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <label className="text-caption font-medium text-muted-foreground block mb-1.5">Description</label>
+            <Input
+              required
+              placeholder="Description des accès et missions…"
+              value={roleFormData.description}
+              onChange={(e) => setRoleFormData({ ...roleFormData, description: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <label className="text-caption font-medium text-muted-foreground block mb-1.5">Couleur du badge</label>
+            <Select
+              value={roleFormData.badgeColor}
+              onChange={(e) =>
+                setRoleFormData({
+                  ...roleFormData,
+                  badgeColor: e.target.value as 'gold' | 'outline' | 'success' | 'warning',
+                })
+              }
+              className="text-xs"
+            >
+              <option value="gold">Primary (haute importance)</option>
+              <option value="success">Vert (équipe photo)</option>
+              <option value="outline">Neutre (assistant)</option>
+              <option value="warning">Orange (client / externe)</option>
+            </Select>
+          </div>
+
+          <div className="pt-3 border-t border-border space-y-3">
+            <div className="font-semibold text-primary flex items-center text-sm">
+              <ShieldCheck className="h-4 w-4 mr-1.5" /> Permissions
+            </div>
+
+            <div className="space-y-2">
+              {(
+                [
+                  ['managePrestations', 'Catalogue prestations & tarifs'],
+                  ['manageGalleries', 'Galeries photos & téléversement'],
+                  ['manageFinances', 'Finances & factures'],
+                  ['manageCrm', 'CRM & fiches clients'],
+                  ['manageUsers', 'Gestion utilisateurs & rôles'],
+                  ['manageSettings', 'Paramètres studio & clés API'],
+                ] as const
+              ).map(([key, label]) => (
+                <label
+                  key={key}
+                  className="flex items-center justify-between p-2 rounded-lg bg-surface-muted border border-border cursor-pointer"
+                >
+                  <span className="text-foreground text-sm">{label}</span>
                   <input
                     type="checkbox"
-                    checked={userFormData.twoFactorEnabled}
-                    onChange={(e) => setUserFormData({ ...userFormData, twoFactorEnabled: e.target.checked })}
-                    className="h-4 w-4 rounded accent-amber-400"
-                  />
-                </div>
-
-                <div className="pt-4 flex justify-end space-x-3 border-t border-zinc-800">
-                  <Button type="button" variant="outline" onClick={() => setIsUserModalOpen(false)}>
-                    Annuler
-                  </Button>
-                  <Button type="submit" variant="gold">
-                    Enregistrer l'Utilisateur
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Modal Role */}
-      {isRoleModalOpen && (
-        <div className="fixed inset-0 z-[999999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <Card className="glass-panel max-w-lg w-full border-amber-400/40 space-y-4">
-            <CardHeader className="flex flex-row items-center justify-between border-b border-zinc-800 pb-3">
-              <CardTitle className="text-xl">
-                {editingRole ? 'Modifier le Rôle' : 'Créer un Nouveau Rôle'}
-              </CardTitle>
-              <button onClick={() => setIsRoleModalOpen(false)} className="text-zinc-400 hover:text-white">
-                ✕
-              </button>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSaveRole} className="space-y-4 text-xs">
-                <div>
-                  <label className="text-zinc-400 block mb-1 font-semibold">Nom du Rôle</label>
-                  <Input
-                    required
-                    placeholder="ex: Éditeur Retoucheur, Commercial Devis..."
-                    value={roleFormData.name}
-                    onChange={(e) => setRoleFormData({ ...roleFormData, name: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <label className="text-zinc-400 block mb-1 font-semibold">Description du Rôle</label>
-                  <Input
-                    required
-                    placeholder="Description explicative des accès et missions..."
-                    value={roleFormData.description}
-                    onChange={(e) => setRoleFormData({ ...roleFormData, description: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <label className="text-zinc-400 block mb-1 font-semibold">Couleur de Badge</label>
-                  <select
-                    value={roleFormData.badgeColor}
+                    checked={roleFormData.permissions[key]}
                     onChange={(e) =>
                       setRoleFormData({
                         ...roleFormData,
-                        badgeColor: e.target.value as 'gold' | 'outline' | 'success' | 'warning',
+                        permissions: { ...roleFormData.permissions, [key]: e.target.checked },
                       })
                     }
-                    className="w-full h-11 rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-xs text-zinc-100 focus:outline-none focus:border-amber-400"
-                  >
-                    <option value="gold">Doré (Haute Importance)</option>
-                    <option value="success">Vert (Equipe Photographe)</option>
-                    <option value="outline">Gris (Assistant & Staff)</option>
-                    <option value="warning">Orange (Client / Externe)</option>
-                  </select>
-                </div>
-
-                {/* Permissions Matrix Checkboxes */}
-                <div className="pt-3 border-t border-zinc-800 space-y-3">
-                  <div className="font-bold text-amber-400 flex items-center">
-                    <ShieldCheck className="h-4 w-4 mr-1.5" /> Sélection des Permissions Granulaires
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="flex items-center justify-between p-2 rounded-xl bg-zinc-950 border border-zinc-800 cursor-pointer">
-                      <span className="text-zinc-200">Accès Catalogue Prestations & Tarifs</span>
-                      <input
-                        type="checkbox"
-                        checked={roleFormData.permissions.managePrestations}
-                        onChange={(e) =>
-                          setRoleFormData({
-                            ...roleFormData,
-                            permissions: { ...roleFormData.permissions, managePrestations: e.target.checked },
-                          })
-                        }
-                        className="h-4 w-4 accent-amber-400"
-                      />
-                    </label>
-
-                    <label className="flex items-center justify-between p-2 rounded-xl bg-zinc-950 border border-zinc-800 cursor-pointer">
-                      <span className="text-zinc-200">Accès Galeries Photos & Téléversement</span>
-                      <input
-                        type="checkbox"
-                        checked={roleFormData.permissions.manageGalleries}
-                        onChange={(e) =>
-                          setRoleFormData({
-                            ...roleFormData,
-                            permissions: { ...roleFormData.permissions, manageGalleries: e.target.checked },
-                          })
-                        }
-                        className="h-4 w-4 accent-amber-400"
-                      />
-                    </label>
-
-                    <label className="flex items-center justify-between p-2 rounded-xl bg-zinc-950 border border-zinc-800 cursor-pointer">
-                      <span className="text-zinc-200">Accès Finances & Émission Factures</span>
-                      <input
-                        type="checkbox"
-                        checked={roleFormData.permissions.manageFinances}
-                        onChange={(e) =>
-                          setRoleFormData({
-                            ...roleFormData,
-                            permissions: { ...roleFormData.permissions, manageFinances: e.target.checked },
-                          })
-                        }
-                        className="h-4 w-4 accent-amber-400"
-                      />
-                    </label>
-
-                    <label className="flex items-center justify-between p-2 rounded-xl bg-zinc-950 border border-zinc-800 cursor-pointer">
-                      <span className="text-zinc-200">Accès CRM & Fiches Clients</span>
-                      <input
-                        type="checkbox"
-                        checked={roleFormData.permissions.manageCrm}
-                        onChange={(e) =>
-                          setRoleFormData({
-                            ...roleFormData,
-                            permissions: { ...roleFormData.permissions, manageCrm: e.target.checked },
-                          })
-                        }
-                        className="h-4 w-4 accent-amber-400"
-                      />
-                    </label>
-
-                    <label className="flex items-center justify-between p-2 rounded-xl bg-zinc-950 border border-zinc-800 cursor-pointer">
-                      <span className="text-zinc-200">Accès Gestion Utilisateurs & Rôles</span>
-                      <input
-                        type="checkbox"
-                        checked={roleFormData.permissions.manageUsers}
-                        onChange={(e) =>
-                          setRoleFormData({
-                            ...roleFormData,
-                            permissions: { ...roleFormData.permissions, manageUsers: e.target.checked },
-                          })
-                        }
-                        className="h-4 w-4 accent-amber-400"
-                      />
-                    </label>
-
-                    <label className="flex items-center justify-between p-2 rounded-xl bg-zinc-950 border border-zinc-800 cursor-pointer">
-                      <span className="text-zinc-200">Accès Paramètres Studio & Clés API</span>
-                      <input
-                        type="checkbox"
-                        checked={roleFormData.permissions.manageSettings}
-                        onChange={(e) =>
-                          setRoleFormData({
-                            ...roleFormData,
-                            permissions: { ...roleFormData.permissions, manageSettings: e.target.checked },
-                          })
-                        }
-                        className="h-4 w-4 accent-amber-400"
-                      />
-                    </label>
-                  </div>
-                </div>
-
-                <div className="pt-4 flex justify-end space-x-3 border-t border-zinc-800">
-                  <Button type="button" variant="outline" onClick={() => setIsRoleModalOpen(false)}>
-                    Annuler
-                  </Button>
-                  <Button type="submit" variant="gold">
-                    Enregistrer le Rôle
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+                    className="h-4 w-4 accent-primary"
+                  />
+                </label>
+              ))}
+            </div>
+          </div>
+        </form>
+      </AdminModal>
     </div>
   );
 }

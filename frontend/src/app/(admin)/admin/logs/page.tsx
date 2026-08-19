@@ -142,14 +142,14 @@ export default function AdminLogsPage() {
         }
       />
 
-      <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/5 px-4 py-3 text-xs text-zinc-300">
-        Fichier persistant : <code className="text-emerald-300">backend/logs/admin-activity.log</code> — une ligne JSON par action admin.
+      <div className="rounded-lg border border-success/20 bg-success-muted px-4 py-3 text-xs text-muted-foreground">
+        Fichier persistant : <code className="text-success">backend/logs/admin-activity.log</code> — une ligne JSON par action admin.
       </div>
 
-      <Card className="glass-panel">
+      <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Filter className="h-5 w-5 text-amber-400" />
+          <CardTitle className="text-h2 flex items-center gap-2">
+            <Filter className="h-5 w-5 text-primary" />
             Filtrer par source
           </CardTitle>
           <CardDescription>{filtered.length} entrée(s) affichée(s)</CardDescription>
@@ -161,10 +161,10 @@ export default function AdminLogsPage() {
                 key={opt.id}
                 type="button"
                 onClick={() => setSelectedSource(opt.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                   selectedSource === opt.id
-                    ? 'bg-amber-400 text-zinc-950'
-                    : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-surface-muted text-muted-foreground hover:text-foreground border border-border'
                 }`}
               >
                 {opt.label}
@@ -173,9 +173,9 @@ export default function AdminLogsPage() {
           </div>
 
           {loading ? (
-            <LoadingState message="Chargement du journal..." />
+            <LoadingState message="Chargement du journal…" />
           ) : filtered.length === 0 ? (
-            <p className="text-zinc-500 text-sm text-center py-12">Aucune entrée pour ce filtre.</p>
+            <p className="text-muted-foreground text-sm text-center py-12">Aucune entrée pour ce filtre.</p>
           ) : (
             <div className="space-y-3">
               {filtered.map((log) => {
@@ -183,14 +183,14 @@ export default function AdminLogsPage() {
                 return (
                   <div
                     key={log.id}
-                    className="p-4 rounded-xl border border-zinc-800 bg-zinc-950/60 flex flex-col sm:flex-row sm:items-start gap-3"
+                    className="p-4 rounded-lg border border-border bg-surface-muted flex flex-col sm:flex-row sm:items-start gap-3"
                   >
-                    <div className="p-2 rounded-lg bg-zinc-900 border border-zinc-800 shrink-0">
-                      <Icon className="h-4 w-4 text-amber-400" />
+                    <div className="p-2 rounded-lg bg-surface border border-border shrink-0">
+                      <Icon className="h-4 w-4 text-primary" />
                     </div>
                     <div className="flex-1 min-w-0 space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-bold text-white text-sm">{log.title}</span>
+                        <span className="font-semibold text-foreground text-sm">{log.title}</span>
                         <Badge variant={levelBadge(log.level)} className="text-[10px] uppercase">
                           {log.level}
                         </Badge>
@@ -203,8 +203,8 @@ export default function AdminLogsPage() {
                           </Badge>
                         )}
                       </div>
-                      <p className="text-zinc-400 text-xs leading-relaxed">{log.message}</p>
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-zinc-500">
+                      <p className="text-muted-foreground text-xs leading-relaxed">{log.message}</p>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-caption text-muted-foreground">
                         {log.actorEmail && <span>Admin : {log.actorEmail}</span>}
                         {log.ip && (
                           <span className="inline-flex items-center gap-1">
@@ -219,7 +219,7 @@ export default function AdminLogsPage() {
                       </div>
                     </div>
                     {log.createdAt && (
-                      <span className="text-zinc-500 text-[11px] whitespace-nowrap shrink-0">{log.createdAt}</span>
+                      <span className="text-muted-foreground text-caption whitespace-nowrap shrink-0">{log.createdAt}</span>
                     )}
                   </div>
                 );

@@ -30,12 +30,12 @@ export default function PublicGalleryByKeyPage() {
   const accessKey = normalizeGalleryAccessKey(params.accessKey as string);
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      <header className="border-b border-zinc-800/80 bg-zinc-950/90 backdrop-blur-md sticky top-0 z-40">
+    <div className="min-h-screen bg-surface-muted text-zinc-100">
+      <header className="border-b border-border/80 bg-surface-muted/90sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
           <StudioLogo size="sm" showSubtitle={false} />
           <Link href="/">
-            <Button variant="ghost" size="sm" className="text-zinc-400 text-xs">
+            <Button variant="ghost" size="sm" className="text-muted-foreground text-xs">
               <ArrowLeft className="h-3.5 w-3.5 mr-1" /> Retour au site
             </Button>
           </Link>

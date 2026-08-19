@@ -44,7 +44,7 @@ export function ServicePackagesGrid() {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-[520px] rounded-3xl bg-zinc-900/50 border border-zinc-800 animate-pulse" />
+          <div key={i} className="h-[520px] rounded-3xl bg-surface-muted/50 border border-border animate-pulse" />
         ))}
       </div>
     );
@@ -53,13 +53,13 @@ export function ServicePackagesGrid() {
   return (
     <div className="space-y-8">
       <div className="text-center max-w-2xl mx-auto space-y-3 pb-2">
-        <Badge variant="outline" className="border-zinc-700 text-zinc-400">
+        <Badge variant="outline" className="border-border text-muted-foreground">
           Catalogue
         </Badge>
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-white">
-          Nos <span className="gold-gradient-text">formules</span>
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-foreground">
+          Nos <span className="text-primary">formules</span>
         </h2>
-        <p className="text-sm text-zinc-400 leading-relaxed">
+        <p className="text-sm text-muted-foreground leading-relaxed">
           Filtrez par univers et comparez les inclusions — chaque pack inclut retouche HD, galerie privée et contrat.
         </p>
       </div>
@@ -72,8 +72,8 @@ export function ServicePackagesGrid() {
             onClick={() => setFilter(btn.id)}
             className={`px-4 py-2 text-[11px] font-semibold rounded-full border transition-all cursor-pointer ${
               filter === btn.id
-                ? 'border-amber-400/80 bg-amber-400/10 text-amber-300'
-                : 'border-zinc-800 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200'
+                ? 'border-primary/30 bg-primary-muted text-primary'
+                : 'border-border text-muted-foreground hover:border-zinc-600 hover:text-zinc-200'
             }`}
           >
             {btn.label}
@@ -82,7 +82,7 @@ export function ServicePackagesGrid() {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="text-center py-16 rounded-3xl border border-dashed border-zinc-800 text-zinc-500 text-sm">
+        <div className="text-center py-16 rounded-3xl border border-dashed border-border text-muted-foreground text-sm">
           Aucune prestation dans cette catégorie pour le moment.
         </div>
       ) : (
@@ -98,8 +98,8 @@ export function ServicePackagesGrid() {
         </div>
       )}
 
-      <p className="text-center text-[11px] text-zinc-500 flex items-center justify-center gap-2">
-        <Sparkles className="h-3.5 w-3.5 text-amber-400/70" />
+      <p className="text-center text-[11px] text-muted-foreground flex items-center justify-center gap-2">
+        <Sparkles className="h-3.5 w-3.5 text-primary/70" />
         Tarifs indicatifs — devis personnalisé sur demande via le formulaire contact.
       </p>
     </div>

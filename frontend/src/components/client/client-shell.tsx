@@ -77,17 +77,17 @@ export function ClientShell({
 
   if (guestGalleryView) {
     return (
-      <div className="min-h-screen h-[100dvh] bg-zinc-950 text-zinc-100 overflow-hidden flex flex-col">
-        <header className="border-b border-zinc-800/80 bg-zinc-950/90 backdrop-blur-md sticky top-0 z-40 shrink-0">
+      <div className="min-h-screen h-[100dvh] bg-background text-foreground overflow-hidden flex flex-col">
+        <header className="border-b border-border bg-background sticky top-0 z-40 shrink-0">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
             <StudioLogo size="sm" showSubtitle={false} />
             <div className="flex items-center gap-2">
               <AppLink href="/galerie-privee">
-                <Button variant="ghost" size="sm" className="text-zinc-400 text-xs">
+                <Button variant="ghost" size="sm" className="text-muted-foreground text-xs">
                   <KeyRound className="h-3.5 w-3.5 mr-1" /> Autre clé
                 </Button>
               </AppLink>
-              <ButtonLink href="/" variant="ghost" size="sm" className="text-zinc-400 text-xs">
+              <ButtonLink href="/" variant="ghost" size="sm" className="text-muted-foreground text-xs">
                 <ArrowLeft className="h-3.5 w-3.5 mr-1" /> Site
               </ButtonLink>
             </div>
@@ -101,11 +101,11 @@ export function ClientShell({
   }
 
   return (
-    <div className="min-h-screen h-[100dvh] bg-zinc-950 flex text-zinc-100 overflow-hidden">
+    <div className="min-h-screen h-[100dvh] bg-background flex text-foreground overflow-hidden">
       <div
         className={`${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } md:translate-x-0 fixed md:static inset-y-0 left-0 z-50 md:z-auto transition-transform duration-200 ease-out shrink-0 shadow-2xl md:shadow-none`}
+        } md:translate-x-0 fixed md:static inset-y-0 left-0 z-50 md:z-auto transition-transform duration-200 ease-out shrink-0 md:shadow-none`}
       >
         <ClientSidebar unreadNotifs={unreadNotifs} onCloseMobile={() => setSidebarOpen(false)} />
       </div>
@@ -114,7 +114,7 @@ export function ClientShell({
         <button
           type="button"
           aria-label="Fermer le menu"
-          className="md:hidden fixed inset-0 z-40 bg-black/65 backdrop-blur-[2px]"
+          className="md:hidden fixed inset-0 z-40 bg-background/80"
           onClick={() => setSidebarOpen(false)}
         />
       )}

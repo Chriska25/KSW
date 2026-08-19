@@ -78,7 +78,7 @@ export function SocialLinksRow({ className = '', iconClassName, showLabel = fals
 
   if (links.length === 0) {
     return (
-      <p className={`text-[11px] text-zinc-500 ${className}`}>
+      <p className={`text-[11px] text-muted-foreground ${className}`}>
         Aucun réseau configuré — renseignez les liens dans Paramètres Studio.
       </p>
     );
@@ -87,7 +87,7 @@ export function SocialLinksRow({ className = '', iconClassName, showLabel = fals
   return (
     <div className={`flex flex-wrap items-center gap-2.5 ${className}`}>
       {showLabel && (
-        <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mr-1">Suivez-nous</span>
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono mr-1">Suivez-nous</span>
       )}
       {links.map((item) => (
         <a
@@ -97,7 +97,7 @@ export function SocialLinksRow({ className = '', iconClassName, showLabel = fals
           rel="noopener noreferrer"
           aria-label={item.label}
           title={item.label}
-          className="h-9 w-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-300 hover:text-amber-400 hover:border-amber-400/40 hover:bg-zinc-800/80 transition-all"
+          className="h-9 w-9 rounded-xl bg-surface-muted border border-border flex items-center justify-center text-foreground hover:text-primary hover:border-primary/30 hover:bg-surface-muted/80 transition-all"
         >
           <SocialIcon id={item.id} className={iconClassName} />
         </a>

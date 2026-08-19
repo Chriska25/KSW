@@ -6,9 +6,19 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableEmpty,
+} from '@/components/ui/table';
 import { useSettings } from '@/context/settings-context';
 import { LoadingState } from '@/components/common/loading-state';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
+import { AdminModal } from '@/components/admin/admin-modal';
 import {
   buildCrmClients,
   fetchAdminBookings,
@@ -80,170 +90,171 @@ export default function AdminCrmPage() {
       />
 
       {loadError && (
-        <p className="text-rose-400 text-sm rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3">
+        <p className="text-danger text-sm rounded-lg border border-danger/30 bg-danger-muted px-4 py-3">
           {loadError}
         </p>
       )}
 
-      <div className="glass-panel p-4 rounded-2xl border-zinc-800 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="relative w-full md:w-80">
-          <Search className="h-4 w-4 absolute left-3 top-3 text-zinc-500" />
-          <Input
-            placeholder="Rechercher par nom, email, tél..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 h-10 text-xs"
-          />
+      <Card className="p-4">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="relative w-full md:w-80">
+            <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
+            <Input
+              placeholder="Rechercher par nom, email, tél…"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 h-10 text-xs"
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {segments.map((seg) => (
+              <button
+                key={seg}
+                type="button"
+                onClick={() => setSelectedSegment(seg)}
+                className={`px-4 py-2 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${
+                  selectedSegment === seg
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border bg-surface-muted text-muted-foreground hover:border-primary/40 hover:text-foreground'
+                }`}
+              >
+                {seg === 'all' ? 'Tous' : seg}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {segments.map((seg) => (
-            <button
-              key={seg}
-              onClick={() => setSelectedSegment(seg)}
-              className={`px-4 py-2 text-xs font-semibold rounded-xl border transition-all cursor-pointer ${
-                selectedSegment === seg
-                  ? 'border-amber-400 bg-amber-400 text-zinc-950'
-                  : 'border-zinc-800 glass-panel text-zinc-300 hover:border-zinc-700'
-              }`}
-            >
-              {seg === 'all' ? 'Tous' : seg}
-            </button>
-          ))}
-        </div>
-      </div>
+      </Card>
 
-      <Card className="glass-panel space-y-4">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Fichier Clients ({filteredClients.length})</CardTitle>
+          <CardTitle className="text-h2">Fichier clients ({filteredClients.length})</CardTitle>
           <CardDescription>Données issues des réservations et leads contact.</CardDescription>
         </CardHeader>
         <CardContent>
-          {filteredClients.length === 0 ? (
-            <p className="text-zinc-500 text-sm text-center py-8">Aucun client ou lead enregistré.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-zinc-300">
-                <thead className="bg-zinc-950/80 text-xs font-semibold uppercase text-zinc-400 border-b border-zinc-800">
-                  <tr>
-                    <th className="py-3 px-4">Client</th>
-                    <th className="py-3 px-4">Coordonnées</th>
-                    <th className="py-3 px-4">Segment</th>
-                    <th className="py-3 px-4">Dépenses</th>
-                    <th className="py-3 px-4">Séances</th>
-                    <th className="py-3 px-4 text-right">Fiche</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-800/60">
-                  {filteredClients.map((c) => (
-                    <tr key={c.email} className="hover:bg-zinc-900/40 transition-colors">
-                      <td className="py-3.5 px-4 font-bold text-white">{c.name}</td>
-                      <td className="py-3.5 px-4 text-xs space-y-0.5">
-                        <div className="flex items-center">
-                          <Mail className="h-3 w-3 mr-1 text-amber-400" /> {c.email}
-                        </div>
-                        <div className="text-zinc-500 flex items-center">
-                          <Phone className="h-3 w-3 mr-1 text-amber-400" /> {c.phone}
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <Badge variant="gold" className="text-[10px]">{c.segment}</Badge>
-                      </td>
-                      <td className="py-3.5 px-4 font-extrabold text-white">
-                        {formatPrice(c.totalSpent)}
-                      </td>
-                      <td className="py-3.5 px-4 text-xs">{c.bookingsCount} réservation(s)</td>
-                      <td className="py-3.5 px-4 text-right">
-                        <Button variant="outline" size="sm" onClick={() => setSelectedClient(c)}>
-                          <Eye className="h-3.5 w-3.5 mr-1" /> Consulter
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Client</TableHead>
+                <TableHead>Coordonnées</TableHead>
+                <TableHead>Segment</TableHead>
+                <TableHead>Dépenses</TableHead>
+                <TableHead>Séances</TableHead>
+                <TableHead className="text-right">Fiche</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredClients.length === 0 ? (
+                <TableEmpty colSpan={6} message="Aucun client ou lead enregistré." />
+              ) : (
+                filteredClients.map((c) => (
+                  <TableRow key={c.email}>
+                    <TableCell className="font-medium">{c.name}</TableCell>
+                    <TableCell className="text-xs space-y-0.5">
+                      <div className="flex items-center text-muted-foreground">
+                        <Mail className="h-3 w-3 mr-1 text-primary shrink-0" /> {c.email}
+                      </div>
+                      <div className="flex items-center text-muted-foreground">
+                        <Phone className="h-3 w-3 mr-1 text-primary shrink-0" /> {c.phone || '—'}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="accent" className="text-[10px]">{c.segment}</Badge>
+                    </TableCell>
+                    <TableCell className="font-semibold tabular-nums">
+                      {formatPrice(c.totalSpent)}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{c.bookingsCount} réservation(s)</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="outline" size="sm" onClick={() => setSelectedClient(c)}>
+                        <Eye className="h-3.5 w-3.5 mr-1" /> Consulter
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 
-      {selectedClient && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <Card className="glass-panel max-w-3xl w-full border-amber-400/40 max-h-[90vh] overflow-y-auto">
-            <CardHeader className="flex flex-row items-start justify-between border-b border-zinc-800 pb-4">
-              <div>
-                <CardTitle className="text-2xl text-white">{selectedClient.name}</CardTitle>
-                <CardDescription className="text-xs">{selectedClient.email} • {selectedClient.phone}</CardDescription>
-              </div>
-              <button type="button" onClick={() => setSelectedClient(null)} className="text-zinc-400 hover:text-white">
-                ✕
-              </button>
-            </CardHeader>
-            <CardContent className="space-y-6 text-xs">
-              <div className="flex gap-3 border-b border-zinc-800 pb-2">
-                {[
-                  { id: 'history', label: 'Réservations' },
-                  { id: 'messages', label: `Messages (${selectedClient.messages.length})` },
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveTab(tab.id as 'history' | 'messages')}
-                    className={`pb-2 font-semibold border-b-2 ${
-                      activeTab === tab.id ? 'border-amber-400 text-amber-400' : 'border-transparent text-zinc-400'
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
+      <AdminModal
+        open={!!selectedClient}
+        onClose={() => setSelectedClient(null)}
+        title={selectedClient?.name ?? 'Fiche client'}
+        size="xl"
+      >
+        {selectedClient && (
+          <div className="space-y-6 text-sm">
+            <p className="text-muted-foreground text-xs">
+              {selectedClient.email} • {selectedClient.phone || '—'}
+            </p>
 
-              {activeTab === 'history' && (
-                <div className="space-y-3">
-                  {selectedClient.bookings.length === 0 ? (
-                    <p className="text-zinc-500">Aucune réservation.</p>
-                  ) : (
-                    selectedClient.bookings.map((b) => (
-                      <div key={b.id} className="p-3 rounded-xl border border-zinc-800 bg-zinc-950 flex justify-between items-center">
-                        <div>
-                          <div className="font-bold text-white">{b.serviceTitle}</div>
-                          <div className="text-zinc-400">{b.date} à {b.time}</div>
-                          <div className="text-zinc-500">{formatPrice(b.totalPrice)} — statut: {b.status}</div>
-                        </div>
-                        {b.paymentStatus === 'paid' && <Badge variant="success">Acompte payé</Badge>}
+            <div className="flex gap-3 border-b border-border pb-2">
+              {[
+                { id: 'history', label: 'Réservations' },
+                { id: 'messages', label: `Messages (${selectedClient.messages.length})` },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id as 'history' | 'messages')}
+                  className={`pb-2 font-semibold border-b-2 transition-colors ${
+                    activeTab === tab.id
+                      ? 'border-primary text-primary'
+                      : 'border-transparent text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {activeTab === 'history' && (
+              <div className="space-y-3">
+                {selectedClient.bookings.length === 0 ? (
+                  <p className="text-muted-foreground">Aucune réservation.</p>
+                ) : (
+                  selectedClient.bookings.map((b) => (
+                    <div key={b.id} className="p-3 rounded-lg border border-border bg-surface-muted flex justify-between items-center gap-4">
+                      <div>
+                        <div className="font-semibold text-foreground">{b.serviceTitle}</div>
+                        <div className="text-muted-foreground text-xs">{b.date} à {b.time}</div>
+                        <div className="text-caption">{formatPrice(b.totalPrice)} — {b.status}</div>
                       </div>
-                    ))
-                  )}
-                </div>
-              )}
+                      {b.paymentStatus === 'paid' && <Badge variant="success">Acompte payé</Badge>}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
 
-              {activeTab === 'messages' && (
-                <div className="space-y-3">
-                  {selectedClient.messages.length === 0 ? (
-                    <p className="text-zinc-500">Aucun message contact.</p>
-                  ) : (
-                    selectedClient.messages.map((m) => (
-                      <div key={m.id} className="p-3 rounded-xl border border-zinc-800 bg-zinc-950 space-y-1">
-                        <div className="flex items-center gap-2 text-amber-400">
-                          <MessageSquare className="h-3.5 w-3.5" />
-                          <span className="font-semibold">{m.subject}</span>
-                          <span className="text-zinc-500">{m.createdAt}</span>
-                        </div>
-                        <p className="text-zinc-300 whitespace-pre-wrap">{m.message}</p>
+            {activeTab === 'messages' && (
+              <div className="space-y-3">
+                {selectedClient.messages.length === 0 ? (
+                  <p className="text-muted-foreground">Aucun message contact.</p>
+                ) : (
+                  selectedClient.messages.map((m) => (
+                    <div key={m.id} className="p-3 rounded-lg border border-border bg-surface-muted space-y-1">
+                      <div className="flex items-center gap-2 text-primary">
+                        <MessageSquare className="h-3.5 w-3.5 shrink-0" />
+                        <span className="font-semibold">{m.subject}</span>
+                        <span className="text-muted-foreground text-xs">{m.createdAt}</span>
                       </div>
-                    ))
-                  )}
-                </div>
-              )}
+                      <p className="text-foreground whitespace-pre-wrap text-xs">{m.message}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
 
-              {selectedClient.notes && (
-                <div className="p-3 rounded-xl border border-zinc-800 bg-zinc-950 text-zinc-400">
-                  <strong className="text-zinc-300">Notes :</strong> {selectedClient.notes}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
+            {selectedClient.notes && (
+              <div className="p-3 rounded-lg border border-border bg-surface-muted text-muted-foreground text-xs">
+                <strong className="text-foreground">Notes :</strong> {selectedClient.notes}
+              </div>
+            )}
+          </div>
+        )}
+      </AdminModal>
     </div>
   );
 }

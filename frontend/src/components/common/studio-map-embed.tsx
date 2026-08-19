@@ -20,7 +20,7 @@ export function StudioMapEmbed({
   const src = buildStudioMapEmbedUrl(map);
 
   return (
-    <div className={`rounded-2xl overflow-hidden glass-panel border border-zinc-800 ${className}`}>
+    <div className={`rounded-2xl overflow-hidden border border-border ${className}`}>
       <iframe
         title={title}
         src={src}

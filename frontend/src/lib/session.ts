@@ -2,8 +2,9 @@ import type { AuthUser } from '@/hooks/use-auth';
 import { clearAuthVerifyCache, markAuthVerified } from '@/lib/auth-verify-cache';
 
 const USER_KEY = 'studio_current_user';
+/** Legacy — le JWT est désormais en cookie HttpOnly (non lisible en JS). */
 const TOKEN_KEY = 'studio_token';
-const TOKEN_COOKIE = 'studio_token';
+export const TOKEN_COOKIE = 'studio_token';
 
 export function getSession(): AuthUser | null {
   if (typeof window === 'undefined') return null;
@@ -15,6 +16,7 @@ export function getSession(): AuthUser | null {
   }
 }
 
+/** Token en localStorage (legacy / dev) — préférer le cookie HttpOnly. */
 export function getToken(): string | null {
   if (typeof window === 'undefined') return null;
   try {
@@ -24,23 +26,22 @@ export function getToken(): string | null {
   }
 }
 
-export function syncAuthCookie(token: string): void {
-  if (typeof document === 'undefined') return;
-  const maxAge = 60 * 60 * 24;
-  const secure = window.location.protocol === 'https:' ? '; Secure' : '';
-  document.cookie = `${TOKEN_COOKIE}=${encodeURIComponent(token)}; Path=/; Max-Age=${maxAge}; SameSite=Lax${secure}`;
+/** @deprecated Cookie posé par le backend (HttpOnly). */
+export function syncAuthCookie(_token: string): void {
+  // no-op — le serveur définit studio_token en HttpOnly
 }
 
 export function clearAuthCookie(): void {
-  if (typeof document === 'undefined') return;
-  document.cookie = `${TOKEN_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
+  // no-op côté client — utiliser POST /auth/logout
 }
 
 export function persistSession(token: string, user: AuthUser): AuthUser {
   try {
-    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.removeItem(TOKEN_KEY);
     localStorage.setItem(USER_KEY, JSON.stringify(user));
-    syncAuthCookie(token);
+    if (token && process.env.NODE_ENV === 'development') {
+      localStorage.setItem(TOKEN_KEY, token);
+    }
     markAuthVerified();
   } catch {
     // localStorage indisponible
@@ -53,7 +54,11 @@ export function clearSession(): void {
   try {
     localStorage.removeItem(USER_KEY);
     localStorage.removeItem(TOKEN_KEY);
-    clearAuthCookie();
+    if (typeof window !== 'undefined') {
+      void import('@/lib/api-client').then(({ default: apiClient }) =>
+        apiClient.post('/auth/logout').catch(() => undefined),
+      );
+    }
   } catch {
     // ignore
   }

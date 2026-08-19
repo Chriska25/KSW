@@ -29,11 +29,10 @@ export interface HomePageContent {
 }
 
 export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
-  heroBadge: "Studio Photographique d'Art & Prestige",
-  heroTitleLine1: "Sublimer l'Instant,",
-  heroTitleHighlight: "Graver l'Émotion",
-  heroSubtitle:
-    "Photographe professionnel spécialisé dans les reportages de mariage haut de gamme, les portraits d'art et l'accompagnement visuel sur-mesure.",
+  heroBadge:"Studio Photographique d'Art & Prestige",
+  heroTitleLine1:"Sublimer l'Instant,",
+  heroTitleHighlight:"Graver l'Émotion",
+  heroSubtitle:"Photographe professionnel spécialisé dans les reportages de mariage haut de gamme, les portraits d'art et l'accompagnement visuel sur-mesure.",
   heroCtaPrimary: 'Réserver une Séance',
   heroCtaSecondary: 'Explorer le Portfolio',
   heroBackgroundUrl:
@@ -42,20 +41,18 @@ export const DEFAULT_HOME_PAGE_CONTENT: HomePageContent = {
   trustBadge2: 'Note 5/5 (180+ Avis Vérifiés)',
   trustBadge3: 'Galerie Securisée & Livraison HD',
   stats: [
-    { value: '12+', label: "Années d'Expérience" },
+    { value: '12+', label:"Années d'Expérience" },
     { value: '450+', label: 'Mariages & Projets' },
     { value: '15', label: 'Distinctions Internationales' },
     { value: '100%', label: 'Livraison Haute Définition' },
   ],
-  servicesBadge: "Prestations D'Exception",
+  servicesBadge:"Prestations D'Exception",
   servicesTitleLine1: 'Des formules conçues pour immortaliser',
   servicesTitleHighlight: 'vos plus grands moments',
-  servicesSubtitle:
-    "Chaque prestation comprend la direction artistique, la retouche minutieuse haute précision et l'accès à une galerie privée en ligne.",
+  servicesSubtitle:"Chaque prestation comprend la direction artistique, la retouche minutieuse haute précision et l'accès à une galerie privée en ligne.",
   ctaTitleLine1: 'Prêt à immortaliser',
   ctaTitleHighlight: 'vos souvenirs ?',
-  ctaSubtitle:
-    "Vérifiez la disponibilité de votre date et réservez votre créneau directement en ligne avec paiement sécurisé de l'acompte.",
+  ctaSubtitle:"Vérifiez la disponibilité de votre date et réservez votre créneau directement en ligne avec paiement sécurisé de l'acompte.",
   ctaButtonPrimary: 'Réserver en Ligne Maintenant',
   ctaButtonSecondary: 'Formulaire de Contact',
 };

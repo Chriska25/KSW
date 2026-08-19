@@ -71,10 +71,10 @@ export default function AdminVideothequePage() {
       <AdminStickyActions>
         <Button
           type="submit"
-          variant="gold"
+          variant="primary"
           size="lg"
           disabled={saving}
-          className="w-full sm:w-auto px-6 sm:px-8 font-bold shadow-lg shadow-amber-400/20"
+          className="w-full sm:w-auto px-6 sm:px-8 font-bold"
         >
           <Save className="h-4 w-4 mr-2" />
           {saving ? 'Publication…' : 'Publier la vidéothèque'}

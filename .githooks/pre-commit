@@ -1,0 +1,14 @@
+#!/bin/bash
+# Bloque tout commit contenant des fichiers .env (sauf .env.example)
+set -euo pipefail
+
+BLOCKED=$(git diff --cached --name-only | grep -E '^\.env' | grep -v '^\.env\.example$' || true)
+if [ -n "${BLOCKED}" ]; then
+  echo "❌ Commit refusé : fichier(s) secret(s) détecté(s) :" >&2
+  echo "${BLOCKED}" >&2
+  echo "" >&2
+  echo "Les clés .env ne doivent jamais être versionnées." >&2
+  exit 1
+fi
+
+exit 0

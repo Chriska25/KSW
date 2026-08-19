@@ -48,7 +48,7 @@ export function ClientAuthGuard({ children }: { children: React.ReactNode }) {
         router.replace(`/login?redirect=${encodeURIComponent(pathnameRef.current || '/client/dashboard')}`);
         return;
       }
-      persistSession(localStorage.getItem('studio_token') || '', user);
+      persistSession('', user);
       markAuthVerified();
       setReady(true);
     } catch (err: unknown) {
@@ -56,10 +56,6 @@ export function ClientAuthGuard({ children }: { children: React.ReactNode }) {
         clearSession();
         setDenied(true);
         router.replace(`/login?redirect=${encodeURIComponent(pathnameRef.current || '/client/dashboard')}`);
-        return;
-      }
-      if (canSkipAuthVerify(isClientUser)) {
-        setReady(true);
         return;
       }
       setNetworkError(getApiErrorMessage(err, 'Impossible de joindre l\'API backend.'));
@@ -75,13 +71,13 @@ export function ClientAuthGuard({ children }: { children: React.ReactNode }) {
   if (networkError) {
     return (
       <div className="flex-1 flex items-center justify-center py-24 px-4">
-        <div className="max-w-md w-full glass-panel rounded-2xl border border-amber-400/20 p-8 text-center space-y-4">
-          <AlertCircle className="h-10 w-10 text-amber-400 mx-auto" />
-          <h2 className="text-lg font-bold text-white">API indisponible</h2>
-          <p className="text-sm text-zinc-400 leading-relaxed">{networkError}</p>
-          <Button type="button" variant="gold" size="sm" onClick={() => verify(true)} className="space-x-2">
-            <RefreshCw className="h-4 w-4" />
-            <span>Réessayer</span>
+        <div className="max-w-md w-full surface rounded-lg p-8 text-center space-y-4">
+          <AlertCircle className="h-10 w-10 text-warning mx-auto" aria-hidden />
+          <h2 className="text-h2">API indisponible</h2>
+          <p className="text-small text-muted-foreground">{networkError}</p>
+          <Button type="button" variant="primary" size="sm" onClick={() => verify(true)}>
+            <RefreshCw className="h-4 w-4" aria-hidden />
+            Réessayer
           </Button>
         </div>
       </div>

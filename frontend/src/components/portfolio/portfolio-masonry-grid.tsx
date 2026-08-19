@@ -45,7 +45,7 @@ function PortfolioPhotoCard({ photo, index, onClick }: PortfolioPhotoCardProps) 
       onMouseEnter={() => prefetchImageUrl(resolveGridImageUrl(photo.url, photo.thumbUrl, 640))}
       style={{ animationDelay: visible ? `${staggerMs}ms` : undefined }}
       className={cn(
-        'portfolio-photo-card group relative overflow-hidden rounded-2xl border border-zinc-800/80 bg-zinc-950 text-left cursor-pointer min-h-[220px]',
+        'portfolio-photo-card group relative overflow-hidden rounded-2xl border border-border/80 bg-surface-muted text-left cursor-pointer min-h-[220px]',
         layout.grid,
         layout.kenburns && 'portfolio-photo-kenburns',
         visible && 'is-visible'
@@ -59,26 +59,24 @@ function PortfolioPhotoCard({ photo, index, onClick }: PortfolioPhotoCardProps) 
         className="portfolio-photo-image absolute inset-0 h-full w-full object-cover"
       />
 
-      <div className="portfolio-photo-shine" aria-hidden />
-
-      <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/25 to-transparent opacity-85 group-hover:opacity-100 transition-opacity duration-500 z-[1]" />
+      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/25 to-transparent opacity-85 group-hover:opacity-100 transition-opacity duration-500 z-[1]" />
 
       <div className="absolute inset-x-0 bottom-0 p-5 z-[3] translate-y-3 group-hover:translate-y-0 transition-transform duration-500 ease-out">
-        <span className="inline-block text-[10px] uppercase tracking-[0.2em] text-amber-400 font-mono opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 delay-75">
+        <span className="inline-block text-[10px] uppercase tracking-[0.2em] text-primary font-mono opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 delay-75">
           {PORTFOLIO_CATEGORY_LABELS[photo.cat || ''] || photo.cat || 'portfolio'}
         </span>
-        <h3 className="text-base sm:text-lg font-bold text-white mt-1 line-clamp-2 translate-y-1 group-hover:translate-y-0 transition-transform duration-500">
+        <h3 className="text-base sm:text-lg font-bold text-foreground mt-1 line-clamp-2 translate-y-1 group-hover:translate-y-0 transition-transform duration-500">
           {photo.title}
         </h3>
         {photo.albumName && (
-          <p className="text-[11px] text-zinc-400 mt-1 max-h-0 opacity-0 overflow-hidden group-hover:max-h-8 group-hover:opacity-100 transition-all duration-500">
+          <p className="text-[11px] text-muted-foreground mt-1 max-h-0 opacity-0 overflow-hidden group-hover:max-h-8 group-hover:opacity-100 transition-all duration-500">
             {photo.albumName}
           </p>
         )}
       </div>
 
-      <div className="absolute top-3 right-3 z-[3] h-9 w-9 rounded-full bg-zinc-950/70 border border-zinc-700/80 flex items-center justify-center scale-75 opacity-0 group-hover:scale-100 group-hover:opacity-100 transition-all duration-300 ease-out">
-        <Eye className="h-4 w-4 text-amber-400" />
+      <div className="absolute top-3 right-3 z-[3] h-9 w-9 rounded-full bg-surface-muted/70 border border-border/80 flex items-center justify-center scale-75 opacity-0 group-hover:scale-100 group-hover:opacity-100 transition-all duration-300 ease-out">
+        <Eye className="h-4 w-4 text-primary" />
       </div>
 
       <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/0 group-hover:ring-amber-400/20 transition-all duration-500 pointer-events-none z-[4]" />
@@ -100,9 +98,9 @@ export function PortfolioMasonryGrid({ photos, onPhotoClick }: PortfolioMasonryG
 
   if (photos.length === 0) {
     return (
-      <div className="text-center py-16 px-6 rounded-3xl border border-dashed border-zinc-800 bg-zinc-950/50 portfolio-photo-card is-visible">
+      <div className="text-center py-16 px-6 rounded-3xl border border-dashed border-border bg-surface-muted/50 portfolio-photo-card is-visible">
         <Eye className="h-10 w-10 text-zinc-600 mx-auto mb-4" />
-        <p className="text-zinc-400 text-sm">
+        <p className="text-muted-foreground text-sm">
           Aucune photo publique pour le moment. Rendez une galerie visible dans Admin → Galeries.
         </p>
       </div>

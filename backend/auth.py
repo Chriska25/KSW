@@ -3,7 +3,7 @@ import secrets
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import User
 from security import verify_password_hash, is_development as security_is_dev
+from auth_cookies import AUTH_COOKIE_NAME
 from superuser import is_superuser
 
 JWT_SECRET = os.getenv("JWT_SECRET_KEY", "ksw-dev-secret-change-in-production")
@@ -23,9 +24,11 @@ STAFF_ROLES = {"admin", "photographer", "assistant"}
 
 from pending_auth_store import clear_2fa_code, consume_2fa_code, store_2fa_code
 
-_bearer = HTTPBearer(auto_error=False)
-_pending_password_reset: Dict[str, Dict[str, Any]] = {}
+from password_reset_store import consume_password_reset_token as _consume_reset_token
+from password_reset_store import store_password_reset_token
+
 RESET_TOKEN_HOURS = 1
+_bearer = HTTPBearer(auto_error=False)
 
 
 def is_development() -> bool:
@@ -98,27 +101,12 @@ def issue_2fa_code(user_id: str) -> str:
 
 def issue_password_reset_token(user_id: str) -> str:
     token = secrets.token_urlsafe(32)
-    _pending_password_reset[token] = {
-        "user_id": user_id,
-        "expires": datetime.utcnow() + timedelta(hours=RESET_TOKEN_HOURS),
-    }
-    if is_development():
-        print(f"[DEV RESET] Token pour {user_id}: {token}")
+    store_password_reset_token(token, user_id, hours=RESET_TOKEN_HOURS)
     return token
 
 
 def consume_password_reset_token(token: str) -> Optional[str]:
-    clean = (token or "").strip()
-    if not clean:
-        return None
-    pending = _pending_password_reset.get(clean)
-    if not pending:
-        return None
-    if datetime.utcnow() > pending["expires"]:
-        _pending_password_reset.pop(clean, None)
-        return None
-    _pending_password_reset.pop(clean, None)
-    return str(pending["user_id"])
+    return _consume_reset_token(token)
 
 
 def verify_2fa_code(user_id: str, code: str) -> bool:
@@ -148,11 +136,25 @@ def get_token_from_credentials(
     return token
 
 
+def resolve_token(
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials],
+) -> Optional[str]:
+    token = get_token_from_credentials(credentials)
+    if token:
+        return token
+    cookie_token = request.cookies.get(AUTH_COOKIE_NAME)
+    if cookie_token and len(cookie_token) > 10:
+        return cookie_token
+    return None
+
+
 def get_current_user(
+    request: Request,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer),
     db: Session = Depends(get_db),
 ) -> User:
-    token = get_token_from_credentials(credentials)
+    token = resolve_token(request, credentials)
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentification requise.")
 

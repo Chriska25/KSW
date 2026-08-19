@@ -72,13 +72,13 @@ export function AdminInvitationPdfPanel({
   };
 
   return (
-    <Card className="glass-panel">
+    <Card className="">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm text-white flex items-center gap-2">
-          <FileText className="h-4 w-4 text-amber-400" />
+        <CardTitle className="text-sm text-foreground flex items-center gap-2">
+          <FileText className="h-4 w-4 text-primary" />
           Invitation imprimable & QR code
         </CardTitle>
-        <p className="text-zinc-500 text-xs mt-1">
+        <p className="text-muted-foreground text-xs mt-1">
           QR général vers l&apos;invitation digitale. Chaque invité confirmé reçoit aussi un QR personnel (billet) dans la liste des réponses.
         </p>
       </CardHeader>
@@ -95,20 +95,20 @@ export function AdminInvitationPdfPanel({
             <img
               src={qrCodeImageUrl(publicUrl, 160)}
               alt="QR Code"
-              className="rounded-lg border border-zinc-800 bg-white p-1"
+              className="rounded-lg border border-border bg-white p-1"
               width={160}
               height={160}
             />
           </div>
-          <div className="flex-1 space-y-3 text-xs text-zinc-400">
+          <div className="flex-1 space-y-3 text-xs text-muted-foreground">
             <p>
-              <span className="text-zinc-300 font-medium">Option 1 — Générée par le système :</span>
+              <span className="text-foreground font-medium">Option 1 — Générée par le système :</span>
               <br />
               PDF A4 avec les informations de l&apos;événement et le QR code intégré.
             </p>
             <Button
               size="sm"
-              variant="gold"
+              variant="primary"
               type="button"
               disabled={downloading !== null}
               onClick={() => void handleDownload('system')}
@@ -121,19 +121,19 @@ export function AdminInvitationPdfPanel({
               Télécharger l&apos;invitation PDF
             </Button>
 
-            <p className="pt-2 border-t border-zinc-800">
-              <span className="text-zinc-300 font-medium">Option 2 — Votre modèle PDF :</span>
+            <p className="pt-2 border-t border-border">
+              <span className="text-foreground font-medium">Option 2 — Votre modèle PDF :</span>
               <br />
               Téléversez votre fichier (Canva, Illustrator…). Le système y ajoute le QR code.
             </p>
 
             <div className="grid sm:grid-cols-2 gap-2">
-              <label className="text-zinc-500 block">
+              <label className="text-muted-foreground block">
                 Position du QR
                 <select
                   value={position}
                   onChange={(e) => setPosition(e.target.value as QrPosition)}
-                  className="mt-1 w-full rounded border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-white text-xs"
+                  className="mt-1 w-full rounded border border-border bg-surface-muted px-2 py-1.5 text-foreground text-xs"
                 >
                   <option value="bottom-right">Bas droite</option>
                   <option value="bottom-left">Bas gauche</option>
@@ -142,7 +142,7 @@ export function AdminInvitationPdfPanel({
                   <option value="center">Centre</option>
                 </select>
               </label>
-              <label className="flex items-end gap-2 text-zinc-500 pb-1.5 cursor-pointer">
+              <label className="flex items-end gap-2 text-muted-foreground pb-1.5 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={saveTemplate}

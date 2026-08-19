@@ -34,6 +34,7 @@ export function getApiBaseUrl(): string {
 export const apiClient: AxiosInstance = axios.create({
   baseURL: getApiBaseUrl(),
   timeout: API_TIMEOUT_MS,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
@@ -46,9 +47,9 @@ apiClient.interceptors.request.use(
     if (typeof window !== 'undefined') {
       config.baseURL = getApiBaseUrl();
 
-      const token = localStorage.getItem('studio_token');
-      if (token && config.headers) {
-        config.headers.Authorization = `Bearer ${token}`;
+      const legacyToken = localStorage.getItem('studio_token');
+      if (legacyToken && config.headers) {
+        config.headers.Authorization = `Bearer ${legacyToken}`;
       }
       if (config.headers) {
         config.headers['ngrok-skip-browser-warning'] = 'true';

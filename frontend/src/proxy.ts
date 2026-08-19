@@ -3,9 +3,31 @@ import type { NextRequest } from 'next/server';
 
 const TOKEN_COOKIE = 'studio_token';
 
-function hasAuthToken(request: NextRequest): boolean {
+function parseJwtPayload(token: string): Record<string, unknown> | null {
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  try {
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const json = atob(base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '='));
+    return JSON.parse(json) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function hasValidAuthToken(request: NextRequest, adminOnly = false): boolean {
   const token = request.cookies.get(TOKEN_COOKIE)?.value;
-  return Boolean(token && token.length > 10);
+  if (!token || token.length < 20) return false;
+  const payload = parseJwtPayload(token);
+  if (!payload) return false;
+  const exp = typeof payload.exp === 'number' ? payload.exp : 0;
+  if (exp > 0 && exp * 1000 < Date.now()) return false;
+  if (payload.pre_2fa) return false;
+  const role = String(payload.role || 'client');
+  if (adminOnly) {
+    return ['admin', 'photographer', 'assistant'].includes(role) && payload['2fa_verified'] !== false;
+  }
+  return true;
 }
 
 function loginRedirect(request: NextRequest, pathname: string, admin = false): NextResponse {
@@ -27,7 +49,7 @@ export function proxy(request: NextRequest) {
   }
 
   if (pathname.startsWith('/admin')) {
-    if (!hasAuthToken(request)) {
+    if (!hasValidAuthToken(request, true)) {
       return loginRedirect(request, pathname, true);
     }
   }
@@ -35,7 +57,7 @@ export function proxy(request: NextRequest) {
   const isGalleryViewer = isGalleryKeyAccessPath(pathname);
 
   if (pathname.startsWith('/client') && !isGalleryViewer) {
-    if (!hasAuthToken(request)) {
+    if (!hasValidAuthToken(request, false)) {
       return loginRedirect(request, pathname);
     }
   }

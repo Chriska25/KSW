@@ -24,7 +24,7 @@ interface DashboardChartsProps {
 export default function DashboardCharts({ stats, formatPrice, currencySymbol }: DashboardChartsProps) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <Card className="lg:col-span-2 glass-panel space-y-4">
+      <Card className="lg:col-span-2 space-y-4">
         <CardHeader>
           <CardTitle className="text-lg">Volume d&apos;affaires mensuel</CardTitle>
           <CardDescription>Réservations enregistrées par mois ({currencySymbol}).</CardDescription>
@@ -45,14 +45,14 @@ export default function DashboardCharts({ stats, formatPrice, currencySymbol }: 
         </CardContent>
       </Card>
 
-      <Card className="glass-panel space-y-4">
+      <Card className="space-y-4">
         <CardHeader>
           <CardTitle className="text-lg">Répartition prestations</CardTitle>
           <CardDescription>Part des réservations par catégorie.</CardDescription>
         </CardHeader>
         <CardContent className="h-72 flex items-center justify-center">
           {stats.serviceDistribution.length === 0 ? (
-            <p className="text-zinc-500 text-sm">Aucune donnée</p>
+            <p className="text-muted-foreground text-sm">Aucune donnée</p>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>

@@ -19,9 +19,11 @@ from sqlalchemy import func
 from typing import Dict, Any, List, Optional
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from database import engine, Base, get_db, SessionLocal
+from storage_backend import get_media_storage
+from app.core.config import settings
+from database import engine, Base, get_db, SessionLocal, check_db_connection
 from models import Setting, User, Service, Testimonial, Gallery, ElectronicInvitation, InvitationGuest
-from schemas import SettingUpdate, LoginRequest, Verify2FARequest, Resend2FARequest, RegisterRequest, ForgotPasswordRequest, ResetPasswordRequest, ChangePasswordRequest, ProfileUpdateRequest, ServiceCreate, TestimonialCreate, GalleriesSaveAll, TestimonialsSaveAll, BlogPostsSaveAll, FaqSaveAll, VisitTrack, ClientPresenceHeartbeat, SyncFromLocalPayload, BackupRestorePayload, GalleryUnlockRequest, GalleryDownloadZipRequest, GalleryDownloadPhotoRequest, ContactCreate, BookingCreate, BookingStatusUpdate, BookingUpdate, StripeCheckoutCreate, MobileMoneyPaymentSubmit, MobileMoneyConfirm, BalancePaymentRecord, NotificationMarkRead, ClientNotificationMarkRead, AdminEmailTest
+from schemas import SettingUpdate, LoginRequest, Verify2FARequest, Resend2FARequest, RegisterRequest, ForgotPasswordRequest, ResetPasswordRequest, ChangePasswordRequest, ProfileUpdateRequest, ServiceCreate, TestimonialCreate, GalleriesSaveAll, TestimonialsSaveAll, BlogPostsSaveAll, FaqSaveAll, VisitTrack, ClientPresenceHeartbeat, SyncFromLocalPayload, BackupRestorePayload, GalleryUnlockRequest, GalleryDownloadZipRequest, GalleryDownloadPhotoRequest, ContactCreate, BookingCreate, BookingStatusUpdate, BookingUpdate, StripeCheckoutCreate, MobileMoneyPaymentSubmit, MobileMoneyConfirm, BalancePaymentRecord, NotificationMarkRead, ClientNotificationMarkRead, AdminEmailTest, AdminUserUpsert
 from superuser import is_superuser, ensure_superuser_column, ensure_superuser_account, SUPERUSER_EMAIL, SUPERUSER_ID
 from pending_auth_store import ensure_pending_auth_table
 from visit_analytics import track_visit, get_visit_analytics_summary
@@ -38,15 +40,19 @@ from seed import seed_database, ensure_demo_gallery, ensure_blog_posts, ensure_f
 from security import (
     hash_password,
     cors_headers,
+    security_headers,
     check_rate_limit,
+    enforce_upload_size,
     resolve_booking_pricing,
     validate_redirect_url,
     validate_user_role_change,
     redact_settings_payload,
     is_blocked_upload,
     is_production,
-    validate_jwt_secret_at_startup,
+    validate_security_at_startup,
+    validate_password_policy,
 )
+from auth_cookies import AUTH_COOKIE_NAME, build_auth_json_response, clear_auth_cookie
 from auth import (
     ACCESS_TOKEN_HOURS,
     create_access_token,
@@ -64,6 +70,7 @@ from auth import (
     require_super_admin,
     require_superuser,
     get_token_from_credentials,
+    resolve_token,
 )
 from image_processor import (
     load_media_settings,
@@ -90,6 +97,15 @@ from booking_availability import (
     build_slot_conflict_message,
 )
 from gallery_booking_helpers import create_gallery_for_booking, get_gallery_for_booking
+from public_settings import filter_public_settings
+from password_reset_store import ensure_password_reset_table
+from gallery_password import (
+    is_stored_password_hash,
+    migrate_gallery_passwords,
+    prepare_gallery_password_for_storage,
+    regenerate_gallery_password,
+    verify_gallery_password,
+)
 from gallery_photo_notify import append_gallery_photo_notification, detect_gallery_photo_uploads
 from gallery_thumbnails import generate_all_gallery_thumbnails
 from invoice_helpers import ALLOWED_BALANCE_PAYMENT_METHODS, booking_to_invoice, compute_booking_financials
@@ -148,8 +164,17 @@ def _extract_admin_actor(request: Request) -> tuple[str, str, str]:
     except Exception:
         return "", "", ""
 
-# Auto-create tables on startup
-Base.metadata.create_all(bind=engine)
+def _use_supabase_pooler() -> bool:
+    url = settings.database_url
+    return "pooler.supabase.com" in url and ":6543" in url
+
+
+# Auto-create tables on startup (sauf Supabase pooler transaction : schéma déjà migré)
+def _should_bootstrap_schema() -> bool:
+    return not _use_supabase_pooler()
+
+if _should_bootstrap_schema():
+    Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="KSW Studio Python FastAPI Backend",
@@ -166,9 +191,13 @@ app.include_router(invitation_router)
 # Serve uploaded static files
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
+
 @app.on_event("startup")
 def validate_security_on_startup():
-    validate_jwt_secret_at_startup()
+    validate_security_at_startup()
+    if _use_supabase_pooler():
+        # Schéma déjà migré via pg_dump — évite des dizaines de connexions au pooler.
+        return
     _ensure_gallery_booking_id_column()
     _ensure_gallery_deleted_at_column()
     ensure_superuser_column(engine)
@@ -368,6 +397,8 @@ async def dynamic_cors_and_cache_middleware(request, call_next):
 
     for key, value in cors_headers(origin).items():
         response.headers[key] = value
+    for key, value in security_headers().items():
+        response.headers[key] = value
     cache_control = _cache_control_header(request.method.upper(), request.url.path)
     response.headers["Cache-Control"] = cache_control
     if cache_control.startswith("no-cache"):
@@ -398,6 +429,7 @@ async def upload_file(
     _admin: User = Depends(require_admin_user),
 ):
     content = await file.read()
+    enforce_upload_size(len(content))
     media_settings = load_media_settings(db)
 
     if is_image_upload(file.content_type, file.filename or ""):
@@ -439,14 +471,13 @@ async def upload_file(
         elif "video/quicktime" in content_type:
             ext = ".mov"
     filename = f"{uuid.uuid4()}{ext or '.bin'}"
-    file_path = os.path.join(UPLOAD_DIR, filename)
-    with open(file_path, "wb") as buffer:
-        buffer.write(content)
+    storage = get_media_storage(UPLOAD_DIR)
+    url = storage.put_bytes(filename, content)
 
     return {
-        "url": f"/uploads/{filename}",
+        "url": url,
         "filename": filename,
-        "size": os.path.getsize(file_path),
+        "size": len(content),
         "processed": False,
     }
 
@@ -477,27 +508,37 @@ async def upload_base64(
 
 @app.on_event("startup")
 def startup_event():
-    db = next(get_db())
-    seed_database(db)
-    ensure_demo_gallery(db)
-    ensure_blog_posts(db)
-    ensure_faq_items(db)
-    ensure_superuser_account(db)
+    db = SessionLocal()
+    try:
+        seed_database(db)
+        ensure_demo_gallery(db)
+        ensure_blog_posts(db)
+        ensure_faq_items(db)
+        ensure_superuser_account(db)
+        migrate_gallery_passwords(db)
+        ensure_password_reset_table()
+    except Exception as exc:
+        print(f"[STARTUP] Initialisation base ignorée: {exc}")
+    finally:
+        db.close()
 
 # -------------------------------------------------------------------
 # Health Check Endpoint
 # -------------------------------------------------------------------
 @app.get("/api/v1/health")
 def health_check():
+    db_ok = check_db_connection()
     return {
-        "status": "ok",
+        "status": "ok" if db_ok else "degraded",
         "service": "KSW Studio Python FastAPI Backend",
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "database": "connected" if db_ok else "unavailable",
     }
 
 
 @app.post("/api/v1/analytics/visit")
 def track_site_visit(payload: VisitTrack, request: Request, background_tasks: BackgroundTasks):
+    check_rate_limit(f"visit:{extract_client_ip(request)}", max_attempts=120, window_seconds=60)
     ip = extract_client_ip(request)
     geo = lookup_geo(ip)
     background_tasks.add_task(
@@ -592,21 +633,20 @@ def safe_int(val, default=0):
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
-    print(f"CRITICAL API ERROR: {exc}")
-    origin = request.headers.get("origin") or "*"
+    import logging
+
+    logging.getLogger("ksw.security").exception("Unhandled API error")
+    origin = request.headers.get("origin")
+    headers = cors_headers(origin)
+    headers.update(security_headers())
     return JSONResponse(
-        status_code=200,
-        content={"status": "error", "message": f"Erreur API: {exc}"},
-        headers={
-            "Access-Control-Allow-Origin": origin,
-            "Access-Control-Allow-Credentials": "true",
-            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
-            "Access-Control-Allow-Headers": "*",
-        }
+        status_code=500,
+        content={"detail": "Erreur interne du serveur."},
+        headers=headers,
     )
 
 @app.post("/api/v1/admin/sync-from-local")
-def sync_from_local(payload: SyncFromLocalPayload, db: Session = Depends(get_db), _admin: User = Depends(require_admin_user)):
+def sync_from_local(payload: SyncFromLocalPayload, db: Session = Depends(get_db), _admin: User = Depends(require_super_admin)):
     try:
         media_settings = load_media_settings(db)
 
@@ -685,7 +725,7 @@ def sync_from_local(payload: SyncFromLocalPayload, db: Session = Depends(get_db)
                     category=str(item.get("category", "mariage")),
                     is_private=bool(item.get("isPrivate", False)),
                     access_key=str(item.get("accessKey", "KEY")),
-                    password=item.get("password"),
+                    password=prepare_gallery_password_for_storage(item.get("password")),
                     expires_at=item.get("expiresAt"),
                     cover_url=cover_url,
                     albums=item.get("albums", []),
@@ -722,13 +762,39 @@ def sync_from_local(payload: SyncFromLocalPayload, db: Session = Depends(get_db)
     except Exception as e:
         db.rollback()
         print(f"Erreur sync_from_local: {e}")
-        return {"status": "error", "message": str(e)}
+        raise HTTPException(status_code=500, detail="Échec de la synchronisation.")
 
 # -------------------------------------------------------------------
 # Settings Endpoints (Persisted in PostgreSQL)
 # -------------------------------------------------------------------
+def _request_is_admin(request: Request, db: Session) -> bool:
+    auth = request.headers.get("authorization") or request.headers.get("Authorization") or ""
+    token = ""
+    if auth.lower().startswith("bearer "):
+        token = auth[7:].strip()
+    if not token:
+        token = request.cookies.get(AUTH_COOKIE_NAME) or ""
+    if not token:
+        return False
+    try:
+        payload = decode_token(token)
+        if payload.get("pre_2fa"):
+            return False
+        user = db.query(User).filter(User.id == str(payload.get("sub"))).first()
+        if not user:
+            return False
+        role = user.role or "client"
+        if role not in {"admin", "photographer", "assistant"}:
+            return False
+        if role in {"admin", "photographer", "assistant"} and not payload.get("2fa_verified"):
+            return False
+        return True
+    except Exception:
+        return False
+
+
 @app.get("/api/v1/settings")
-def get_settings(db: Session = Depends(get_db)):
+def get_settings(request: Request, db: Session = Depends(get_db)):
     settings_db = db.query(Setting).all()
     result = {}
     secret_keys = {"stripeSecretKey", "stripeWebhookSecret", "smtpPassword"}
@@ -746,6 +812,8 @@ def get_settings(db: Session = Depends(get_db)):
         if key not in result or result[key] in (None, ""):
             result[key] = default
     result["socialLinks"] = merge_social_links(result.get("socialLinks"))
+    if not _request_is_admin(request, db):
+        result = filter_public_settings(result)
     return {"data": result}
 
 @app.post("/api/v1/settings")
@@ -774,14 +842,14 @@ def update_settings(payload: SettingUpdate, db: Session = Depends(get_db), _admi
     except Exception as e:
         db.rollback()
         print(f"Erreur update_settings: {e}")
-        return {"status": "error", "message": str(e)}
+        raise HTTPException(status_code=500, detail="Impossible d'enregistrer les paramètres.")
 
 # -------------------------------------------------------------------
 # Auth Endpoints
 # -------------------------------------------------------------------
 def _normalize_login_email(email: str) -> str:
     email_clean = email.lower().strip()
-    if email_clean == "client@kswstudio.fr":
+    if is_development() and email_clean == "client@kswstudio.fr":
         return "sophie.d@email.com"
     return email_clean
 
@@ -876,8 +944,7 @@ def update_profile(
 
 
 def _change_user_password(user: User, current_password: str, new_password: str, db: Session) -> None:
-    if len(new_password or "") < 8:
-        raise HTTPException(status_code=400, detail="Le nouveau mot de passe doit contenir au moins 8 caractères.")
+    validate_password_policy(new_password)
     if not verify_password(user, current_password):
         raise HTTPException(status_code=400, detail="Mot de passe actuel incorrect.")
     user.password = hash_password(new_password)
@@ -929,8 +996,9 @@ def login(req: LoginRequest, request: Request, db: Session = Depends(get_db)):
             print(f"[2FA EMAIL] Échec envoi à {delivery_email} : {email_error}")
             if is_development():
                 print(f"[DEV 2FA] Code pour {delivery_email}: {code} (123456 accepté en dev)")
+        pre_token = create_pre_2fa_token(user)
         return {
-            "token": create_pre_2fa_token(user),
+            "token": pre_token,
             "user": res_user,
             "requires_2fa": True,
             "user_id": user.id,
@@ -957,12 +1025,17 @@ def login(req: LoginRequest, request: Request, db: Session = Depends(get_db)):
             user_agent=request.headers.get("user-agent") or "",
         )
 
-    return {
-        "token": create_access_token(user, two_fa_verified=True, hours=_staff_session_hours(db, user)),
-        "user": res_user,
-        "requires_2fa": False,
-        "user_id": user.id,
-    }
+    session_hours = _staff_session_hours(db, user)
+    access_token = create_access_token(user, two_fa_verified=True, hours=session_hours)
+    return build_auth_json_response(
+        {
+            "user": res_user,
+            "requires_2fa": False,
+            "user_id": user.id,
+        },
+        access_token,
+        max_age_hours=session_hours,
+    )
 
 
 @app.post("/api/v1/auth/resend-2fa")
@@ -973,7 +1046,7 @@ def resend_2fa(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
 ):
     check_rate_limit(f"2fa-resend:{req.user_id}", max_attempts=3, window_seconds=900)
-    pre_token = get_token_from_credentials(credentials)
+    pre_token = resolve_token(request, credentials)
     if not pre_token:
         raise HTTPException(status_code=401, detail="Session 2FA requise. Reconnectez-vous.")
     try:
@@ -1016,7 +1089,7 @@ def verify_2fa(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
 ):
     check_rate_limit(f"2fa:{req.user_id}", max_attempts=8, window_seconds=900)
-    pre_token = get_token_from_credentials(credentials)
+    pre_token = resolve_token(request, credentials)
     if not pre_token:
         raise HTTPException(status_code=401, detail="Session 2FA requise. Reconnectez-vous.")
     try:
@@ -1034,14 +1107,20 @@ def verify_2fa(
         raise HTTPException(status_code=400, detail="Code 2FA invalide ou expiré.")
 
     res_user = serialize_user(user)
-    return {
-        "token": create_access_token(user, two_fa_verified=True, hours=_staff_session_hours(db, user)),
-        "user": res_user,
-    }
+    session_hours = _staff_session_hours(db, user)
+    access_token = create_access_token(user, two_fa_verified=True, hours=session_hours)
+    return build_auth_json_response({"user": res_user}, access_token, max_age_hours=session_hours)
+
+@app.post("/api/v1/auth/logout")
+def logout():
+    response = JSONResponse(content={"status": "success", "message": "Déconnexion effectuée."})
+    clear_auth_cookie(response)
+    return response
 
 @app.post("/api/v1/auth/register")
 def register(req: RegisterRequest, request: Request, db: Session = Depends(get_db)):
     check_rate_limit(f"register:{extract_client_ip(request)}", max_attempts=6, window_seconds=3600)
+    validate_password_policy(req.password)
     existing = db.query(User).filter(User.email == req.email.lower()).first()
     if existing:
         raise HTTPException(status_code=400, detail="Un compte existe déjà avec cet email.")
@@ -1087,10 +1166,10 @@ def forgot_password(
 
 
 @app.post("/api/v1/auth/reset-password")
-def reset_password(req: ResetPasswordRequest, db: Session = Depends(get_db)):
+def reset_password(req: ResetPasswordRequest, request: Request, db: Session = Depends(get_db)):
+    check_rate_limit(f"reset-password:{extract_client_ip(request)}", max_attempts=8, window_seconds=900)
     password = (req.password or "").strip()
-    if len(password) < 8:
-        raise HTTPException(status_code=400, detail="Le mot de passe doit contenir au moins 8 caractères.")
+    validate_password_policy(password)
 
     user_id = consume_password_reset_token(req.token)
     if not user_id:
@@ -1153,19 +1232,15 @@ def list_users(db: Session = Depends(get_db), admin: User = Depends(require_admi
 
 @app.post("/api/v1/admin/users")
 def create_or_update_user(
-    payload: Dict[str, Any],
+    payload: AdminUserUpsert,
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin_user),
 ):
-    user_id = payload.get("id")
-    email = payload.get("email", "").lower().strip()
-    first_name = payload.get("firstName", "")
-    last_name = payload.get("lastName", "")
-    role = (payload.get("role") or "client").strip().lower()
-    user_status = payload.get("status", "active")
-    password = payload.get("password")
-
-    validate_user_role_change(admin.role or "client", role)
+    user_id = payload.id
+    email = payload.email.lower().strip()
+    first_name = payload.firstName or ""
+    last_name = payload.lastName or ""
+    password = payload.password
 
     existing = None
     if user_id:
@@ -1176,31 +1251,42 @@ def create_or_update_user(
     if existing:
         if is_superuser(existing) and not is_superuser(admin):
             raise HTTPException(status_code=403, detail="Ce compte système ne peut pas être modifié.")
+        if payload.role is not None:
+            role = payload.role.strip().lower()
+            validate_user_role_change(admin.role or "client", role)
+            existing.role = role
+        if payload.status is not None:
+            existing.status = payload.status.strip()
         existing.first_name = first_name or existing.first_name
         existing.last_name = last_name or existing.last_name
-        existing.role = role
-        existing.status = user_status
         if password:
+            validate_password_policy(password)
             existing.password = hash_password(password)
         db.commit()
         db.refresh(existing)
         return {"status": "success", "message": "Utilisateur mis à jour", "user": {"id": existing.id, "email": existing.email, "role": existing.role}}
-    else:
-        if email == SUPERUSER_EMAIL or str(user_id) == SUPERUSER_ID:
-            raise HTTPException(status_code=403, detail="Impossible de créer un compte super administrateur.")
-        new_u = User(
-            id=str(user_id or uuid.uuid4()),
-            first_name=first_name,
-            last_name=last_name,
-            email=email,
-            password=hash_password(password) if password else hash_password(str(uuid.uuid4())),
-            role=role,
-            status=user_status
-        )
-        db.add(new_u)
-        db.commit()
-        db.refresh(new_u)
-        return {"status": "success", "message": "Utilisateur créé", "user": {"id": new_u.id, "email": new_u.email, "role": new_u.role}}
+
+    role = (payload.role or "client").strip().lower()
+    user_status = (payload.status or "pending").strip()
+    validate_user_role_change(admin.role or "client", role)
+    if not password:
+        raise HTTPException(status_code=400, detail="Mot de passe requis pour créer un utilisateur.")
+    validate_password_policy(password)
+    if email == SUPERUSER_EMAIL or str(user_id) == SUPERUSER_ID:
+        raise HTTPException(status_code=403, detail="Impossible de créer un compte super administrateur.")
+    new_u = User(
+        id=str(user_id or uuid.uuid4()),
+        first_name=first_name,
+        last_name=last_name,
+        email=email,
+        password=hash_password(password),
+        role=role,
+        status=user_status,
+    )
+    db.add(new_u)
+    db.commit()
+    db.refresh(new_u)
+    return {"status": "success", "message": "Utilisateur créé", "user": {"id": new_u.id, "email": new_u.email, "role": new_u.role}}
 
 
 @app.delete("/api/v1/admin/users/{user_id}")
@@ -1718,18 +1804,32 @@ def _gallery_booking_reference(db: Session, gallery: Gallery) -> str:
     return str(booking.get("reference") or "") if booking else ""
 
 
-def _send_gallery_access_sync(db: Session, gallery: Gallery, booking: Optional[Dict[str, Any]] = None) -> tuple[bool, str, Optional[str]]:
+def _send_gallery_access_sync(
+    db: Session,
+    gallery: Gallery,
+    booking: Optional[Dict[str, Any]] = None,
+    *,
+    plain_password: Optional[str] = None,
+) -> tuple[bool, str, Optional[str], str]:
     delivery_email = _resolve_gallery_delivery_email(db, gallery, booking)
     if not delivery_email:
-        return False, "", "Email client introuvable. Renseignez l'email sur la galerie ou choisissez un client enregistré."
+        return False, "", "Email client introuvable. Renseignez l'email sur la galerie ou choisissez un client enregistré.", ""
+
+    password_for_email = (plain_password or "").strip()
+    if not password_for_email:
+        if is_stored_password_hash(gallery.password):
+            password_for_email = regenerate_gallery_password(db, gallery)
+        else:
+            password_for_email = (gallery.password or "").strip()
 
     ok, err = send_gallery_access_for_gallery(
         db,
         gallery,
         delivery_email=delivery_email,
         booking_reference=_gallery_booking_reference(db, gallery),
+        plain_password=password_for_email,
     )
-    return ok, delivery_email, err
+    return ok, delivery_email, err, password_for_email
 
 
 def _bg_send_gallery_access(booking_id: str) -> None:
@@ -1739,8 +1839,9 @@ def _bg_send_gallery_access(booking_id: str) -> None:
         if not booking:
             return
         gallery = get_gallery_for_booking(db, booking_id)
+        plain_password = None
         if not gallery:
-            gallery = create_gallery_for_booking(
+            gallery, plain_password = create_gallery_for_booking(
                 db,
                 booking,
                 get_json_setting_list=_get_json_setting_list,
@@ -1748,7 +1849,9 @@ def _bg_send_gallery_access(booking_id: str) -> None:
                 save_json_setting_list=_save_json_setting_list,
             )
         if gallery:
-            ok, email, err = _send_gallery_access_sync(db, gallery, booking)
+            ok, email, err, _pwd = _send_gallery_access_sync(
+                db, gallery, booking, plain_password=plain_password
+            )
             if ok:
                 print(f"[GALLERY EMAIL] Accès envoyé à {email}")
             else:
@@ -1789,9 +1892,11 @@ def _bg_notify_gallery_photos(payload: Dict[str, Any]) -> None:
 @app.post("/api/v1/contact")
 def create_contact_message(
     req: ContactCreate,
+    request: Request,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
+    check_rate_limit(f"contact:{extract_client_ip(request)}", max_attempts=5, window_seconds=3600)
     if req.website and req.website.strip():
         raise HTTPException(status_code=400, detail="Requête rejetée.")
     if req.form_started_at:
@@ -1843,9 +1948,11 @@ def booking_availability(
 @app.post("/api/v1/bookings")
 def create_booking(
     req: BookingCreate,
+    request: Request,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
+    check_rate_limit(f"booking:{extract_client_ip(request)}", max_attempts=8, window_seconds=3600)
     service_title, total_price, deposit_amount = resolve_booking_pricing(
         db, req.service_id, req.service_title or ""
     )
@@ -1901,7 +2008,7 @@ def create_booking(
         "currency": currency,
         "type": "booking",
     })
-    gallery = create_gallery_for_booking(
+    gallery, _plain_password = create_gallery_for_booking(
         db,
         entry,
         get_json_setting_list=_get_json_setting_list,
@@ -2015,17 +2122,22 @@ def admin_get_booking_gallery(
     if not gallery and booking.get("galleryId"):
         gallery = db.query(Gallery).filter(Gallery.id == str(booking["galleryId"])).first()
     if not gallery:
-        gallery = create_gallery_for_booking(
+        gallery, plain_password = create_gallery_for_booking(
             db,
             booking,
             get_json_setting_list=_get_json_setting_list,
             find_booking_index=_find_booking_index,
             save_json_setting_list=_save_json_setting_list,
         )
+    else:
+        plain_password = None
     if not gallery:
         raise HTTPException(status_code=404, detail="Aucune galerie liée à cette réservation.")
 
-    return {"status": "success", "data": _gallery_to_dict(gallery, include_password=True)}
+    return {
+        "status": "success",
+        "data": _gallery_to_dict(gallery, include_password=True, plain_password_override=plain_password),
+    }
 
 
 @app.post("/api/v1/admin/bookings/{booking_id}/send-gallery-access")
@@ -2039,8 +2151,9 @@ def admin_send_booking_gallery_access(
         raise HTTPException(status_code=404, detail="Réservation introuvable.")
 
     gallery = get_gallery_for_booking(db, booking_id)
+    plain_password = None
     if not gallery:
-        gallery = create_gallery_for_booking(
+        gallery, plain_password = create_gallery_for_booking(
             db,
             booking,
             get_json_setting_list=_get_json_setting_list,
@@ -2050,14 +2163,20 @@ def admin_send_booking_gallery_access(
     if not gallery:
         raise HTTPException(status_code=500, detail="Impossible de créer la galerie.")
 
-    ok, delivery_email, err = _send_gallery_access_sync(db, gallery, booking)
+    ok, delivery_email, err, emailed_password = _send_gallery_access_sync(
+        db, gallery, booking, plain_password=plain_password
+    )
     if not ok:
         raise HTTPException(status_code=503, detail=err or "Échec d'envoi de l'email galerie.")
 
     return {
         "status": "success",
         "message": f"Accès galerie envoyé à {delivery_email}.",
-        "data": _gallery_to_dict(gallery, include_password=True),
+        "data": _gallery_to_dict(
+            gallery,
+            include_password=True,
+            plain_password_override=emailed_password or None,
+        ),
     }
 
 
@@ -2077,7 +2196,7 @@ def admin_send_gallery_access(
     if gallery.booking_id:
         booking = _get_booking_by_id(db, str(gallery.booking_id))
 
-    ok, delivery_email, err = _send_gallery_access_sync(db, gallery, booking)
+    ok, delivery_email, err, emailed_password = _send_gallery_access_sync(db, gallery, booking)
     if not ok:
         raise HTTPException(status_code=503, detail=err or "Échec d'envoi de l'email galerie.")
 
@@ -2088,12 +2207,17 @@ def admin_send_gallery_access(
     return {
         "status": "success",
         "message": f"Accès galerie envoyé à {delivery_email}.",
-        "data": _gallery_to_dict(gallery, include_password=True),
+        "data": _gallery_to_dict(
+            gallery,
+            include_password=True,
+            plain_password_override=emailed_password or None,
+        ),
     }
 
 
 @app.post("/api/v1/bookings/stripe/create-checkout-session")
-def create_stripe_checkout_session(payload: StripeCheckoutCreate, db: Session = Depends(get_db)):
+def create_stripe_checkout_session(payload: StripeCheckoutCreate, request: Request, db: Session = Depends(get_db)):
+    check_rate_limit(f"stripe-checkout:{extract_client_ip(request)}", max_attempts=15, window_seconds=3600)
     import stripe
 
     items = _get_json_setting_list(db, BOOKINGS_KEY)
@@ -2191,7 +2315,8 @@ def stripe_session_status(
 
 
 @app.post("/api/v1/bookings/mobile-money/submit")
-def submit_mobile_money_payment(payload: MobileMoneyPaymentSubmit, db: Session = Depends(get_db)):
+def submit_mobile_money_payment(payload: MobileMoneyPaymentSubmit, request: Request, db: Session = Depends(get_db)):
+    check_rate_limit(f"mobile-money:{extract_client_ip(request)}", max_attempts=10, window_seconds=3600)
     if not _get_setting_scalar(db, "mobileMoneyEnabled", False):
         raise HTTPException(status_code=400, detail="Le paiement Mobile Money n'est pas disponible.")
 
@@ -2971,7 +3096,7 @@ def _security_recommendations(db: Session, https_enabled: bool, jwt_secret: str)
 
 
 @app.get("/api/v1/admin/backup/export")
-def admin_export_backup(db: Session = Depends(get_db), _admin: User = Depends(require_admin_user)):
+def admin_export_backup(db: Session = Depends(get_db), _admin: User = Depends(require_super_admin)):
     return _build_admin_backup_payload(db)
 
 
@@ -3056,7 +3181,7 @@ def _restore_galleries_from_backup(db: Session, items: List[Dict[str, Any]], med
                 category=str(item.get("category", "mariage")),
                 is_private=bool(item.get("isPrivate", False)),
                 access_key=str(item.get("accessKey", "KEY")),
-                password=item.get("password"),
+                password=prepare_gallery_password_for_storage(item.get("password")),
                 expires_at=item.get("expiresAt"),
                 cover_url=cover_url,
                 albums=item.get("albums", []),
@@ -3176,7 +3301,7 @@ def _restore_admin_backup(db: Session, data: Dict[str, Any]) -> Dict[str, Any]:
 def admin_restore_backup(
     payload: BackupRestorePayload,
     db: Session = Depends(get_db),
-    _admin: User = Depends(require_admin_user),
+    _admin: User = Depends(require_super_admin),
 ):
     if not payload.confirm:
         return {
@@ -3195,7 +3320,7 @@ def admin_restore_backup(
     except Exception as exc:
         db.rollback()
         print(f"Erreur restore_backup: {exc}")
-        return {"status": "error", "message": str(exc)}
+        raise HTTPException(status_code=500, detail="Échec de la restauration de la sauvegarde.")
 
 
 @app.get("/api/v1/client/notifications")
@@ -3223,7 +3348,8 @@ def client_mark_notifications_read(
     return {"status": "success"}
 
 @app.post("/api/v1/testimonials")
-def create_testimonial(req: TestimonialCreate, db: Session = Depends(get_db)):
+def create_testimonial(req: TestimonialCreate, request: Request, db: Session = Depends(get_db)):
+    check_rate_limit(f"testimonial:{extract_client_ip(request)}", max_attempts=3, window_seconds=3600)
     t = Testimonial(
         id=str(uuid.uuid4()),
         client_name=req.client_name.strip(),
@@ -3252,7 +3378,7 @@ def toggle_approve_testimonial(id: str, db: Session = Depends(get_db), _admin: U
 # -------------------------------------------------------------------
 def _normalize_client_email(email: str) -> str:
     email_clean = (email or "").lower().strip()
-    if email_clean == "client@kswstudio.fr":
+    if is_development() and email_clean == "client@kswstudio.fr":
         return "sophie.d@email.com"
     return email_clean
 
@@ -3359,7 +3485,13 @@ def _bg_generate_missing_thumbs(photos: list) -> None:
             print(f"BG thumb error {url}: {exc}")
 
 
-def _gallery_to_dict(g, include_password: bool = False, *, include_media: bool = True) -> dict:
+def _gallery_to_dict(
+    g,
+    include_password: bool = False,
+    *,
+    include_media: bool = True,
+    plain_password_override: Optional[str] = None,
+) -> dict:
     data = {
         "id": g.id,
         "title": g.title,
@@ -3384,7 +3516,15 @@ def _gallery_to_dict(g, include_password: bool = False, *, include_media: bool =
         data["photosCount"] = len(photos) if isinstance(photos, list) else 0
         data["albumsCount"] = len(albums) if isinstance(albums, list) else 0
     if include_password:
-        data["password"] = g.password
+        if plain_password_override:
+            data["password"] = plain_password_override
+            data["hasPassword"] = True
+        elif g.password and is_stored_password_hash(g.password):
+            data["password"] = ""
+            data["hasPassword"] = True
+        else:
+            data["password"] = g.password
+            data["hasPassword"] = bool(g.password)
     return data
 
 
@@ -3401,7 +3541,7 @@ def _get_gallery_by_access_key(db: Session, access_key: str) -> Gallery:
 
 
 def _assert_gallery_unlocked(gallery: Gallery, password: Optional[str] = None) -> None:
-    if gallery.password and gallery.password != (password or ""):
+    if gallery.password and not verify_gallery_password(gallery.password, password):
         raise HTTPException(status_code=403, detail="Mot de passe incorrect.")
     if gallery.expires_at:
         try:
@@ -3416,11 +3556,7 @@ def _assert_gallery_unlocked(gallery: Gallery, password: Optional[str] = None) -
 def _photo_local_path(url: str) -> Optional[str]:
     if not url:
         return None
-    raw = str(url).strip()
-    if raw.startswith("/uploads/"):
-        path = os.path.join(UPLOAD_DIR, raw.replace("/uploads/", "", 1))
-        return path if os.path.isfile(path) else None
-    return None
+    return get_media_storage(UPLOAD_DIR).local_path(str(url).strip())
 
 
 def _guess_image_ext(url: str, default: str = ".jpg") -> str:
@@ -3437,20 +3573,14 @@ def _read_photo_bytes_for_zip(
     *,
     media_settings: Optional[dict] = None,
 ) -> Optional[tuple]:
-    """Lit un fichier local ou télécharge une URL externe ; applique le filigrane si nécessaire."""
-    local = _photo_local_path(url)
-    data: Optional[bytes] = None
+    """Lit un fichier local, Supabase Storage ou URL externe ; applique le filigrane si nécessaire."""
+    storage = get_media_storage(UPLOAD_DIR)
+    data: Optional[bytes] = storage.get_bytes(url)
     ext = ".jpg"
 
-    if local:
-        try:
-            with open(local, "rb") as handle:
-                data = handle.read()
-            if data:
-                ext = _guess_image_ext(local, os.path.splitext(local)[1] or ".webp")
-        except OSError as exc:
-            print(f"ZIP local read error {url}: {exc}")
-            return None
+    if data:
+        local = _photo_local_path(url)
+        ext = _guess_image_ext(local or url, os.path.splitext(local or url)[1] or ".webp")
     else:
         raw = str(url or "").strip()
         if not raw.startswith(("http://", "https://")):
@@ -3498,14 +3628,19 @@ def _safe_zip_name(title: str, index: int) -> str:
 
 
 @app.post("/api/v1/galleries/unlock")
-def unlock_gallery(req: GalleryUnlockRequest, db: Session = Depends(get_db)):
+def unlock_gallery(req: GalleryUnlockRequest, request: Request, db: Session = Depends(get_db)):
+    ip = extract_client_ip(request)
+    key = (req.access_key or "").strip().lower()
+    check_rate_limit(f"gallery-unlock:{ip}:{key}", max_attempts=8, window_seconds=900)
     gallery = _get_gallery_by_access_key(db, req.access_key)
     _assert_gallery_unlocked(gallery, req.password)
     return {"status": "success", "data": _gallery_to_dict(gallery)}
 
 
 @app.post("/api/v1/galleries/download-zip")
-def download_gallery_zip(req: GalleryDownloadZipRequest, db: Session = Depends(get_db)):
+def download_gallery_zip(req: GalleryDownloadZipRequest, request: Request, db: Session = Depends(get_db)):
+    ip = extract_client_ip(request)
+    check_rate_limit(f"gallery-dl:{ip}:{(req.access_key or '').strip().lower()}", max_attempts=15, window_seconds=3600)
     gallery = _get_gallery_by_access_key(db, req.access_key)
     _assert_gallery_unlocked(gallery, req.password)
     media_settings = load_media_settings(db)
@@ -3551,7 +3686,10 @@ def download_gallery_zip(req: GalleryDownloadZipRequest, db: Session = Depends(g
 
 
 @app.post("/api/v1/galleries/download-photo")
-def download_gallery_photo(req: GalleryDownloadPhotoRequest, db: Session = Depends(get_db)):
+def download_gallery_photo(req: GalleryDownloadPhotoRequest, request: Request, db: Session = Depends(get_db)):
+    ip = extract_client_ip(request)
+    key = (req.access_key or "").strip().lower()
+    check_rate_limit(f"gallery-dl-photo:{ip}:{key}", max_attempts=8, window_seconds=900)
     gallery = _get_gallery_by_access_key(db, req.access_key)
     _assert_gallery_unlocked(gallery, req.password)
     media_settings = load_media_settings(db)
@@ -3651,6 +3789,7 @@ def save_all_galleries(
 ):
     media_settings = load_media_settings(db)
     old_galleries = db.query(Gallery).all()
+    old_by_id = {str(g.id): g for g in old_galleries}
     incoming = [dict(item) if not isinstance(item, dict) else item for item in payload.galleries]
     photo_upload_events = detect_gallery_photo_uploads(old_galleries, incoming)
 
@@ -3674,15 +3813,22 @@ def save_all_galleries(
             else:
                 processed_photos.append(photo)
 
+        g_id = str(item.get("id"))
+        previous = old_by_id.get(g_id)
+        stored_password = prepare_gallery_password_for_storage(
+            item.get("password"),
+            existing=previous.password if previous else None,
+        )
+
         g = Gallery(
-            id=str(item.get("id")),
+            id=g_id,
             title=item.get("title", "Galerie Studio"),
             client_name=item.get("clientName", "Client"),
             client_email=item.get("clientEmail"),
             category=item.get("category", "mariage"),
             is_private=item.get("isPrivate", True),
             access_key=item.get("accessKey", "STUDIO-KEY"),
-            password=item.get("password"),
+            password=stored_password,
             booking_id=item.get("bookingId"),
             expires_at=item.get("expiresAt"),
             deleted_at=item.get("deletedAt"),

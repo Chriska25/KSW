@@ -30,7 +30,7 @@ export default function PublicInvitationPage() {
 
   if (error || !invitation) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-surface-muted flex items-center justify-center p-6">
         <ErrorState title="Invitation indisponible" message={error || 'Lien invalide.'} />
       </div>
     );

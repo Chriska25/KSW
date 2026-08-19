@@ -78,13 +78,13 @@ export function PhotoLightbox({
   const hdSrc = resolvePhotoHdUrl(currentPhoto);
 
   return (
-    <div className="portfolio-lightbox-backdrop fixed inset-0 z-50 bg-black/95 backdrop-blur-xl flex flex-col justify-between p-4 sm:p-6">
+    <div className="portfolio-lightbox-backdrop fixed inset-0 z-50 bg-black/95flex flex-col justify-between p-4 sm:p-6">
       <div className="flex items-center justify-between z-10">
         <div className="flex items-center space-x-3">
-          <Badge variant="gold" className="text-xs">
+          <Badge variant="primary" className="text-xs">
             {currentIndex + 1} / {photos.length}
           </Badge>
-          <span className="text-sm font-semibold text-white truncate max-w-xs sm:max-w-md">
+          <span className="text-sm font-semibold text-foreground truncate max-w-xs sm:max-w-md">
             {currentPhoto.title}
           </span>
         </div>
@@ -95,16 +95,16 @@ export function PhotoLightbox({
               variant="ghost"
               size="icon"
               onClick={() => onToggleFavorite(currentPhoto.id)}
-              className="text-zinc-300 hover:text-amber-400"
+              className="text-foreground hover:text-primary"
             >
               <Heart
                 className={`h-5 w-5 ${
-                  currentPhoto.isFavorite ? 'fill-amber-400 text-amber-400' : ''
+                  currentPhoto.isFavorite ? 'fill-amber-400 text-primary' : ''
                 }`}
               />
             </Button>
           )}
-          <Button variant="ghost" size="icon" onClick={onClose} className="text-zinc-400 hover:text-white">
+          <Button variant="ghost" size="icon" onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <X className="h-6 w-6" />
           </Button>
         </div>
@@ -114,7 +114,7 @@ export function PhotoLightbox({
         {currentIndex > 0 && (
           <button
             onClick={() => onNavigate(currentIndex - 1)}
-            className="absolute left-2 sm:left-4 z-20 p-3 rounded-full glass-panel text-white hover:text-amber-400 hover:border-amber-400 transition-all cursor-pointer"
+            className="absolute left-2 sm:left-4 z-20 p-3 rounded-full text-foreground hover:text-primary hover:border-amber-400 transition-all cursor-pointer"
           >
             <ChevronLeft className="h-6 w-6" />
           </button>
@@ -123,7 +123,7 @@ export function PhotoLightbox({
         {currentIndex < photos.length - 1 && (
           <button
             onClick={() => onNavigate(currentIndex + 1)}
-            className="absolute right-2 sm:right-4 z-20 p-3 rounded-full glass-panel text-white hover:text-amber-400 hover:border-amber-400 transition-all cursor-pointer"
+            className="absolute right-2 sm:right-4 z-20 p-3 rounded-full text-foreground hover:text-primary hover:border-amber-400 transition-all cursor-pointer"
           >
             <ChevronRight className="h-6 w-6" />
           </button>
@@ -152,7 +152,7 @@ export function PhotoLightbox({
 
           {showTextWatermark && (
             <div
-              className={`absolute ${settings.watermarkPosition === 'diagonal' ? watermarkPos : watermarkPos} text-[10px] font-mono tracking-widest text-white uppercase bg-black/50 px-3 py-1.5 rounded-full backdrop-blur-sm select-none pointer-events-none whitespace-nowrap`}
+              className={`absolute ${settings.watermarkPosition === 'diagonal' ? watermarkPos : watermarkPos} text-[10px] font-mono tracking-widest text-foreground uppercase bg-black/50 px-3 py-1.5 rounded-full  select-none pointer-events-none whitespace-nowrap`}
               style={{ opacity: watermarkOpacity }}
             >
               {watermarkLabel}
@@ -162,9 +162,9 @@ export function PhotoLightbox({
       </div>
 
       {currentPhoto.exif && (
-        <div className="glass-panel rounded-xl p-3 max-w-xl mx-auto flex items-center justify-center space-x-6 text-xs text-zinc-400 border-zinc-800">
+        <div className="rounded-xl p-3 max-w-xl mx-auto flex items-center justify-center space-x-6 text-xs text-muted-foreground border-border">
           <div className="flex items-center space-x-1.5">
-            <Camera className="h-3.5 w-3.5 text-amber-400" />
+            <Camera className="h-3.5 w-3.5 text-primary" />
             <span>{currentPhoto.exif.camera || 'Canon EOS R5'}</span>
           </div>
           <div>{currentPhoto.exif.lens || 'RF 85mm F1.2'}</div>

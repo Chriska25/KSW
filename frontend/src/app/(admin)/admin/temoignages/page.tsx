@@ -18,6 +18,19 @@ import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Select } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableEmpty,
+} from '@/components/ui/table';
+import { LoadingState } from '@/components/common/loading-state';
+import { AdminModal } from '@/components/admin/admin-modal';
 import apiClient from '@/lib/api-client';
 import { fetchAdminTestimonials, type TestimonialItem } from '@/lib/testimonials';
 import { useAdminToast } from '@/components/admin/admin-toast';
@@ -159,7 +172,7 @@ export default function AdminTemoignagesPage() {
               <Search className="h-4 w-4" />
               <span>Actualiser</span>
             </Button>
-            <Button variant="gold" size="sm" onClick={handleOpenAdd} className="space-x-2">
+            <Button variant="primary" size="sm" onClick={handleOpenAdd} className="space-x-2">
               <Plus className="h-4 w-4" />
               <span>Ajouter un Témoignage</span>
             </Button>
@@ -167,24 +180,23 @@ export default function AdminTemoignagesPage() {
         }
       />
 
-      {/* Table Card */}
-      <Card className="glass-panel space-y-4">
+      <Card>
         <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <CardTitle className="text-xl flex items-center gap-2">
-              Avis et Recommandations ({filteredTestimonials.length})
+            <CardTitle className="text-h2 flex items-center gap-2 flex-wrap">
+              Avis et recommandations ({filteredTestimonials.length})
               {pendingCount > 0 && (
                 <Badge variant="warning">{pendingCount} en attente</Badge>
               )}
             </CardTitle>
             <CardDescription>
-              Modération des témoignages publiés dans le carrousel de la page d'accueil.
+              Modération des témoignages publiés dans le carrousel de la page d&apos;accueil.
             </CardDescription>
           </div>
           <div className="relative w-full sm:w-72">
-            <Search className="h-4 w-4 absolute left-3 top-3 text-zinc-500" />
+            <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
             <Input
-              placeholder="Rechercher un avis..."
+              placeholder="Rechercher un avis…"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9 h-10 text-xs"
@@ -193,159 +205,148 @@ export default function AdminTemoignagesPage() {
         </CardHeader>
 
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-zinc-300">
-              <thead className="bg-zinc-950/80 text-xs font-semibold uppercase text-zinc-400 border-b border-zinc-800">
-                <tr>
-                  <th className="py-3 px-4">Avatar</th>
-                  <th className="py-3 px-4">Client / Qualité</th>
-                  <th className="py-3 px-4">Note Étoiles</th>
-                  <th className="py-3 px-4">Avis & Message</th>
-                  <th className="py-3 px-4">Statut Modération</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-800/60">
-                {loading ? (
-                  <tr>
-                    <td colSpan={6} className="py-8 text-center text-zinc-500 text-xs">
-                      Chargement des avis…
-                    </td>
-                  </tr>
-                ) : filteredTestimonials.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-8 text-center text-zinc-500 text-xs">
-                      Aucun avis pour le moment. Les dépôts depuis la page Contact apparaîtront ici en « En Attente ».
-                    </td>
-                  </tr>
+          {loading ? (
+            <LoadingState message="Chargement des avis…" />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Avatar</TableHead>
+                  <TableHead>Client</TableHead>
+                  <TableHead>Note</TableHead>
+                  <TableHead>Message</TableHead>
+                  <TableHead>Statut</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredTestimonials.length === 0 ? (
+                  <TableEmpty
+                    colSpan={6}
+                    message="Aucun avis pour le moment. Les dépôts depuis Contact apparaîtront en « En attente »."
+                  />
                 ) : (
-                filteredTestimonials.map((t) => (
-                  <tr key={t.id} className="hover:bg-zinc-900/40 transition-colors">
-                    <td className="py-3 px-4">
-                      <img
-                        src={t.avatarUrl}
-                        alt={t.clientName}
-                        className="h-10 w-10 rounded-full object-cover border border-zinc-800"
-                      />
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="font-bold text-white text-sm">{t.clientName}</div>
-                      <div className="text-xs text-zinc-500">{t.clientRole}</div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center space-x-1 text-amber-400">
-                        {Array.from({ length: t.rating }).map((_, i) => (
-                          <Star key={i} className="h-3.5 w-3.5 fill-amber-400" />
-                        ))}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-xs text-zinc-300 max-w-sm italic">
-                      "{t.content}"
-                    </td>
-                    <td className="py-3 px-4">
-                      <button onClick={() => handleToggleApprove(t.id)} className="cursor-pointer">
-                        <Badge variant={t.isPublished ? 'success' : 'warning'}>
-                          {t.isPublished ? 'Approuvé & Publié' : 'En Attente'}
-                        </Badge>
-                      </button>
-                    </td>
-                    <td className="py-3 px-4 text-right space-x-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleOpenEdit(t)}
-                        className="h-8 w-8 text-zinc-300 hover:text-amber-400"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(t.id)}
-                        className="h-8 w-8 text-destructive hover:text-destructive/80"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))
+                  filteredTestimonials.map((t) => (
+                    <TableRow key={t.id}>
+                      <TableCell>
+                        <img
+                          src={t.avatarUrl}
+                          alt={t.clientName}
+                          className="h-10 w-10 rounded-full object-cover border border-border"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-medium text-foreground text-sm">{t.clientName}</div>
+                        <div className="text-caption text-muted-foreground">{t.clientRole}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-0.5 text-primary">
+                          {Array.from({ length: t.rating }).map((_, i) => (
+                            <Star key={i} className="h-3.5 w-3.5 fill-primary" />
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground max-w-sm italic">
+                        &ldquo;{t.content}&rdquo;
+                      </TableCell>
+                      <TableCell>
+                        <button type="button" onClick={() => handleToggleApprove(t.id)} className="cursor-pointer">
+                          <Badge variant={t.isPublished ? 'success' : 'warning'}>
+                            {t.isPublished ? 'Approuvé' : 'En attente'}
+                          </Badge>
+                        </button>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="inline-flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleOpenEdit(t)}
+                            className="h-8 w-8"
+                            aria-label="Modifier"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(t.id)}
+                            className="h-8 w-8 text-destructive hover:text-destructive/80"
+                            aria-label="Supprimer"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
                 )}
-              </tbody>
-            </table>
-          </div>
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
-      {/* Modal Add / Edit */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <Card className="glass-panel max-w-xl w-full border-amber-400/40 space-y-4">
-            <CardHeader className="flex flex-row items-center justify-between border-b border-zinc-800 pb-3">
-              <CardTitle className="text-xl">
-                {editingItem ? 'Modifier le Témoignage' : 'Ajouter un Témoignage Client'}
-              </CardTitle>
-              <button onClick={() => setIsModalOpen(false)} className="text-zinc-400 hover:text-white">
-                ✕
-              </button>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSave} className="space-y-4 text-xs">
-                <div>
-                  <label className="text-zinc-400 block mb-1">Nom du Client / Couple</label>
-                  <Input
-                    required
-                    value={formData.clientName}
-                    onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
-                  />
-                </div>
+      <AdminModal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={editingItem ? 'Modifier le témoignage' : 'Ajouter un témoignage'}
+        size="md"
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
+              Annuler
+            </Button>
+            <Button type="submit" form="testimonial-form" variant="primary">
+              Enregistrer
+            </Button>
+          </>
+        }
+      >
+        <form id="testimonial-form" onSubmit={handleSave} className="space-y-4 text-sm">
+          <div>
+            <label className="text-caption font-medium text-muted-foreground block mb-1.5">Nom du client</label>
+            <Input
+              required
+              value={formData.clientName}
+              onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
+            />
+          </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-zinc-400 block mb-1">Qualité / Événement</label>
-                    <Input
-                      value={formData.clientRole}
-                      onChange={(e) => setFormData({ ...formData, clientRole: e.target.value })}
-                      placeholder="Mariés en 2026"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-zinc-400 block mb-1">Note (1 à 5 Étoiles)</label>
-                    <select
-                      value={formData.rating}
-                      onChange={(e) => setFormData({ ...formData, rating: Number(e.target.value) })}
-                      className="w-full h-11 rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-xs text-zinc-100"
-                    >
-                      <option value={5}>5 / 5 Étoiles (Sublime)</option>
-                      <option value={4}>4 / 5 Étoiles (Très Bien)</option>
-                      <option value={3}>3 / 5 Étoiles (Moyen)</option>
-                    </select>
-                  </div>
-                </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-caption font-medium text-muted-foreground block mb-1.5">Événement</label>
+              <Input
+                value={formData.clientRole}
+                onChange={(e) => setFormData({ ...formData, clientRole: e.target.value })}
+                placeholder="Mariés en 2026"
+              />
+            </div>
+            <div>
+              <label className="text-caption font-medium text-muted-foreground block mb-1.5">Note</label>
+              <Select
+                value={String(formData.rating)}
+                onChange={(e) => setFormData({ ...formData, rating: Number(e.target.value) })}
+                className="text-xs"
+              >
+                <option value="5">5 / 5</option>
+                <option value="4">4 / 5</option>
+                <option value="3">3 / 5</option>
+              </Select>
+            </div>
+          </div>
 
-                <div>
-                  <label className="text-zinc-400 block mb-1">Message du Témoignage</label>
-                  <textarea
-                    required
-                    rows={4}
-                    className="flex w-full rounded-xl border border-zinc-800 bg-zinc-950 p-3 text-xs text-zinc-100 focus:outline-none focus:border-amber-400"
-                    value={formData.content}
-                    onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                  />
-                </div>
-
-                <div className="pt-4 flex justify-end space-x-3">
-                  <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
-                    Annuler
-                  </Button>
-                  <Button type="submit" variant="gold">
-                    Enregistrer le Témoignage
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+          <div>
+            <label className="text-caption font-medium text-muted-foreground block mb-1.5">Message</label>
+            <Textarea
+              required
+              rows={4}
+              value={formData.content}
+              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+            />
+          </div>
+        </form>
+      </AdminModal>
     </div>
   );
 }

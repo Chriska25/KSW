@@ -1,9 +1,17 @@
 import json
+import os
+
 from sqlalchemy.orm import Session
+
 from models import Setting, User, Service, Testimonial, Gallery
-from security import hash_password
+from security import hash_password, is_production
+from gallery_password import hash_gallery_password, verify_gallery_password
+
 
 def seed_database(db: Session):
+    if is_production() and os.getenv("ALLOW_DEMO_SEED", "").lower() != "true":
+        print("[SEED] Données de démo désactivées en production (ALLOW_DEMO_SEED=true pour forcer).")
+        return
     # Seed Settings if empty
     if db.query(Setting).count() == 0:
         default_settings = {
@@ -175,7 +183,7 @@ def seed_database(db: Session):
             category='mariage',
             is_private=True,
             access_key='SOPHIE-ALEX-2026',
-            password='Love2026!',
+            password=hash_gallery_password('Love2026!'),
             cover_url='https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=600&auto=format&fit=crop',
             albums=[
                 {'id': 'alb-1', 'name': 'Préparatifs & Habillage', 'photosCount': 2, 'isPrivate': True},
@@ -304,8 +312,8 @@ def ensure_demo_gallery(db: Session) -> None:
     if not gallery.is_private:
         gallery.is_private = True
         changed = True
-    if gallery.password != 'Love2026!':
-        gallery.password = 'Love2026!'
+    if not gallery.password or not verify_gallery_password(gallery.password, 'Love2026!'):
+        gallery.password = hash_gallery_password('Love2026!')
         changed = True
     if (gallery.client_email or '').lower() != 'sophie.d@email.com':
         gallery.client_email = 'sophie.d@email.com'

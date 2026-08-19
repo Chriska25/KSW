@@ -11,7 +11,7 @@ import {
   Lock,
   Globe,
   Plus,
-  Sparkles,
+  RefreshCw,
   Layers,
   Edit3,
   Star,
@@ -762,7 +762,7 @@ export default function AdminGaleriesPage() {
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto">
       {isSaving && (
-        <div className="sticky top-0 z-30 flex items-center gap-2 rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-2 text-xs text-amber-200">
+        <div className="sticky top-0 z-30 flex items-center gap-2 rounded-xl border border-primary/30 bg-primary-muted px-4 py-2 text-xs text-primary">
           <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
           Sauvegarde en cours…
         </div>
@@ -790,7 +790,7 @@ export default function AdminGaleriesPage() {
             </Button>
           )}
           <Button
-            variant="gold"
+            variant="primary"
             size="sm"
             onClick={() => {
               setEditingGallery({ isPrivate: true, category: 'mariage' });
@@ -827,20 +827,20 @@ export default function AdminGaleriesPage() {
               variant="outline"
               size="sm"
               onClick={handleRestoreBrokenPhotos}
-              className="space-x-1.5 border-zinc-800 text-amber-400 hover:bg-amber-400/10 text-xs font-semibold hidden md:inline-flex"
+              className="space-x-1.5 border-zinc-800 text-primary hover:bg-primary-muted text-xs font-semibold hidden md:inline-flex"
             >
-              <Sparkles className="h-4 w-4" />
+              <RefreshCw className="h-4 w-4" />
               <span>Restaurer les Photos</span>
             </Button>
 
             <Button
-              variant="gold"
+              variant="primary"
               size="sm"
               onClick={() => {
                 setEditingGallery({ isPrivate: true, category: 'mariage' });
                 setIsGalleryModalOpen(true);
               }}
-              className="space-x-2 font-bold shadow-md shadow-amber-400/20"
+              className="space-x-2 font-semibold"
             >
               <FolderPlus className="h-4 w-4" />
               <span>Nouvelle Galerie</span>
@@ -886,8 +886,8 @@ export default function AdminGaleriesPage() {
                     }}
                     className={`w-full text-left rounded-xl border p-3 flex gap-3 transition-all cursor-pointer ${
                       isSelected
-                        ? 'border-amber-400 bg-amber-400/10 shadow-md shadow-amber-400/10'
-                        : 'border-zinc-800 glass-panel hover:border-zinc-700'
+                        ? 'border-primary bg-primary-muted'
+                        : 'border-border bg-surface hover:border-primary/40'
                     }`}
                   >
                     <img
@@ -896,7 +896,7 @@ export default function AdminGaleriesPage() {
                       className="h-14 w-[4.5rem] object-cover rounded-lg border border-zinc-700 shrink-0"
                     />
                     <div className="min-w-0 flex-1">
-                      <p className={`text-xs font-bold truncate ${isSelected ? 'text-amber-400' : 'text-white'}`}>
+                      <p className={`text-xs font-bold truncate ${isSelected ? 'text-primary' : 'text-white'}`}>
                         {gal.title}
                       </p>
                       <p className="text-[10px] text-zinc-500 truncate mt-0.5 flex items-center gap-1">
@@ -904,7 +904,7 @@ export default function AdminGaleriesPage() {
                         {gal.clientName}
                       </p>
                       <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                        <code className="text-[9px] font-mono text-amber-400/90 bg-zinc-900 px-1.5 py-0.5 rounded border border-zinc-800">
+                        <code className="text-[9px] font-mono text-primary/90 bg-zinc-900 px-1.5 py-0.5 rounded border border-zinc-800">
                           {gal.accessKey}
                         </code>
                         {meta?.invoiceNumber && (
@@ -914,7 +914,7 @@ export default function AdminGaleriesPage() {
                           </span>
                         )}
                         {gal.isPrivate ? (
-                          <Lock className="h-3 w-3 text-amber-400" />
+                          <Lock className="h-3 w-3 text-primary" />
                         ) : (
                           <Globe className="h-3 w-3 text-emerald-400" />
                         )}
@@ -1005,14 +1005,14 @@ export default function AdminGaleriesPage() {
 
         {/* Colonne droite — contenu galerie sélectionnée */}
         <div className="flex-1 min-w-0">
-      <Card className="glass-panel border-amber-400/30 overflow-hidden h-full flex flex-col">
+      <Card className="border-primary/30 overflow-hidden h-full flex flex-col">
         {/* En-tête galerie compact */}
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 p-5 border-b border-zinc-800 bg-zinc-950/40">
           <div className="flex items-center gap-4 min-w-0">
             <img
               src={selectedGallery.coverUrl}
               alt={selectedGallery.title}
-              className="h-16 w-22 object-cover rounded-xl border border-amber-400/40 shrink-0"
+              className="h-16 w-22 object-cover rounded-xl border border-primary/40 shrink-0"
             />
             <div className="min-w-0 space-y-1">
               <div className="flex flex-wrap items-center gap-2">
@@ -1022,18 +1022,18 @@ export default function AdminGaleriesPage() {
                 </Badge>
               </div>
               <p className="text-[11px] text-zinc-400">
-                {selectedGallery.clientName} • <span className="text-amber-400 uppercase font-mono">{selectedGallery.category}</span>
+                {selectedGallery.clientName} • <span className="text-primary uppercase font-mono">{selectedGallery.category}</span>
               </p>
               <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono text-zinc-500">
                 <span className="inline-flex items-center gap-1">
-                  <Key className="h-3 w-3 text-amber-400" />
+                  <Key className="h-3 w-3 text-primary" />
                   {selectedGallery.accessKey}
                 </span>
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-6 px-2 text-[10px] text-zinc-400 hover:text-amber-400"
+                  className="h-6 px-2 text-[10px] text-zinc-400 hover:text-primary"
                   onClick={() => handleCopyGalleryLink(selectedGallery.accessKey)}
                 >
                   {copiedLink ? (
@@ -1059,7 +1059,7 @@ export default function AdminGaleriesPage() {
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             {selectedGallery.isPrivate && (
               <Button
-                variant="gold"
+                variant="primary"
                 size="sm"
                 disabled={sendingGalleryAccess}
                 onClick={() => handleSendGalleryAccess(selectedGallery)}
@@ -1078,7 +1078,7 @@ export default function AdminGaleriesPage() {
               }}
               className="text-xs border-zinc-800"
             >
-              <Edit3 className="h-3.5 w-3.5 text-amber-400 mr-1.5" />
+              <Edit3 className="h-3.5 w-3.5 text-primary mr-1.5" />
               Modifier
             </Button>
             <Button
@@ -1091,7 +1091,7 @@ export default function AdminGaleriesPage() {
               <Trash2 className="h-3.5 w-3.5 mr-1.5" />
               Mettre en corbeille
             </Button>
-            <Button variant="gold" size="sm" onClick={() => setIsAlbumModalOpen(true)} className="text-xs font-bold">
+            <Button variant="primary" size="sm" onClick={() => setIsAlbumModalOpen(true)} className="text-xs font-bold">
               <Plus className="h-3.5 w-3.5 mr-1.5" />
               Album
             </Button>
@@ -1136,7 +1136,7 @@ export default function AdminGaleriesPage() {
                 onClick={() => setSelectedAlbumFilter('all')}
                 className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer flex items-center justify-between ${
                   selectedAlbumFilter === 'all'
-                    ? 'border-amber-400 bg-amber-400/15 text-amber-400'
+                    ? 'border-primary bg-primary-muted text-primary'
                     : 'border-transparent text-zinc-400 hover:bg-zinc-900/60 hover:text-white'
                 }`}
               >
@@ -1156,7 +1156,7 @@ export default function AdminGaleriesPage() {
                     <div
                       key={alb.id}
                       className={`rounded-xl border transition-all ${
-                        isActive ? 'border-amber-400/50 bg-amber-400/5' : 'border-zinc-800/80'
+                        isActive ? 'border-primary/50 bg-primary-muted' : 'border-zinc-800/80'
                       }`}
                     >
                       <button
@@ -1165,13 +1165,13 @@ export default function AdminGaleriesPage() {
                         className="w-full text-left px-3 py-2.5 flex items-start justify-between gap-2 cursor-pointer"
                       >
                         <div className="min-w-0">
-                          <p className={`text-xs font-semibold truncate ${isActive ? 'text-amber-400' : 'text-zinc-200'}`}>
+                          <p className={`text-xs font-semibold truncate ${isActive ? 'text-primary' : 'text-zinc-200'}`}>
                             {alb.name}
                           </p>
                           <p className="text-[10px] text-zinc-500 mt-0.5">{albumCount} photo(s)</p>
                         </div>
                         {alb.isPrivate ? (
-                          <Lock className="h-3.5 w-3.5 text-amber-400 shrink-0 mt-0.5" />
+                          <Lock className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
                         ) : (
                           <Globe className="h-3.5 w-3.5 text-emerald-400 shrink-0 mt-0.5" />
                         )}
@@ -1186,7 +1186,7 @@ export default function AdminGaleriesPage() {
                           title={alb.isPrivate ? 'Passer en public' : 'Passer en privé'}
                           className={`flex-1 py-1.5 text-[10px] font-semibold transition-colors cursor-pointer ${
                             alb.isPrivate
-                              ? 'text-amber-400 hover:bg-amber-400/10'
+                              ? 'text-primary hover:bg-primary-muted'
                               : 'text-emerald-400 hover:bg-emerald-500/10'
                           }`}
                         >
@@ -1335,16 +1335,16 @@ export default function AdminGaleriesPage() {
               )}
 
               {/* Uploader compact */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-3 rounded-xl border border-dashed border-amber-400/30 bg-zinc-950/50">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-3 rounded-xl border border-dashed border-primary/30 bg-zinc-950/50">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className="h-9 w-9 rounded-lg bg-amber-400/10 text-amber-400 flex items-center justify-center shrink-0">
+                  <div className="h-9 w-9 rounded-lg bg-primary-muted text-primary flex items-center justify-center shrink-0">
                     <UploadCloud className="h-4 w-4" />
                   </div>
                   <p className="text-[11px] text-zinc-400 truncate">
                     Glisser-déposer ou sélectionner — WebP & filigrane auto
                   </p>
                 </div>
-                <label className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-amber-400 text-zinc-950 font-bold text-[11px] cursor-pointer hover:bg-amber-300 transition-all shrink-0">
+                <label className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-caption cursor-pointer hover:bg-primary/90 transition-colors shrink-0">
                   <UploadCloud className="h-3.5 w-3.5 mr-1.5" />
                   Uploader
                   <input type="file" multiple accept="image/*" className="hidden" onChange={handleMultiPhotoUpload} />
@@ -1353,12 +1353,12 @@ export default function AdminGaleriesPage() {
 
               {uploading && (
                 <div className="space-y-1.5">
-                  <div className="flex justify-between text-[11px] text-amber-400 font-semibold">
+                  <div className="flex justify-between text-[11px] text-primary font-semibold">
                     <span>Traitement…</span>
                     <span>{uploadProgress}%</span>
                   </div>
                   <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
-                    <div className="h-full bg-amber-400 transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                    <div className="h-full bg-primary transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
                   </div>
                 </div>
               )}
@@ -1381,7 +1381,7 @@ export default function AdminGaleriesPage() {
                 return (
                   <div
                     key={photo.id}
-                    className="group relative rounded-2xl overflow-hidden glass-panel border border-zinc-800 aspect-[4/3] flex flex-col justify-end"
+                    className="group relative rounded-lg overflow-hidden border border-border bg-surface aspect-[4/3] flex flex-col justify-end"
                   >
                     <img
                       src={photo.url}
@@ -1396,7 +1396,7 @@ export default function AdminGaleriesPage() {
                     <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10">
                       <div className="flex items-center space-x-1.5">
                         {photo.isCover && (
-                          <Badge variant="gold" className="text-[10px] uppercase font-mono font-bold">
+                          <Badge variant="primary" className="text-[10px] uppercase font-mono font-bold">
                             ★ Couverture
                           </Badge>
                         )}
@@ -1421,7 +1421,7 @@ export default function AdminGaleriesPage() {
                           onClick={() => handleToggleFavorite(photo.id)}
                           title={photo.isFavorite ? 'Retirer des favoris client' : 'Marquer comme favori client'}
                           className={`h-8 w-8 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
-                            photo.isFavorite ? 'bg-amber-400 text-zinc-950' : 'bg-zinc-900/80 text-zinc-300 hover:text-amber-400'
+                            photo.isFavorite ? 'bg-primary text-primary-foreground' : 'bg-surface-elevated text-muted-foreground hover:text-primary'
                           }`}
                         >
                           <Star className="h-4 w-4 fill-current" />
@@ -1432,7 +1432,7 @@ export default function AdminGaleriesPage() {
                             setIsPhotoEditModalOpen(true);
                           }}
                           title="Modifier le titre, l'album et la catégorie"
-                          className="h-8 w-8 rounded-xl bg-zinc-900/80 text-zinc-300 hover:text-amber-400 flex items-center justify-center transition-all cursor-pointer"
+                          className="h-8 w-8 rounded-xl bg-zinc-900/80 text-zinc-300 hover:text-primary flex items-center justify-center transition-all cursor-pointer"
                         >
                           <Edit3 className="h-4 w-4" />
                         </button>
@@ -1446,7 +1446,7 @@ export default function AdminGaleriesPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <div className="text-xs uppercase font-mono text-amber-400 tracking-wider">
+                        <div className="text-xs uppercase font-mono text-primary tracking-wider">
                           {photo.albumName || 'Album Général'}
                         </div>
                         <h4 className="text-sm font-bold text-white line-clamp-1">{photo.title}</h4>
@@ -1456,7 +1456,7 @@ export default function AdminGaleriesPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => handleSetAsCover(photo)}
-                            className="w-full text-[11px] border-amber-400/40 text-amber-400 hover:bg-amber-400 hover:text-zinc-950 font-bold"
+                            className="w-full text-caption border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground font-semibold"
                           >
                             Définir comme Couverture
                           </Button>
@@ -1479,11 +1479,11 @@ export default function AdminGaleriesPage() {
 
       {/* Modal 1: Create / Edit Gallery */}
       {isGalleryModalOpen && (
-        <div className="fixed inset-0 z-50 bg-zinc-950/80 backdrop-blur-md flex items-center justify-center p-4">
-          <Card className="glass-panel border-amber-400/50 gold-border-glow w-full max-w-lg p-6 space-y-6">
+        <div className="fixed inset-0 z-50 bg-background/80 flex items-center justify-center p-4">
+          <Card className="surface-elevated border-primary/50 w-full max-w-lg p-6 space-y-6">
             <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
               <h3 className="text-lg font-bold text-white flex items-center">
-                <FolderPlus className="h-5 w-5 text-amber-400 mr-2" />
+                <FolderPlus className="h-5 w-5 text-primary mr-2" />
                 {editingGallery.id ? 'Modifier la Galerie' : 'Créer une Nouvelle Galerie'}
               </h3>
               <button onClick={() => setIsGalleryModalOpen(false)} className="text-zinc-400 hover:text-white">
@@ -1536,7 +1536,7 @@ export default function AdminGaleriesPage() {
                     type="checkbox"
                     checked={editingGallery.isPrivate ?? true}
                     onChange={(e) => setEditingGallery({ ...editingGallery, isPrivate: e.target.checked })}
-                    className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-amber-400 focus:ring-amber-400 cursor-pointer"
+                    className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 accent-primary focus:ring-primary cursor-pointer"
                   />
                 </div>
 
@@ -1590,7 +1590,11 @@ export default function AdminGaleriesPage() {
                       <label className="text-zinc-400 block mb-1 font-semibold">Mot de Passe Confidentiel</label>
                       <Input
                         type="text"
-                        placeholder="Optionnel"
+                        placeholder={
+                          editingGallery.hasPassword && !editingGallery.password
+                            ? 'Mot de passe défini — laisser vide pour conserver'
+                            : 'Optionnel'
+                        }
                         value={editingGallery.password || ''}
                         onChange={(e) => setEditingGallery({ ...editingGallery, password: e.target.value })}
                       />
@@ -1613,7 +1617,7 @@ export default function AdminGaleriesPage() {
                 <Button type="button" variant="outline" size="sm" onClick={() => setIsGalleryModalOpen(false)}>
                   Annuler
                 </Button>
-                <Button type="submit" variant="gold" size="sm" className="font-bold">
+                <Button type="submit" variant="primary" size="sm" className="font-bold">
                   Enregistrer la Galerie
                 </Button>
               </div>
@@ -1624,11 +1628,11 @@ export default function AdminGaleriesPage() {
 
       {/* Modal 2: Create New Album with Public / Privé Choice */}
       {isAlbumModalOpen && (
-        <div className="fixed inset-0 z-50 bg-zinc-950/80 backdrop-blur-md flex items-center justify-center p-4">
-          <Card className="glass-panel border-amber-400/50 gold-border-glow w-full max-w-md p-6 space-y-6">
+        <div className="fixed inset-0 z-50 bg-background/80 flex items-center justify-center p-4">
+          <Card className="surface-elevated border-primary/50 w-full max-w-md p-6 space-y-6">
             <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
               <h3 className="text-lg font-bold text-white flex items-center">
-                <Layers className="h-5 w-5 text-amber-400 mr-2" /> Créer un Sous-Album (Public ou Privé)
+                <Layers className="h-5 w-5 text-primary mr-2" /> Créer un Sous-Album (Public ou Privé)
               </h3>
               <button onClick={() => setIsAlbumModalOpen(false)} className="text-zinc-400 hover:text-white">
                 <X className="h-5 w-5" />
@@ -1650,7 +1654,7 @@ export default function AdminGaleriesPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="font-bold text-white flex items-center space-x-1.5">
-                      {newAlbumForm.isPrivate ? <Lock className="h-4 w-4 text-amber-400" /> : <Globe className="h-4 w-4 text-emerald-400" />}
+                      {newAlbumForm.isPrivate ? <Lock className="h-4 w-4 text-primary" /> : <Globe className="h-4 w-4 text-emerald-400" />}
                       <span>{newAlbumForm.isPrivate ? 'Album Privé Verrouillé' : 'Album Public Visible Tous'}</span>
                     </div>
                     <div className="text-zinc-400 text-[11px] mt-0.5">
@@ -1663,7 +1667,7 @@ export default function AdminGaleriesPage() {
                     type="checkbox"
                     checked={newAlbumForm.isPrivate}
                     onChange={(e) => setNewAlbumForm({ ...newAlbumForm, isPrivate: e.target.checked })}
-                    className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-amber-400 focus:ring-amber-400 cursor-pointer"
+                    className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 accent-primary focus:ring-primary cursor-pointer"
                   />
                 </div>
 
@@ -1683,7 +1687,7 @@ export default function AdminGaleriesPage() {
                 <Button type="button" variant="outline" size="sm" onClick={() => setIsAlbumModalOpen(false)}>
                   Annuler
                 </Button>
-                <Button type="submit" variant="gold" size="sm" className="font-bold">
+                <Button type="submit" variant="primary" size="sm" className="font-bold">
                   Créer l'Album
                 </Button>
               </div>
@@ -1694,11 +1698,11 @@ export default function AdminGaleriesPage() {
 
       {/* Modal 3: Edit Single Photo Metadata */}
       {isPhotoEditModalOpen && editingPhoto && (
-        <div className="fixed inset-0 z-50 bg-zinc-950/80 backdrop-blur-md flex items-center justify-center p-4">
-          <Card className="glass-panel border-amber-400/50 gold-border-glow w-full max-w-lg p-6 space-y-6">
+        <div className="fixed inset-0 z-50 bg-background/80 flex items-center justify-center p-4">
+          <Card className="surface-elevated border-primary/50 w-full max-w-lg p-6 space-y-6">
             <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
               <h3 className="text-lg font-bold text-white flex items-center">
-                <Edit3 className="h-5 w-5 text-amber-400 mr-2" /> Personnaliser la Photo
+                <Edit3 className="h-5 w-5 text-primary mr-2" /> Personnaliser la Photo
               </h3>
               <button onClick={() => setIsPhotoEditModalOpen(false)} className="text-zinc-400 hover:text-white">
                 <X className="h-5 w-5" />
@@ -1763,7 +1767,7 @@ export default function AdminGaleriesPage() {
                 <Button type="button" variant="outline" size="sm" onClick={() => setIsPhotoEditModalOpen(false)}>
                   Annuler
                 </Button>
-                <Button type="submit" variant="gold" size="sm" className="font-bold">
+                <Button type="submit" variant="primary" size="sm" className="font-bold">
                   Enregistrer les Modifications
                 </Button>
               </div>

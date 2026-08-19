@@ -44,17 +44,17 @@ function ProcessStepCard({
     <div
       ref={ref}
       className={cn(
-        'prestations-step group relative p-6 sm:p-8 rounded-3xl border border-zinc-800/90 bg-zinc-950/60 hover:border-amber-400/25 transition-colors',
+        'prestations-step group relative p-6 sm:p-8 rounded-3xl border border-border/90 bg-surface-muted hover:border-primary/30 transition-colors',
         visible && 'is-visible'
       )}
       style={{ animationDelay: visible ? `${index * 120}ms` : undefined }}
     >
-      <span className="text-[10px] font-mono text-amber-400/80 tracking-[0.3em]">{step}</span>
-      <div className="mt-4 h-11 w-11 rounded-xl bg-amber-400/10 flex items-center justify-center text-amber-400 group-hover:scale-110 transition-transform">
+      <span className="text-[10px] font-mono text-primary/80 tracking-[0.3em]">{step}</span>
+      <div className="mt-4 h-11 w-11 rounded-xl bg-primary-muted flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
         <Icon className="h-5 w-5" />
       </div>
-      <h3 className="mt-4 text-lg font-bold text-white">{title}</h3>
-      <p className="mt-2 text-sm text-zinc-400 leading-relaxed">{description}</p>
+      <h3 className="mt-4 text-lg font-bold text-foreground">{title}</h3>
+      <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{description}</p>
     </div>
   );
 }
@@ -71,7 +71,7 @@ export default function PrestationsPage() {
     return [
       { value: String(services.length || '—'), label: 'Formules actives' },
       { value: minPrice != null ? `dès ${formatPrice(minPrice)}` : 'Sur devis', label: 'Tarifs transparents' },
-      { value: `${settings.depositRate || 30}%`, label: "Acompte à la réservation" },
+      { value: `${settings.depositRate || 30}%`, label:"Acompte à la réservation" },
     ];
   }, [services, formatPrice, settings.depositRate]);
 
@@ -84,15 +84,15 @@ export default function PrestationsPage() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_20%,_rgba(212,175,55,0.14),_transparent_55%)]" />
 
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 pb-14">
-          <Badge variant="gold" className="mb-5 px-4 py-1.5 text-[10px] uppercase tracking-[0.2em]">
+          <Badge variant="primary" className="mb-5 px-4 py-1.5 text-[10px] uppercase tracking-[0.2em]">
             <Sparkles className="h-3.5 w-3.5 mr-2 inline" />
             {content.heroBadge}
           </Badge>
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-white tracking-tight leading-[1.05] max-w-4xl">
+          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-foreground tracking-tight leading-[1.05] max-w-4xl">
             {content.heroTitleLine1}{' '}
-            <span className="gold-gradient-text block sm:inline">{content.heroTitleHighlight}</span>
+            <span className="text-primary block sm:inline">{content.heroTitleHighlight}</span>
           </h1>
-          <p className="mt-6 max-w-2xl text-base sm:text-lg text-zinc-300 leading-relaxed font-light">
+          <p className="mt-6 max-w-2xl text-base sm:text-lg text-foreground leading-relaxed font-light">
             {content.heroSubtitle.includes('Chez ')
               ? content.heroSubtitle
               : `Chez ${fullStudioName}, ${content.heroSubtitle.charAt(0).toLowerCase()}${content.heroSubtitle.slice(1)}`}
@@ -101,8 +101,8 @@ export default function PrestationsPage() {
           <div className="mt-10 flex flex-wrap gap-8 sm:gap-12">
             {stats.map((stat) => (
               <div key={stat.label}>
-                <div className="text-2xl sm:text-3xl font-extrabold text-white">{stat.value}</div>
-                <div className="text-[11px] uppercase tracking-wider text-zinc-500 mt-1">{stat.label}</div>
+                <div className="text-2xl sm:text-3xl font-extrabold text-foreground">{stat.value}</div>
+                <div className="text-[11px] uppercase tracking-wider text-muted-foreground mt-1">{stat.label}</div>
               </div>
             ))}
           </div>
@@ -118,13 +118,13 @@ export default function PrestationsPage() {
         {/* Comment ça marche */}
         <section className="space-y-10">
           <div className="text-center max-w-2xl mx-auto space-y-3">
-            <Badge variant="outline" className="border-zinc-700 text-zinc-400">
+            <Badge variant="outline" className="border-border text-muted-foreground">
               Parcours client
             </Badge>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-white">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground">
               {content.processTitle}
             </h2>
-            <p className="text-sm text-zinc-400 leading-relaxed">
+            <p className="text-sm text-muted-foreground leading-relaxed">
               Un processus fluide, pensé pour les mariés et clients exigeants — de la réservation à la livraison de vos images.
             </p>
           </div>
@@ -144,19 +144,19 @@ export default function PrestationsPage() {
         </section>
 
         {/* Garanties */}
-        <section className="glass-panel rounded-3xl p-8 sm:p-10 border border-zinc-800/90">
+        <section className="rounded-3xl p-8 sm:p-10 border border-border/90">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 items-center">
             <div className="space-y-5">
               <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-2xl bg-amber-400/10 flex items-center justify-center text-amber-400 shrink-0">
+                <div className="h-12 w-12 rounded-2xl bg-primary-muted flex items-center justify-center text-primary shrink-0">
                   <Shield className="h-6 w-6" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-white">Engagement qualité & sécurité</h3>
-                  <p className="text-sm text-zinc-400 mt-0.5">Votre sérénité, notre priorité.</p>
+                  <h3 className="text-xl font-bold text-foreground">Engagement qualité & sécurité</h3>
+                  <p className="text-sm text-muted-foreground mt-0.5">Votre sérénité, notre priorité.</p>
                 </div>
               </div>
-              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-zinc-300">
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-foreground">
                 {[
                   'Paiement sécurisé Stripe & Mobile Money',
                   'Contrat avec signature électronique',
@@ -164,7 +164,7 @@ export default function PrestationsPage() {
                   'Retouche professionnelle & livraison HD',
                 ].map((line) => (
                   <li key={line} className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+                    <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                     <span>{line}</span>
                   </li>
                 ))}
@@ -172,7 +172,7 @@ export default function PrestationsPage() {
             </div>
             <div className="flex flex-col sm:flex-row lg:flex-col gap-3 shrink-0">
               <Link href="/reservation">
-                <Button variant="gold" size="lg" className="w-full sm:w-auto space-x-2">
+                <Button variant="primary" size="lg" className="w-full sm:w-auto space-x-2">
                   <Calendar className="h-4 w-4" />
                   <span>Réserver maintenant</span>
                 </Button>
@@ -187,17 +187,17 @@ export default function PrestationsPage() {
         </section>
 
         {/* CTA final */}
-        <section className="relative overflow-hidden rounded-3xl border border-amber-400/20 bg-gradient-to-br from-zinc-900 via-zinc-950 to-zinc-950 p-8 sm:p-12 text-center">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-32 bg-amber-400/10 blur-3xl" />
+        <section className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-zinc-900 via-zinc-950 to-zinc-950 p-8 sm:p-12 text-center">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-32 bg-primary-muted blur-3xl" />
           <div className="relative space-y-4 max-w-xl mx-auto">
-            <h2 className="text-2xl sm:text-3xl font-bold text-white">
-              Une date en tête ? <span className="gold-gradient-text">Sécurisez-la dès aujourd&apos;hui.</span>
+            <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
+              Une date en tête ? <span className="text-primary">Sécurisez-la dès aujourd&apos;hui.</span>
             </h2>
-            <p className="text-sm text-zinc-400">
+            <p className="text-sm text-muted-foreground">
               Les créneaux haute saison partent vite. Verrouillez votre date avec un acompte et recevez votre confirmation immédiatement.
             </p>
             <Link href="/reservation">
-              <Button variant="gold" size="lg" className="mt-2 space-x-2">
+              <Button variant="primary" size="lg" className="mt-2 space-x-2">
                 <span>Voir les disponibilités</span>
                 <ArrowRight className="h-4 w-4" />
               </Button>

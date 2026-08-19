@@ -131,11 +131,11 @@ export default function ContactPage() {
     <div className="pt-28 pb-20 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 space-y-16">
       {/* Header */}
       <div className="text-center max-w-3xl mx-auto space-y-4">
-        <Badge variant="gold">Contact & Conciergerie</Badge>
-        <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
-          Écrivez à <span className="gold-gradient-text">{settings.studioName}</span>
+        <Badge variant="primary">Contact & Conciergerie</Badge>
+        <h1 className="text-4xl sm:text-5xl font-extrabold text-foreground tracking-tight">
+          Écrivez à <span className="text-primary">{settings.studioName}</span>
         </h1>
-        <p className="text-zinc-400 text-base leading-relaxed">
+        <p className="text-muted-foreground text-base leading-relaxed">
           Une question sur un projet de mariage, une séance portrait ou une prestation corporate ? Le studio vous répond avec soin sous 24 heures.
         </p>
       </div>
@@ -146,10 +146,10 @@ export default function ContactPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Contact Form */}
         <div className="lg:col-span-7">
-          <Card className="glass-panel border-zinc-800 p-6 sm:p-8 space-y-6">
+          <Card className="border-border p-6 sm:p-8 space-y-6">
             <div className="space-y-1">
-              <h3 className="text-xl font-bold text-white">Formulaire de Contact</h3>
-              <p className="text-xs text-zinc-400">
+              <h3 className="text-xl font-bold text-foreground">Formulaire de Contact</h3>
+              <p className="text-xs text-muted-foreground">
                 Remplissez les détails de votre projet pour recevoir notre plaquette tarifaire.
               </p>
             </div>
@@ -157,8 +157,8 @@ export default function ContactPage() {
             {submitted ? (
               <div className="p-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 space-y-3 text-center">
                 <CheckCircle2 className="h-10 w-10 mx-auto text-emerald-400" />
-                <h4 className="font-bold text-lg text-white">Message Transmis avec Succès !</h4>
-                <p className="text-xs text-zinc-300">
+                <h4 className="font-bold text-lg text-foreground">Message Transmis avec Succès !</h4>
+                <p className="text-xs text-foreground">
                   Merci {formData.name}, nous avons bien reçu votre demande concernant votre projet. Notre équipe vous recontactera très rapidement.
                 </p>
               </div>
@@ -176,7 +176,7 @@ export default function ContactPage() {
                 />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-zinc-400 block mb-1 font-semibold">Nom & Prénom *</label>
+                    <label className="text-muted-foreground block mb-1 font-semibold">Nom & Prénom *</label>
                     <Input
                       required
                       placeholder="Sophie Dupont"
@@ -185,7 +185,7 @@ export default function ContactPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-zinc-400 block mb-1 font-semibold">Adresse Email *</label>
+                    <label className="text-muted-foreground block mb-1 font-semibold">Adresse Email *</label>
                     <Input
                       required
                       type="email"
@@ -198,7 +198,7 @@ export default function ContactPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-zinc-400 block mb-1 font-semibold">Numéro de Téléphone</label>
+                    <label className="text-muted-foreground block mb-1 font-semibold">Numéro de Téléphone</label>
                     <Input
                       placeholder="+33 6 12 34 56 78"
                       value={formData.phone}
@@ -206,11 +206,11 @@ export default function ContactPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-zinc-400 block mb-1 font-semibold">Type de Projet *</label>
+                    <label className="text-muted-foreground block mb-1 font-semibold">Type de Projet *</label>
                     <select
                       value={formData.subject}
                       onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                      className="w-full h-11 rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-xs text-zinc-100 focus:border-amber-400 focus:outline-none"
+                      className="w-full h-11 rounded-xl border border-border bg-surface-muted px-3 text-xs text-foreground focus:border-primary focus:outline-none"
                     >
                       <option value="Mariage">Reportage de Mariage</option>
                       <option value="Portrait">Séance Portrait d'Art</option>
@@ -221,34 +221,34 @@ export default function ContactPage() {
                 </div>
 
                 <div>
-                  <label className="text-zinc-400 block mb-1 font-semibold">Votre Message *</label>
+                  <label className="text-muted-foreground block mb-1 font-semibold">Votre Message *</label>
                   <textarea
                     required
                     rows={5}
                     placeholder="Décrivez votre projet, la date souhaitée, le lieu..."
-                    className="flex w-full rounded-xl border border-zinc-800 bg-zinc-950/80 p-3 text-xs text-zinc-100 placeholder:text-zinc-500 focus:border-amber-400 focus:outline-none"
+                    className="flex w-full rounded-xl border border-border bg-surface-muted/80 p-3 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                   />
                 </div>
 
                 {/* Captcha anti-spam Checkbox simulation */}
-                <div className="p-3.5 rounded-xl border border-zinc-800 bg-zinc-950/60 flex items-center justify-between">
+                <div className="p-3.5 rounded-xl border border-border bg-surface-muted flex items-center justify-between">
                   <label className="flex items-center space-x-3 cursor-pointer select-none">
                     <input
                       type="checkbox"
                       checked={captchaVerified}
                       onChange={(e) => setCaptchaVerified(e.target.checked)}
-                      className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-amber-400 focus:ring-amber-400"
+                      className="h-4 w-4 rounded border-border bg-surface-muted text-primary focus:ring-ring"
                     />
-                    <span className="text-xs text-zinc-300 font-medium">Je ne suis pas un robot (reCAPTCHA)</span>
+                    <span className="text-xs text-foreground font-medium">Je ne suis pas un robot (reCAPTCHA)</span>
                   </label>
-                  <ShieldCheck className="h-5 w-5 text-amber-400" />
+                  <ShieldCheck className="h-5 w-5 text-primary" />
                 </div>
 
                 {submitError && <p className="text-rose-400 text-[11px] font-medium">{submitError}</p>}
 
-                <Button type="submit" variant="gold" size="lg" className="w-full font-bold" disabled={submitting}>
+                <Button type="submit" variant="primary" size="lg" className="w-full font-bold" disabled={submitting}>
                   {submitting ? 'Envoi en cours…' : 'Envoyer le Message'} {!submitting && <Send className="h-4 w-4 ml-2" />}
                 </Button>
               </form>
@@ -258,43 +258,43 @@ export default function ContactPage() {
 
         {/* Studio Info & Opening Hours */}
         <div className="lg:col-span-5 space-y-6">
-          <Card className="glass-panel border-zinc-800 p-6 space-y-4">
-            <h3 className="text-lg font-bold text-white flex items-center">
-              <MapPin className="h-5 w-5 text-amber-400 mr-2" /> Coordonnées du Studio
+          <Card className="border-border p-6 space-y-4">
+            <h3 className="text-lg font-bold text-foreground flex items-center">
+              <MapPin className="h-5 w-5 text-primary mr-2" /> Coordonnées du Studio
             </h3>
-            <div className="space-y-3 text-xs text-zinc-300">
+            <div className="space-y-3 text-xs text-foreground">
               <div className="flex items-start space-x-3">
-                <MapPin className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+                <MapPin className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                 <span>{settings.address}</span>
               </div>
               <div className="flex items-center space-x-3">
-                <Mail className="h-4 w-4 text-amber-400 shrink-0" />
+                <Mail className="h-4 w-4 text-primary shrink-0" />
                 <span>{settings.contactEmail}</span>
               </div>
               <div className="flex items-center space-x-3">
-                <Phone className="h-4 w-4 text-amber-400 shrink-0" />
+                <Phone className="h-4 w-4 text-primary shrink-0" />
                 <span>{settings.phone}</span>
               </div>
             </div>
           </Card>
 
           {/* Horaires d'ouverture */}
-          <Card className="glass-panel border-zinc-800 p-6 space-y-4">
-            <h3 className="text-lg font-bold text-white flex items-center">
-              <Clock className="h-5 w-5 text-amber-400 mr-2" /> Horaires d'Ouverture
+          <Card className="border-border p-6 space-y-4">
+            <h3 className="text-lg font-bold text-foreground flex items-center">
+              <Clock className="h-5 w-5 text-primary mr-2" /> Horaires d'Ouverture
             </h3>
-            <div className="space-y-2 text-xs text-zinc-300">
-              <div className="flex justify-between py-1 border-b border-zinc-800/60">
+            <div className="space-y-2 text-xs text-foreground">
+              <div className="flex justify-between py-1 border-b border-border/60">
                 <span>Lundi - Vendredi</span>
-                <span className="font-semibold text-white">09:00 - 19:00</span>
+                <span className="font-semibold text-foreground">09:00 - 19:00</span>
               </div>
-              <div className="flex justify-between py-1 border-b border-zinc-800/60">
+              <div className="flex justify-between py-1 border-b border-border/60">
                 <span>Samedi</span>
-                <span className="font-semibold text-white">10:00 - 18:00</span>
+                <span className="font-semibold text-foreground">10:00 - 18:00</span>
               </div>
               <div className="flex justify-between py-1">
                 <span>Dimanche</span>
-                <span className="text-amber-400 font-semibold">Sur rendez-vous (Mariages)</span>
+                <span className="text-primary font-semibold">Sur rendez-vous (Mariages)</span>
               </div>
             </div>
           </Card>
@@ -309,11 +309,11 @@ export default function ContactPage() {
       <ReviewSubmissionSection />
 
       {/* FAQ Section */}
-      <div className="max-w-4xl mx-auto space-y-6 pt-10 border-t border-zinc-800">
+      <div className="max-w-4xl mx-auto space-y-6 pt-10 border-t border-border">
         <div className="text-center space-y-2">
-          <Badge variant="gold">Questions Fréquentes</Badge>
-          <h2 className="text-3xl font-bold text-white">
-            Tout ce que vous devez savoir avant de <span className="gold-gradient-text">réserver</span>
+          <Badge variant="primary">Questions Fréquentes</Badge>
+          <h2 className="text-3xl font-bold text-foreground">
+            Tout ce que vous devez savoir avant de <span className="text-primary">réserver</span>
           </h2>
         </div>
 
@@ -322,19 +322,19 @@ export default function ContactPage() {
             <Card
               key={index}
               onClick={() => setOpenFaqIndex(openFaqIndex === index ? null : index)}
-              className="glass-panel p-5 cursor-pointer border-zinc-800 hover:border-zinc-700 transition-all"
+              className="p-5 cursor-pointer border-border hover:border-border transition-all"
             >
-              <div className="flex items-center justify-between font-bold text-white text-sm">
+              <div className="flex items-center justify-between font-bold text-foreground text-sm">
                 <span>{faq.q}</span>
                 <ChevronDown
-                  className={`h-4 w-4 text-amber-400 transition-transform duration-300 ${
+                  className={`h-4 w-4 text-primary transition-transform duration-300 ${
                     openFaqIndex === index ? 'rotate-180' : ''
                   }`}
                 />
               </div>
 
               {openFaqIndex === index && (
-                <p className="mt-3 text-xs text-zinc-400 leading-relaxed border-t border-zinc-800/80 pt-3 animate-in fade-in duration-200">
+                <p className="mt-3 text-xs text-muted-foreground leading-relaxed border-t border-border/80 pt-3 animate-in fade-in duration-200">
                   {faq.a}
                 </p>
               )}
@@ -390,13 +390,13 @@ function ReviewSubmissionSection() {
   };
 
   return (
-    <Card className="glass-panel p-8 max-w-4xl mx-auto border-amber-400/30 gold-border-glow space-y-6">
+    <Card className="p-8 max-w-4xl mx-auto border-primary/30 space-y-6">
       <div className="text-center space-y-2">
-        <Badge variant="gold">Votre Retours d'Expérience</Badge>
-        <h2 className="text-2xl font-bold text-white">
-          Déposer un <span className="gold-gradient-text">Avis / Témoignage</span>
+        <Badge variant="primary">Votre Retours d'Expérience</Badge>
+        <h2 className="text-2xl font-bold text-foreground">
+          Déposer un <span className="text-primary">Avis / Témoignage</span>
         </h2>
-        <p className="text-xs text-zinc-400 max-w-lg mx-auto">
+        <p className="text-xs text-muted-foreground max-w-lg mx-auto">
           Vous avez réalisé une séance ou célébré votre mariage avec nous ? Laissez votre avis ! Il sera vérifié par le studio puis publié sur le site.
         </p>
       </div>
@@ -404,8 +404,8 @@ function ReviewSubmissionSection() {
       {submitted ? (
         <div className="p-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-center space-y-3">
           <CheckCircle2 className="h-10 w-10 text-emerald-400 mx-auto" />
-          <h3 className="text-base font-bold text-white">Merci pour votre témoignage !</h3>
-          <p className="text-xs text-zinc-300">
+          <h3 className="text-base font-bold text-foreground">Merci pour votre témoignage !</h3>
+          <p className="text-xs text-foreground">
             Votre avis a bien été enregistré. Il apparaîtra sur le site dès sa validation par notre équipe.
           </p>
           <Button
@@ -421,7 +421,7 @@ function ReviewSubmissionSection() {
         <form onSubmit={handleSubmitReview} className="space-y-4 text-xs">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="text-zinc-300 block mb-1 font-semibold">Votre Nom / Prénoms *</label>
+              <label className="text-foreground block mb-1 font-semibold">Votre Nom / Prénoms *</label>
               <Input
                 required
                 placeholder="Ex: Sophie & Alexandre"
@@ -430,7 +430,7 @@ function ReviewSubmissionSection() {
               />
             </div>
             <div>
-              <label className="text-zinc-300 block mb-1 font-semibold">Prestation / Qualité</label>
+              <label className="text-foreground block mb-1 font-semibold">Prestation / Qualité</label>
               <Input
                 placeholder="Ex: Mariage Juillet 2026"
                 value={role}
@@ -438,14 +438,14 @@ function ReviewSubmissionSection() {
               />
             </div>
             <div>
-              <label className="text-zinc-300 block mb-1 font-semibold">Note attribuée</label>
-              <div className="flex items-center space-x-1 h-11 px-3 bg-zinc-950 rounded-xl border border-zinc-800">
+              <label className="text-foreground block mb-1 font-semibold">Note attribuée</label>
+              <div className="flex items-center space-x-1 h-11 px-3 bg-surface-muted rounded-xl border border-border">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <Star
                     key={star}
                     onClick={() => setRating(star)}
                     className={`h-5 w-5 cursor-pointer transition-colors ${
-                      star <= rating ? 'text-amber-400 fill-amber-400' : 'text-zinc-700'
+                      star <= rating ? 'text-primary fill-primary' : 'text-muted-foreground'
                     }`}
                   />
                 ))}
@@ -454,21 +454,21 @@ function ReviewSubmissionSection() {
           </div>
 
           <div>
-            <label className="text-zinc-300 block mb-1 font-semibold">Votre Témoignage / Avis *</label>
+            <label className="text-foreground block mb-1 font-semibold">Votre Témoignage / Avis *</label>
             <textarea
               required
               rows={4}
               placeholder="Racontez votre expérience avec le studio..."
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              className="w-full rounded-xl border border-zinc-800 bg-zinc-950/80 p-3 text-xs text-zinc-100 placeholder:text-zinc-500 focus:border-amber-400 focus:outline-none"
+              className="w-full rounded-xl border border-border bg-surface-muted/80 p-3 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
             />
           </div>
 
           {error && <p className="text-rose-400 text-[11px] font-medium">{error}</p>}
 
           <div className="flex justify-end">
-            <Button type="submit" variant="gold" size="md" className="font-bold space-x-2" disabled={loading}>
+            <Button type="submit" variant="primary" size="md" className="font-bold space-x-2" disabled={loading}>
               <Send className="h-4 w-4" />
               <span>{loading ? 'Envoi en cours…' : 'Soumettre Mon Avis pour Publication'}</span>
             </Button>
