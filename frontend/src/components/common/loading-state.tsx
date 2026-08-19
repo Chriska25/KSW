@@ -11,15 +11,15 @@ interface LoadingStateProps {
 
 export function LoadingState({ message = 'Chargement des données en cours...', className = '' }: LoadingStateProps) {
   return (
-    <Card className={`glass-panel p-12 text-center flex flex-col items-center justify-center space-y-4 border-zinc-800 ${className}`}>
+    <Card className={`p-12 text-center flex flex-col items-center justify-center space-y-4 border-border ${className}`}>
       <div className="relative">
-        <div className="h-12 w-12 rounded-full bg-amber-400/10 flex items-center justify-center border border-amber-400/40 gold-border-glow">
-          <Loader2 className="h-6 w-6 text-amber-400 animate-spin" />
+        <div className="h-12 w-12 rounded-full bg-primary-muted flex items-center justify-center border border-primary/30">
+          <Loader2 className="h-6 w-6 text-primary animate-spin" />
         </div>
       </div>
       <div className="space-y-1">
-        <p className="text-sm font-semibold text-white">{message}</p>
-        <p className="text-xs text-zinc-500">Optimisation de l'affichage pour votre connexion</p>
+        <p className="text-sm font-semibold text-foreground">{message}</p>
+        <p className="text-xs text-muted-foreground">Optimisation de l'affichage pour votre connexion</p>
       </div>
     </Card>
   );

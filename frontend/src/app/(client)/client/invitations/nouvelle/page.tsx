@@ -9,7 +9,7 @@ function ClientNewInvitationContent() {
 
 export default function NewClientInvitationPage() {
   return (
-    <Suspense fallback={<div className="text-zinc-500 text-sm py-8">Chargement…</div>}>
+    <Suspense fallback={<div className="text-muted-foreground text-sm py-8">Chargement…</div>}>
       <ClientNewInvitationContent />
     </Suspense>
   );

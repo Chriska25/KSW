@@ -102,12 +102,12 @@ function ClientNotificationsContent() {
       />
 
       {error && (
-        <p className="text-rose-400 text-sm rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3">
+        <p className="text-danger text-sm rounded-xl border border-danger/30 bg-danger/10 px-4 py-3">
           {error}
         </p>
       )}
 
-      <Card className="glass-panel">
+      <Card className="">
         <CardHeader>
           <CardTitle className="text-lg">Activité récente</CardTitle>
           <CardDescription>
@@ -116,7 +116,7 @@ function ClientNotificationsContent() {
         </CardHeader>
         <CardContent className="space-y-3">
           {items.length === 0 ? (
-            <p className="text-zinc-500 text-sm text-center py-10">Aucune notification pour le moment.</p>
+            <p className="text-muted-foreground text-sm text-center py-10">Aucune notification pour le moment.</p>
           ) : (
             items.map((n) => {
               const Icon = iconFor(n.type);
@@ -124,21 +124,21 @@ function ClientNotificationsContent() {
                 <div
                   key={n.id}
                   className={`rounded-xl border p-4 flex gap-4 ${
-                    n.read ? 'border-zinc-800 bg-zinc-950/40' : 'border-amber-400/30 bg-amber-400/5'
+                    n.read ? 'border-border bg-surface-muted' : 'border-primary/30 bg-primary-muted'
                   }`}
                 >
-                  <Icon className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+                  <Icon className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0 space-y-1">
                     <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-semibold text-white text-sm">{n.title}</h3>
-                      {!n.read && <Badge variant="gold" className="text-[10px] shrink-0">Nouveau</Badge>}
+                      <h3 className="font-semibold text-foreground text-sm">{n.title}</h3>
+                      {!n.read && <Badge variant="primary" className="text-[10px] shrink-0">Nouveau</Badge>}
                     </div>
-                    <p className="text-xs text-zinc-400 leading-relaxed">{n.message}</p>
-                    <p className="text-[10px] text-zinc-500">{n.createdAt}</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{n.message}</p>
+                    <p className="text-[10px] text-muted-foreground">{n.createdAt}</p>
                     <div className="flex flex-wrap gap-2 pt-2">
                       {n.type === 'gallery' && n.accessKey && (
                         <Link href={galleryAccessPath(n.accessKey)}>
-                          <Button variant="gold" size="sm" className="text-xs h-8">
+                          <Button variant="primary" size="sm" className="text-xs h-8">
                             Ouvrir la galerie <ExternalLink className="h-3 w-3 ml-1" />
                           </Button>
                         </Link>

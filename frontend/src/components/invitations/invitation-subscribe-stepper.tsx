@@ -15,7 +15,7 @@ interface InvitationSubscribeStepperProps {
 
 export function InvitationSubscribeStepper({ currentStep }: InvitationSubscribeStepperProps) {
   return (
-    <div className="glass-panel rounded-2xl border border-zinc-800/80 px-4 py-5 sm:px-6">
+    <div className="rounded-2xl border border-border/80 px-4 py-5 sm:px-6">
       <div className="flex items-center justify-between gap-1">
         {STEPS.map((item, index) => {
           const done = currentStep > item.step;
@@ -29,15 +29,15 @@ export function InvitationSubscribeStepper({ currentStep }: InvitationSubscribeS
                     done
                       ? 'bg-emerald-500/20 text-emerald-400 ring-2 ring-emerald-500/40'
                       : active
-                        ? 'bg-amber-400 text-zinc-950 ring-4 ring-amber-400/25 shadow-lg shadow-amber-500/20 scale-110'
-                        : 'bg-zinc-900 text-zinc-500 ring-1 ring-zinc-800'
+                        ? 'bg-amber-400 text-zinc-950 ring-4 ring-amber-400/25 shadow-lg  scale-110'
+                        : 'bg-surface-muted text-muted-foreground ring-1 ring-zinc-800'
                   }`}
                 >
                   {done ? <Check className="h-4 w-4" strokeWidth={3} /> : item.step}
                 </div>
                 <span
                   className={`hidden sm:block text-[10px] font-semibold uppercase tracking-wider text-center truncate w-full px-0.5 ${
-                    active ? 'text-amber-400' : done ? 'text-zinc-300' : 'text-zinc-600'
+                    active ? 'text-primary' : done ? 'text-foreground' : 'text-zinc-600'
                   }`}
                 >
                   {item.label}
@@ -46,7 +46,7 @@ export function InvitationSubscribeStepper({ currentStep }: InvitationSubscribeS
               {index < STEPS.length - 1 && (
                 <div
                   className={`h-0.5 flex-1 mx-1 sm:mx-2 rounded-full transition-colors duration-500 ${
-                    currentStep > item.step ? 'bg-gradient-to-r from-emerald-500/60 to-amber-400/60' : 'bg-zinc-800'
+                    currentStep > item.step ? 'bg-gradient-to-r from-emerald-500/60 to-amber-400/60' : 'bg-surface-muted'
                   }`}
                 />
               )}
@@ -54,7 +54,7 @@ export function InvitationSubscribeStepper({ currentStep }: InvitationSubscribeS
           );
         })}
       </div>
-      <p className="sm:hidden text-center text-[11px] text-zinc-500 mt-3 font-medium">
+      <p className="sm:hidden text-center text-[11px] text-muted-foreground mt-3 font-medium">
         Étape {currentStep} sur {STEPS.length} — {STEPS[currentStep - 1]?.label}
       </p>
     </div>

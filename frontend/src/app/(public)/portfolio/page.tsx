@@ -110,16 +110,16 @@ export default function PortfolioPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/30 via-zinc-950/75 to-zinc-950" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_20%,_rgba(251,191,36,0.12),_transparent_50%)]" />
 
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-16">
-          <Badge variant="gold" className="mb-5 px-4 py-1.5 text-[10px] uppercase tracking-[0.2em]">
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 pb-16">
+          <Badge variant="primary" className="mb-5 px-4 py-1.5 text-[10px] uppercase tracking-[0.2em]">
             <Sparkles className="h-3.5 w-3.5 mr-2 inline" />
             {portfolio.heroBadge}
           </Badge>
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-white tracking-tight leading-[1.05] max-w-4xl">
+          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-foreground tracking-tight leading-[1.05] max-w-4xl">
             {portfolio.heroTitleLine1}{' '}
-            <span className="gold-gradient-text block sm:inline">{portfolio.heroTitleHighlight}</span>
+            <span className="text-primary block sm:inline">{portfolio.heroTitleHighlight}</span>
           </h1>
-          <p className="mt-6 max-w-2xl text-base sm:text-lg text-zinc-300 leading-relaxed font-light">
+          <p className="mt-6 max-w-2xl text-base sm:text-lg text-foreground leading-relaxed font-light">
             {portfolio.heroSubtitle.replace('{studio}', fullStudioName)}
           </p>
 
@@ -127,8 +127,8 @@ export default function PortfolioPage() {
             <div className="mt-10 flex flex-wrap gap-8 sm:gap-12">
               {stats.map((stat) => (
                 <div key={stat.label}>
-                  <div className="text-3xl sm:text-4xl font-extrabold text-white tabular-nums">{stat.value}</div>
-                  <div className="text-[11px] uppercase tracking-wider text-zinc-500 mt-1">{stat.label}</div>
+                  <div className="text-3xl sm:text-4xl font-extrabold text-foreground tabular-nums">{stat.value}</div>
+                  <div className="text-[11px] uppercase tracking-wider text-muted-foreground mt-1">{stat.label}</div>
                 </div>
               ))}
             </div>
@@ -138,16 +138,16 @@ export default function PortfolioPage() {
 
       <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 -mt-6 relative z-20 space-y-10">
         {/* Barre de contrôle */}
-        <div className="glass-panel p-4 sm:p-5 rounded-2xl border border-zinc-800/90 space-y-4 shadow-xl shadow-black/20">
+        <div className="p-4 sm:p-5 rounded-2xl border border-border/90 space-y-4 shadow-xl shadow-black/20">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <div className="inline-flex p-1 rounded-xl bg-zinc-950 border border-zinc-800 self-start">
+            <div className="inline-flex p-1 rounded-xl bg-surface-muted border border-border self-start">
               <button
                 type="button"
                 onClick={() => setView('photos')}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
                   view === 'photos'
                     ? 'bg-amber-400 text-zinc-950 shadow-md'
-                    : 'text-zinc-400 hover:text-white'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 <Camera className="h-4 w-4" /> Galerie photo
@@ -158,23 +158,23 @@ export default function PortfolioPage() {
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
                   view === 'videos'
                     ? 'bg-amber-400 text-zinc-950 shadow-md'
-                    : 'text-zinc-400 hover:text-white'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 <Film className="h-4 w-4" /> Vidéothèque
                 {publishedVideos.length > 0 && (
-                  <span className="ml-1 px-1.5 py-0.5 rounded-md bg-zinc-950/20 text-[10px]">{publishedVideos.length}</span>
+                  <span className="ml-1 px-1.5 py-0.5 rounded-md bg-surface-muted/20 text-[10px]">{publishedVideos.length}</span>
                 )}
               </button>
             </div>
 
             <div className="relative w-full lg:max-w-xs">
-              <Search className="h-4 w-4 absolute left-3 top-3 text-zinc-500" />
+              <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
               <Input
                 placeholder={view === 'photos' ? 'Rechercher un projet…' : 'Rechercher un film…'}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 h-10 text-xs bg-zinc-950/80"
+                className="pl-9 h-10 text-xs bg-surface-muted/80"
               />
             </div>
           </div>
@@ -187,8 +187,8 @@ export default function PortfolioPage() {
                 onClick={() => setFilter(btn.id)}
                 className={`px-3.5 py-1.5 text-[11px] font-semibold rounded-full border transition-all cursor-pointer ${
                   filter === btn.id
-                    ? 'border-amber-400/80 bg-amber-400/10 text-amber-300'
-                    : 'border-zinc-800 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200'
+                    ? 'border-primary/30 bg-primary-muted text-primary'
+                    : 'border-border text-muted-foreground hover:border-zinc-600 hover:text-zinc-200'
                 }`}
               >
                 {btn.label}
@@ -217,24 +217,24 @@ export default function PortfolioPage() {
         )}
 
         {/* CTA */}
-        <section className="relative overflow-hidden rounded-3xl border border-amber-400/20 bg-gradient-to-br from-zinc-900 via-zinc-950 to-zinc-950 p-8 sm:p-12">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-amber-400/5 rounded-full blur-3xl" />
+        <section className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-zinc-900 via-zinc-950 to-zinc-950 p-8 sm:p-12">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary-muted rounded-full blur-3xl" />
           <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div className="space-y-2 max-w-xl">
-              <div className="flex items-center gap-2 text-amber-400">
+              <div className="flex items-center gap-2 text-primary">
                 <Aperture className="h-5 w-5" />
                 <span className="text-xs font-mono uppercase tracking-widest">Sur mesure</span>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-white">
-                Votre histoire mérite une <span className="gold-gradient-text">mise en lumière</span> d&apos;exception
+              <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
+                Votre histoire mérite une <span className="text-primary">mise en lumière</span> d&apos;exception
               </h2>
-              <p className="text-sm text-zinc-400 leading-relaxed">
+              <p className="text-sm text-muted-foreground leading-relaxed">
                 Mariage, portrait ou film de marque — construisons ensemble un univers visuel à la hauteur de vos ambitions.
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 shrink-0">
               <Link href="/reservation">
-                <Button variant="gold" size="lg" className="w-full sm:w-auto space-x-2">
+                <Button variant="primary" size="lg" className="w-full sm:w-auto space-x-2">
                   <Calendar className="h-4 w-4" />
                   <span>Réserver une séance</span>
                   <ArrowRight className="h-4 w-4" />

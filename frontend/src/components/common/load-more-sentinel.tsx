@@ -22,7 +22,7 @@ export function LoadMoreSentinel({ enabled, onLoadMore, remaining, className }: 
       className={cn('flex justify-center py-6', className)}
       aria-hidden
     >
-      <span className="text-[11px] text-zinc-500 font-mono">
+      <span className="text-[11px] text-muted-foreground font-mono">
         {remaining != null && remaining > 0 ? `${remaining} photo(s) à afficher…` : 'Chargement…'}
       </span>
     </div>

@@ -149,28 +149,28 @@ export function AdminInvitationFormEditor({
   };
 
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 overflow-hidden">
+    <div className="rounded-xl border border-border bg-surface-muted/40 overflow-hidden">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-zinc-900/50 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-surface-muted/50 transition-colors"
       >
         <div>
-          <p className="text-white font-semibold text-sm">Contenu & formulaire invitation</p>
-          <p className="text-zinc-500 text-xs mt-0.5">Modifier textes, programme, options RSVP et infos pratiques.</p>
+          <p className="text-foreground font-semibold text-sm">Contenu & formulaire invitation</p>
+          <p className="text-muted-foreground text-xs mt-0.5">Modifier textes, programme, options RSVP et infos pratiques.</p>
         </div>
-        {open ? <ChevronUp className="h-4 w-4 text-zinc-500" /> : <ChevronDown className="h-4 w-4 text-zinc-500" />}
+        {open ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
       </button>
 
       {open && (
-        <div className="px-4 pb-4 space-y-5 border-t border-zinc-800/80 pt-4 text-sm">
+        <div className="px-4 pb-4 space-y-5 border-t border-border/80 pt-4 text-sm">
           <Section title="Événement">
             <div className="grid sm:grid-cols-2 gap-3">
               <Field label="Type">
                 <select
                   value={form.eventType}
                   onChange={(e) => patch({ eventType: e.target.value as InvitationEventType })}
-                  className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-white text-sm"
+                  className="w-full rounded-lg border border-border bg-surface-muted px-3 py-2 text-foreground text-sm"
                 >
                   {EVENT_TYPE_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
@@ -178,19 +178,19 @@ export function AdminInvitationFormEditor({
                 </select>
               </Field>
               <Field label="Organisateur(s) *">
-                <Input value={form.organizerNames} onChange={(e) => patch({ organizerNames: e.target.value })} className="bg-zinc-900" />
+                <Input value={form.organizerNames} onChange={(e) => patch({ organizerNames: e.target.value })} className="bg-surface-muted" />
               </Field>
               <Field label="Date *">
-                <Input type="date" value={form.eventDate} onChange={(e) => patch({ eventDate: e.target.value })} className="bg-zinc-900" />
+                <Input type="date" value={form.eventDate} onChange={(e) => patch({ eventDate: e.target.value })} className="bg-surface-muted" />
               </Field>
               <Field label="Heure">
-                <Input type="time" value={form.eventTime} onChange={(e) => patch({ eventTime: e.target.value })} className="bg-zinc-900" />
+                <Input type="time" value={form.eventTime} onChange={(e) => patch({ eventTime: e.target.value })} className="bg-surface-muted" />
               </Field>
               <Field label="Lieu">
-                <Input value={form.venue} onChange={(e) => patch({ venue: e.target.value })} className="bg-zinc-900" />
+                <Input value={form.venue} onChange={(e) => patch({ venue: e.target.value })} className="bg-surface-muted" />
               </Field>
               <Field label="Adresse">
-                <Input value={form.address} onChange={(e) => patch({ address: e.target.value })} className="bg-zinc-900" />
+                <Input value={form.address} onChange={(e) => patch({ address: e.target.value })} className="bg-surface-muted" />
               </Field>
             </div>
           </Section>
@@ -206,15 +206,15 @@ export function AdminInvitationFormEditor({
                   value={form.description}
                   onChange={(e) => patch({ description: e.target.value })}
                   rows={3}
-                  className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-white text-sm resize-none"
+                  className="w-full rounded-lg border border-border bg-surface-muted px-3 py-2 text-foreground text-sm resize-none"
                 />
               </Field>
               <div className="grid sm:grid-cols-2 gap-3">
                 <Field label="Contact">
-                  <Input value={form.contact} onChange={(e) => patch({ contact: e.target.value })} className="bg-zinc-900" />
+                  <Input value={form.contact} onChange={(e) => patch({ contact: e.target.value })} className="bg-surface-muted" />
                 </Field>
                 <Field label="Dress code">
-                  <Input value={form.dressCode} onChange={(e) => patch({ dressCode: e.target.value })} className="bg-zinc-900" />
+                  <Input value={form.dressCode} onChange={(e) => patch({ dressCode: e.target.value })} className="bg-surface-muted" />
                 </Field>
               </div>
               <Field label="Informations complémentaires">
@@ -222,7 +222,7 @@ export function AdminInvitationFormEditor({
                   value={form.extraInfo}
                   onChange={(e) => patch({ extraInfo: e.target.value })}
                   rows={2}
-                  className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-white text-sm resize-none"
+                  className="w-full rounded-lg border border-border bg-surface-muted px-3 py-2 text-foreground text-sm resize-none"
                 />
               </Field>
             </div>
@@ -258,8 +258,8 @@ export function AdminInvitationFormEditor({
 
           {error && <p className="text-rose-400 text-xs">{error}</p>}
 
-          <div className="flex flex-wrap gap-2 pt-2 border-t border-zinc-800">
-            <Button type="button" variant="gold" size="sm" disabled={saving} onClick={() => void handleSave()}>
+          <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
+            <Button type="button" variant="primary" size="sm" disabled={saving} onClick={() => void handleSave()}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
               Enregistrer les modifications
             </Button>
@@ -276,7 +276,7 @@ export function AdminInvitationFormEditor({
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-3">
-      <p className="text-amber-400/90 text-[10px] font-semibold uppercase tracking-[0.2em]">{title}</p>
+      <p className="text-primary/90 text-[10px] font-semibold uppercase tracking-[0.2em]">{title}</p>
       {children}
     </div>
   );
@@ -285,7 +285,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="text-zinc-400 text-xs block mb-1">{label}</label>
+      <label className="text-muted-foreground text-xs block mb-1">{label}</label>
       {children}
     </div>
   );

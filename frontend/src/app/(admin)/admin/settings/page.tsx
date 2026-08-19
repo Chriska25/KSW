@@ -15,7 +15,7 @@ import {
   Clock,
   Sliders,
   DollarSign,
-  Sparkles,
+  Palette,
   Plug,
   ExternalLink,
   Copy,
@@ -89,11 +89,24 @@ const SecuritySettingsFields = dynamic(
   { loading: () => <div className="h-32 animate-pulse rounded-xl bg-zinc-900/40" /> }
 );
 
+type SettingsTabId =
+  | 'appearance'
+  | 'home'
+  | 'portfolio'
+  | 'prestations'
+  | 'legal'
+  | 'general'
+  | 'booking'
+  | 'payments'
+  | 'watermark'
+  | 'security'
+  | 'integrations';
+
 export default function AdminSettingsPage() {
   const { settings: globalSettings, updateSettings } = useSettings();
   const { mode: themeMode } = useTheme();
 
-  const [activeTab, setActiveTab] = useState<'appearance' | 'home' | 'portfolio' | 'prestations' | 'legal' | 'general' | 'booking' | 'payments' | 'watermark' | 'security' | 'integrations'>('general');
+  const [activeTab, setActiveTab] = useState<SettingsTabId>('general');
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
@@ -105,7 +118,9 @@ export default function AdminSettingsPage() {
   const watermarkLogoFileInputRef = useRef<HTMLInputElement>(null);
   const [settings, setSettings] = useState(globalSettings);
   const settingsRef = useRef(settings);
-  settingsRef.current = settings;
+  useEffect(() => {
+    settingsRef.current = settings;
+  }, [settings]);
   const [geocodingMap, setGeocodingMap] = useState(false);
   const [mapPersistStatus, setMapPersistStatus] = useState<MapPersistStatus>('idle');
   const studioMap = resolveStudioMap(settings);
@@ -293,8 +308,8 @@ export default function AdminSettingsPage() {
       } else {
         setSyncStatus('Synchronisation terminée.');
       }
-    } catch (e: any) {
-      setSyncStatus(`Erreur de synchronisation : ${e.message || e}`);
+    } catch (e: unknown) {
+      setSyncStatus(`Erreur de synchronisation : ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
@@ -317,7 +332,7 @@ export default function AdminSettingsPage() {
               </Badge>
             )}
             {isDirty && !saved && (
-              <Badge variant="outline" className="px-3.5 py-2 text-xs font-bold border-amber-400/50 text-amber-300">
+              <Badge variant="outline" className="px-3.5 py-2 text-xs font-bold border-primary/50 text-primary">
                 Modifications non enregistrées
               </Badge>
             )}
@@ -325,20 +340,18 @@ export default function AdminSettingsPage() {
         }
       />
 
-      {/* Live Logo Preview Widget */}
-      <div className="glass-panel p-6 rounded-2xl border-amber-400/40 gold-border-glow flex flex-col sm:flex-row items-center justify-between gap-4">
+      <Card className="p-6 flex flex-col sm:flex-row items-center justify-between gap-4 border-primary/20">
         <div className="space-y-1 text-center sm:text-left">
-          <Badge variant="gold" className="text-[10px]">Aperçu en Temps Réel du Logo du Site</Badge>
-          <div className="text-xs text-zinc-400">Voici le rendu bicolore du titre tel qu'il apparaît sur tout le site :</div>
+          <Badge variant="primary" className="text-caption">Aperçu du logo du site</Badge>
+          <div className="text-caption text-muted-foreground">Rendu bicolore tel qu&apos;affiché sur le site :</div>
         </div>
 
-        <div className="p-4 bg-zinc-950 rounded-xl border border-zinc-800">
+        <div className="p-4 bg-surface-muted rounded-lg border border-border">
           <StudioLogo size="md" />
         </div>
-      </div>
+      </Card>
 
-      {/* Sub-Tabs Navigation Bar */}
-      <div className="flex items-center space-x-2 border-b border-zinc-800 pb-2 overflow-x-auto">
+      <div className="flex items-center gap-2 border-b border-border pb-2 overflow-x-auto">
         {[
           { id: 'appearance', label: 'Apparence', icon: Sun },
           { id: 'home', label: 'Page d\'accueil', icon: Home },
@@ -356,11 +369,11 @@ export default function AdminSettingsPage() {
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`px-4 py-2.5 rounded-xl font-semibold text-xs transition-all flex items-center space-x-2 whitespace-nowrap cursor-pointer ${
+              onClick={() => setActiveTab(tab.id as SettingsTabId)}
+              className={`px-4 py-2.5 rounded-lg font-semibold text-xs transition-colors flex items-center gap-2 whitespace-nowrap cursor-pointer ${
                 activeTab === tab.id
-                  ? 'bg-amber-400 text-zinc-950 shadow-md shadow-amber-400/20'
-                  : 'text-zinc-400 hover:text-white glass-panel'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-surface-muted'
               }`}
             >
               <IconComp className="h-4 w-4" />
@@ -371,14 +384,14 @@ export default function AdminSettingsPage() {
       </div>
 
       {activeTab === 'appearance' && (
-        <Card className="glass-panel space-y-4">
+        <Card className="space-y-4">
           <CardHeader>
             <CardTitle className="text-lg flex items-center">
-              <Sun className="h-5 w-5 text-amber-400 mr-2" /> Apparence de l&apos;interface
+              <Sun className="h-5 w-5 text-primary mr-2" /> Apparence de l&apos;interface
             </CardTitle>
             <CardDescription>
               Préférence personnelle enregistrée dans ce navigateur. Mode actuel :{' '}
-              <span className="text-amber-400 font-semibold">{THEME_MODE_LABELS[themeMode]}</span>.
+              <span className="text-primary font-semibold">{THEME_MODE_LABELS[themeMode]}</span>.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -394,7 +407,7 @@ export default function AdminSettingsPage() {
             onChange={(homePageContent) => patchSettings({ homePageContent })}
           />
           <AdminStickyActions>
-            <Button type="submit" variant="gold" size="lg" className="w-full sm:w-auto px-6 sm:px-8 space-x-2 font-bold shadow-lg shadow-amber-400/20">
+            <Button type="submit" variant="primary" size="lg" className="w-full sm:w-auto px-6 sm:px-8 space-x-2 font-semibold">
               <Save className="h-4 w-4" />
               <span>Enregistrer la page d&apos;accueil</span>
             </Button>
@@ -409,7 +422,7 @@ export default function AdminSettingsPage() {
             onChange={(portfolioContent) => patchSettings({ portfolioContent })}
           />
           <AdminStickyActions>
-            <Button type="submit" variant="gold" size="lg" className="w-full sm:w-auto px-6 sm:px-8 space-x-2 font-bold shadow-lg shadow-amber-400/20">
+            <Button type="submit" variant="primary" size="lg" className="w-full sm:w-auto px-6 sm:px-8 space-x-2 font-semibold">
               <Save className="h-4 w-4" />
               <span>Enregistrer le portfolio & la vidéothèque</span>
             </Button>
@@ -424,7 +437,7 @@ export default function AdminSettingsPage() {
             onChange={(prestationsContent) => patchSettings({ prestationsContent })}
           />
           <AdminStickyActions>
-            <Button type="submit" variant="gold" size="lg" className="w-full sm:w-auto px-6 sm:px-8 space-x-2 font-bold shadow-lg shadow-amber-400/20">
+            <Button type="submit" variant="primary" size="lg" className="w-full sm:w-auto px-6 sm:px-8 space-x-2 font-semibold">
               <Save className="h-4 w-4" />
               <span>Enregistrer la page prestations</span>
             </Button>
@@ -439,7 +452,7 @@ export default function AdminSettingsPage() {
             onChange={(legalPagesContent) => patchSettings({ legalPagesContent })}
           />
           <AdminStickyActions>
-            <Button type="submit" variant="gold" size="lg" className="w-full sm:w-auto px-6 sm:px-8 space-x-2 font-bold shadow-lg shadow-amber-400/20">
+            <Button type="submit" variant="primary" size="lg" className="w-full sm:w-auto px-6 sm:px-8 space-x-2 font-semibold">
               <Save className="h-4 w-4" />
               <span>Enregistrer les pages légales</span>
             </Button>
@@ -451,10 +464,10 @@ export default function AdminSettingsPage() {
       <form onSubmit={handleSave} className="space-y-6">
         {/* Tab 1: General Studio Info & Dual-Color Title Customization */}
         {activeTab === 'general' && (
-          <Card className="glass-panel space-y-4">
+          <Card className="space-y-4">
             <CardHeader>
               <CardTitle className="text-lg flex items-center">
-                <Settings className="h-5 w-5 text-amber-400 mr-2" /> Titre Bicolore du Site & Coordonnées
+                <Settings className="h-5 w-5 text-primary mr-2" /> Titre Bicolore du Site & Coordonnées
               </CardTitle>
               <CardDescription>
                 Personnalisez chaque mot du titre du site (Mot Blanc + Mot Or) et le sous-titre.
@@ -462,9 +475,9 @@ export default function AdminSettingsPage() {
             </CardHeader>
             <CardContent className="space-y-6 text-xs">
               {/* Browser Tab Title Customization Field */}
-              <div className="p-4 rounded-xl border border-amber-400/40 bg-amber-400/10 space-y-2">
+              <div className="p-4 rounded-xl border border-primary/40 bg-primary-muted space-y-2">
                 <label className="text-zinc-200 block font-semibold flex items-center text-sm">
-                  <Globe className="h-4 w-4 text-amber-400 mr-2" />
+                  <Globe className="h-4 w-4 text-primary mr-2" />
                   Titre du Site dans l'Onglet du Navigateur (HTML & SEO Title) *
                 </label>
                 <Input
@@ -481,7 +494,7 @@ export default function AdminSettingsPage() {
               {/* Dual-Color Title Customization Fields */}
               <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-950/80 space-y-4">
                 <div className="font-bold text-white flex items-center text-sm">
-                  <Sparkles className="h-4 w-4 mr-1.5 text-amber-400" /> Personnalisation des Termes du Titre Bicolore
+                  <Palette className="h-4 w-4 mr-1.5 text-primary" /> Personnalisation des termes du titre bicolore
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -498,7 +511,7 @@ export default function AdminSettingsPage() {
 
                   <div>
                     <label className="text-zinc-300 block mb-1 font-semibold">
-                      Titre - 2ème Partie <span className="text-amber-400 font-bold">(Mot Doré)</span>
+                      Titre - 2ème Partie <span className="text-primary font-bold">(Mot Doré)</span>
                     </label>
                     <Input
                       value={settings.studioNameSecondPart || ''}
@@ -522,7 +535,7 @@ export default function AdminSettingsPage() {
 
               <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-950/80 space-y-4">
                 <div className="font-bold text-white flex items-center text-sm">
-                  <ImageIcon className="h-4 w-4 mr-1.5 text-amber-400" /> Logo sur les factures
+                  <ImageIcon className="h-4 w-4 mr-1.5 text-primary" /> Logo sur les factures
                 </div>
                 <p className="text-[11px] text-zinc-500">
                   Ce logo apparaît en en-tête des factures PDF (admin et espace client).
@@ -601,7 +614,7 @@ export default function AdminSettingsPage() {
               {/* Description footer (texte sous le logo) */}
               <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-950/80 space-y-2">
                 <label className="text-zinc-200 block font-semibold flex items-center text-sm">
-                  <Globe className="h-4 w-4 text-amber-400 mr-2" />
+                  <Globe className="h-4 w-4 text-primary mr-2" />
                   Description du Studio (Pied de page)
                 </label>
                 <textarea
@@ -609,7 +622,7 @@ export default function AdminSettingsPage() {
                   onChange={(e) => patchSettings({ studioDescription: e.target.value })}
                   rows={4}
                   placeholder="Présentation courte du studio affichée dans le footer du site..."
-                  className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2.5 text-xs text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-amber-400/60 resize-y min-h-[96px]"
+                  className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2.5 text-xs text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-primary/60 resize-y min-h-[96px]"
                 />
                 <p className="text-[11px] text-zinc-500">
                   {(settings.studioDescription || '').length} caractères — visible sur toutes les pages publiques.
@@ -625,7 +638,7 @@ export default function AdminSettingsPage() {
               <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-950/80 space-y-4">
                 <div>
                   <label className="text-zinc-200 block font-semibold flex items-center text-sm">
-                    <Share2 className="h-4 w-4 text-amber-400 mr-2" />
+                    <Share2 className="h-4 w-4 text-primary mr-2" />
                     Réseaux sociaux (footer)
                   </label>
                   <p className="text-[11px] text-zinc-500 mt-1">
@@ -681,7 +694,7 @@ export default function AdminSettingsPage() {
 
               <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-950/80 space-y-4">
                 <div className="font-bold text-white flex items-center text-sm">
-                  <MapPin className="h-4 w-4 mr-1.5 text-amber-400" /> Carte « Contact & Conciergerie »
+                  <MapPin className="h-4 w-4 mr-1.5 text-primary" /> Carte « Contact & Conciergerie »
                 </div>
                 <p className="text-[11px] text-zinc-500">
                   Le point affiché sur la page Contact correspond exactement aux coordonnées sélectionnées ci-dessous.
@@ -708,7 +721,7 @@ export default function AdminSettingsPage() {
                   <select
                     value={resolveStudioCurrency(settings.currency)}
                     onChange={(e) => patchSettings({ currency: e.target.value })}
-                    className="flex h-11 w-full rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-2 text-sm text-zinc-100 focus:border-amber-400/80 focus:outline-none focus:ring-1 focus:ring-amber-400/80 transition-colors"
+                    className="flex h-11 w-full rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-2 text-sm text-zinc-100 focus:border-primary/80 focus:outline-none focus:ring-1 focus:ring-primary/80 transition-colors"
                   >
                     {!CURRENCY_OPTIONS.some((option) => option.value === resolveStudioCurrency(settings.currency)) && (
                       <option value={resolveStudioCurrency(settings.currency)} className="bg-zinc-950">
@@ -739,10 +752,10 @@ export default function AdminSettingsPage() {
 
         {/* Tab 2: Booking & Deposit Settings */}
         {activeTab === 'booking' && (
-          <Card className="glass-panel space-y-4">
+          <Card className="space-y-4">
             <CardHeader>
               <CardTitle className="text-lg flex items-center">
-                <Clock className="h-5 w-5 text-amber-400 mr-2" /> Règles de Réservation & Acomptes
+                <Clock className="h-5 w-5 text-primary mr-2" /> Règles de Réservation & Acomptes
               </CardTitle>
               <CardDescription>
                 Pourcentage d'acompte exigé lors de la réservation en ligne et délais.
@@ -777,7 +790,7 @@ export default function AdminSettingsPage() {
                   type="checkbox"
                   checked={settings.autoApproveBookings}
                   onChange={(e) => patchSettings({autoApproveBookings: e.target.checked })}
-                  className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-amber-400 focus:ring-amber-400 cursor-pointer"
+                  className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 accent-primary focus:ring-primary cursor-pointer"
                 />
               </div>
             </CardContent>
@@ -786,10 +799,10 @@ export default function AdminSettingsPage() {
 
         {/* Tab 3: Payments & Stripe / PayPal Credentials */}
         {activeTab === 'payments' && (
-          <Card className="glass-panel space-y-4">
+          <Card className="space-y-4">
             <CardHeader>
               <CardTitle className="text-lg flex items-center">
-                <CreditCard className="h-5 w-5 text-amber-400 mr-2" /> Passerelles Stripe & PayPal
+                <CreditCard className="h-5 w-5 text-primary mr-2" /> Passerelles Stripe & PayPal
               </CardTitle>
               <CardDescription>
                 Configuration des clés API de paiement sécurisé pour cartes et PayPal.
@@ -805,7 +818,7 @@ export default function AdminSettingsPage() {
                   type="checkbox"
                   checked={settings.stripeTestMode}
                   onChange={(e) => patchSettings({stripeTestMode: e.target.checked })}
-                  className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-amber-400 focus:ring-amber-400 cursor-pointer"
+                  className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 accent-primary focus:ring-primary cursor-pointer"
                 />
               </div>
 
@@ -847,7 +860,7 @@ export default function AdminSettingsPage() {
                   type="checkbox"
                   checked={settings.payPalEnabled}
                   onChange={(e) => patchSettings({payPalEnabled: e.target.checked })}
-                  className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-amber-400 focus:ring-amber-400 cursor-pointer"
+                  className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 accent-primary focus:ring-primary cursor-pointer"
                 />
               </div>
 
@@ -864,7 +877,7 @@ export default function AdminSettingsPage() {
                     type="checkbox"
                     checked={settings.mobileMoneyEnabled}
                     onChange={(e) => patchSettings({ mobileMoneyEnabled: e.target.checked })}
-                    className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-amber-400 focus:ring-amber-400 cursor-pointer"
+                    className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 accent-primary focus:ring-primary cursor-pointer"
                   />
                 </div>
 
@@ -902,10 +915,10 @@ export default function AdminSettingsPage() {
 
         {/* Tab 4: Integrations & external dashboards */}
         {activeTab === 'integrations' && (
-          <Card className="glass-panel space-y-4">
+          <Card className="space-y-4">
             <CardHeader>
               <CardTitle className="text-lg flex items-center">
-                <Plug className="h-5 w-5 text-amber-400 mr-2" /> Intégrations & tableaux de bord
+                <Plug className="h-5 w-5 text-primary mr-2" /> Intégrations & tableaux de bord
               </CardTitle>
               <CardDescription>
                 Accès rapide aux services externes, URL webhook Stripe et documentation API backend.
@@ -917,51 +930,51 @@ export default function AdminSettingsPage() {
                   href={stripeDashboardUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-4 rounded-xl border border-zinc-800 bg-zinc-950 hover:border-amber-400/40 transition-colors flex items-center justify-between group"
+                  className="p-4 rounded-xl border border-zinc-800 bg-zinc-950 hover:border-primary/40 transition-colors flex items-center justify-between group"
                 >
                   <div>
                     <div className="font-bold text-white flex items-center gap-2">
-                      <CreditCard className="h-4 w-4 text-amber-400" />
+                      <CreditCard className="h-4 w-4 text-primary" />
                       Stripe Dashboard
                     </div>
                     <div className="text-zinc-400 text-[11px] mt-1">
                       Mode {settings.stripeTestMode ? 'test (sandbox)' : 'production (live)'}
                     </div>
                   </div>
-                  <ExternalLink className="h-4 w-4 text-zinc-500 group-hover:text-amber-400" />
+                  <ExternalLink className="h-4 w-4 text-zinc-500 group-hover:text-primary" />
                 </a>
 
                 <a
                   href={stripeWebhooksUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-4 rounded-xl border border-zinc-800 bg-zinc-950 hover:border-amber-400/40 transition-colors flex items-center justify-between group"
+                  className="p-4 rounded-xl border border-zinc-800 bg-zinc-950 hover:border-primary/40 transition-colors flex items-center justify-between group"
                 >
                   <div>
                     <div className="font-bold text-white">Webhooks Stripe</div>
                     <div className="text-zinc-400 text-[11px] mt-1">Configurer checkout.session.completed</div>
                   </div>
-                  <ExternalLink className="h-4 w-4 text-zinc-500 group-hover:text-amber-400" />
+                  <ExternalLink className="h-4 w-4 text-zinc-500 group-hover:text-primary" />
                 </a>
 
                 <a
                   href="https://www.paypal.com/businessmanage/account/home"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-4 rounded-xl border border-zinc-800 bg-zinc-950 hover:border-amber-400/40 transition-colors flex items-center justify-between group"
+                  className="p-4 rounded-xl border border-zinc-800 bg-zinc-950 hover:border-primary/40 transition-colors flex items-center justify-between group"
                 >
                   <div>
                     <div className="font-bold text-white">PayPal Business</div>
                     <div className="text-zinc-400 text-[11px] mt-1">Gestion du compte marchand PayPal</div>
                   </div>
-                  <ExternalLink className="h-4 w-4 text-zinc-500 group-hover:text-amber-400" />
+                  <ExternalLink className="h-4 w-4 text-zinc-500 group-hover:text-primary" />
                 </a>
 
                 <a
                   href="/api/v1/health"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-4 rounded-xl border border-zinc-800 bg-zinc-950 hover:border-amber-400/40 transition-colors flex items-center justify-between group"
+                  className="p-4 rounded-xl border border-zinc-800 bg-zinc-950 hover:border-primary/40 transition-colors flex items-center justify-between group"
                 >
                   <div>
                     <div className="font-bold text-white flex items-center gap-2">
@@ -970,14 +983,14 @@ export default function AdminSettingsPage() {
                     </div>
                     <div className="text-zinc-400 text-[11px] mt-1">GET /api/v1/health</div>
                   </div>
-                  <ExternalLink className="h-4 w-4 text-zinc-500 group-hover:text-amber-400" />
+                  <ExternalLink className="h-4 w-4 text-zinc-500 group-hover:text-primary" />
                 </a>
               </div>
 
-              <div className="p-4 rounded-xl border border-amber-400/30 bg-amber-400/5 space-y-2">
+              <div className="p-4 rounded-lg border border-primary/30 bg-primary-muted space-y-2">
                 <div className="font-bold text-white">URL webhook Stripe (à coller dans le dashboard)</div>
                 <div className="flex flex-col sm:flex-row gap-2">
-                  <code className="flex-1 px-3 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-amber-200 font-mono text-[11px] break-all">
+                  <code className="flex-1 px-3 py-2 rounded-lg bg-surface-muted border border-border text-foreground font-mono text-caption break-all">
                     {webhookUrl}
                   </code>
                   <Button type="button" variant="outline" size="sm" onClick={copyWebhookUrl} className="shrink-0 space-x-1.5">
@@ -995,7 +1008,7 @@ export default function AdminSettingsPage() {
                 <div className="font-bold text-white">Documentation OpenAPI (backend FastAPI)</div>
                 <p className="text-zinc-400 text-[11px]">
                   Swagger UI sur le serveur Python — en local :{' '}
-                  <a href={backendDocsUrl} target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:underline">
+                  <a href={backendDocsUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                     {backendDocsUrl}
                   </a>
                 </p>
@@ -1013,10 +1026,10 @@ export default function AdminSettingsPage() {
 
         {/* Tab 5: Watermark & Media Settings */}
         {activeTab === 'watermark' && (
-          <Card className="glass-panel space-y-4">
+          <Card className="space-y-4">
             <CardHeader>
               <CardTitle className="text-lg flex items-center">
-                <ImageIcon className="h-5 w-5 text-amber-400 mr-2" /> Filigrane & Compression WebP
+                <ImageIcon className="h-5 w-5 text-primary mr-2" /> Filigrane & Compression WebP
               </CardTitle>
               <CardDescription>
                 Protection des épreuves web : texte, logo (ou les deux), position et opacité configurables.
@@ -1034,7 +1047,7 @@ export default function AdminSettingsPage() {
                       type="checkbox"
                       checked={settings.watermarkShowText !== false}
                       onChange={(e) => patchSettings({ watermarkShowText: e.target.checked })}
-                      className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-amber-400 focus:ring-amber-400 cursor-pointer"
+                      className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 accent-primary focus:ring-primary cursor-pointer"
                     />
                   </div>
 
@@ -1091,7 +1104,7 @@ export default function AdminSettingsPage() {
                       type="checkbox"
                       checked={Boolean(settings.watermarkLogoEnabled)}
                       onChange={(e) => patchSettings({ watermarkLogoEnabled: e.target.checked })}
-                      className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-amber-400 focus:ring-amber-400 cursor-pointer"
+                      className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 accent-primary focus:ring-primary cursor-pointer"
                     />
                   </div>
 
@@ -1248,7 +1261,7 @@ export default function AdminSettingsPage() {
         )}
 
         <AdminStickyActions>
-          <Button type="submit" variant="gold" size="lg" className="w-full sm:w-auto px-6 sm:px-8 space-x-2 font-bold shadow-lg shadow-amber-400/20">
+          <Button type="submit" variant="primary" size="lg" className="w-full sm:w-auto px-6 sm:px-8 space-x-2 font-semibold">
             <Save className="h-4 w-4" />
             <span>Enregistrer la configuration</span>
           </Button>

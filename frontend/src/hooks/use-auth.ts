@@ -155,13 +155,13 @@ export function useAuth() {
         throw new Error(data.message || 'Erreur de connexion');
       }
 
-      if (!data?.token || !data?.user) {
+      if (!data?.user) {
         throw new Error('Réponse serveur invalide. Réessayez.');
       }
 
       const normalized = normalizeUser(data.user);
       if (!data.requires_2fa) {
-        persistSession(data.token, normalized);
+        persistSession(data.token || '', normalized);
       } else if (typeof window !== 'undefined') {
         try {
           sessionStorage.setItem('studio_pending_2fa_user', JSON.stringify(normalized));
@@ -236,8 +236,8 @@ export function useAuth() {
         }
       );
       const data = response.data;
-      if (data?.token && data?.user) {
-        persistSession(data.token, data.user);
+      if (data?.user) {
+        persistSession(data.token || '', normalizeUser(data.user));
       }
       if (typeof window !== 'undefined') {
         sessionStorage.removeItem('studio_pre_2fa_token');

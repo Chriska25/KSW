@@ -8,14 +8,14 @@ import { cn } from '@/lib/utils';
 interface RevealPhotoCardProps extends React.HTMLAttributes<HTMLDivElement> {
   index?: number;
   kenBurns?: boolean;
-  /** Reflet lumineux au survol (désactiver si le contenu n'est pas une photo). */
+  /** Reflet lumineux au survol (désactivé par défaut — design sobre). */
   withShine?: boolean;
 }
 
 export function RevealPhotoCard({
   index = 0,
   kenBurns = false,
-  withShine = true,
+  withShine = false,
   className,
   children,
   style,

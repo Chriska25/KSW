@@ -47,11 +47,16 @@ from invitation_helpers import (
     sync_link_schedule,
     public_link_schedule_status,
     parse_link_schedule_date,
+    ensure_guest_check_in_token,
+    guest_pass_payload,
+    guest_pass_url,
 )
 from invitation_pdf import (
     build_system_invitation_pdf,
+    build_guest_pass_pdf,
     overlay_qr_on_pdf,
     pdf_filename,
+    guest_pass_pdf_filename,
     public_invitation_url,
 )
 
@@ -195,6 +200,34 @@ def _guest_counts(db: Session, invitation_ids: List[str]) -> Dict[str, int]:
     return {str(iid): int(cnt) for iid, cnt in rows}
 
 
+def _get_guest_by_check_in_token(db: Session, token: str) -> tuple[InvitationGuest, ElectronicInvitation]:
+    clean = (token or "").strip().upper()
+    if not clean or len(clean) < 8:
+        raise HTTPException(status_code=404, detail="Billet introuvable.")
+    guest = db.query(InvitationGuest).filter(InvitationGuest.check_in_token == clean).first()
+    if not guest:
+        raise HTTPException(status_code=404, detail="Billet introuvable.")
+    if guest.response != "yes":
+        raise HTTPException(status_code=403, detail="Ce billet n'est pas valide.")
+    inv = (
+        db.query(ElectronicInvitation)
+        .filter(ElectronicInvitation.id == guest.invitation_id, ElectronicInvitation.deleted_at.is_(None))
+        .first()
+    )
+    if not inv:
+        raise HTTPException(status_code=404, detail="Événement introuvable.")
+    if inv.status in ("pending", "rejected"):
+        raise HTTPException(status_code=403, detail="Cette invitation n'est pas encore active.")
+    return guest, inv
+
+
+def _commit_guest_with_pass(guest: InvitationGuest, db: Session) -> InvitationGuest:
+    ensure_guest_check_in_token(guest, db)
+    db.commit()
+    db.refresh(guest)
+    return guest
+
+
 def _require_public_token(inv: ElectronicInvitation) -> str:
     if not inv.public_token:
         raise HTTPException(status_code=400, detail="Générez d'abord le lien public.")
@@ -202,22 +235,21 @@ def _require_public_token(inv: ElectronicInvitation) -> str:
 
 
 def _save_pdf_template_bytes(content: bytes, invitation_id: str) -> str:
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    from storage_backend import get_media_storage
+
+    storage = get_media_storage(UPLOAD_DIR)
     filename = f"invitation-template-{invitation_id}.pdf"
-    path = os.path.join(UPLOAD_DIR, filename)
-    with open(path, "wb") as handle:
-        handle.write(content)
-    return f"/uploads/{filename}"
+    return storage.put_bytes(filename, content, "application/pdf")
 
 
 def _load_pdf_template_bytes(template_url: str) -> bytes:
-    if not template_url.startswith("/uploads/"):
-        raise HTTPException(status_code=400, detail="Modèle PDF invalide.")
-    path = os.path.join(UPLOAD_DIR, template_url.replace("/uploads/", "", 1))
-    if not os.path.isfile(path):
+    from storage_backend import get_media_storage
+
+    storage = get_media_storage(UPLOAD_DIR)
+    data = storage.get_bytes(template_url)
+    if not data:
         raise HTTPException(status_code=404, detail="Modèle PDF introuvable.")
-    with open(path, "rb") as handle:
-        return handle.read()
+    return data
 
 
 def _append_manual_notification(db: Session, title: str, message: str, ntype: str = "invitation") -> None:
@@ -446,6 +478,19 @@ def get_admin_invitation(
         .order_by(InvitationGuest.responded_at.desc())
         .all()
     )
+    changed = False
+    for guest in guests:
+        if guest.response == "yes" and not guest.check_in_token:
+            ensure_guest_check_in_token(guest, db)
+            changed = True
+    if changed:
+        db.commit()
+        guests = (
+            db.query(InvitationGuest)
+            .filter(InvitationGuest.invitation_id == inv.id)
+            .order_by(InvitationGuest.responded_at.desc())
+            .all()
+        )
     data = invitation_to_dict(inv, db, include_stats=True, guest_count=len(guests))
     data["guests"] = [guest_to_dict(g) for g in guests]
     return {"data": data}
@@ -733,8 +778,7 @@ def add_guest_manual(
         responded_at=datetime.utcnow(),
     )
     db.add(guest)
-    db.commit()
-    db.refresh(guest)
+    _commit_guest_with_pass(guest, db)
     return {"status": "success", "data": guest_to_dict(guest)}
 
 
@@ -760,7 +804,7 @@ def update_guest(
     guest.companions = [c.strip() for c in (payload.companions or []) if c.strip()]
     guest.message = (payload.message or "").strip() or None
     guest.updated_at = datetime.utcnow()
-    db.commit()
+    _commit_guest_with_pass(guest, db)
     return {"status": "success", "data": guest_to_dict(guest)}
 
 
@@ -781,6 +825,34 @@ def delete_guest(
     db.delete(guest)
     db.commit()
     return {"status": "success", "message": "Invité supprimé."}
+
+
+@router.get("/admin/invitations/{invitation_id}/guests/{guest_id}/pass.pdf")
+def download_guest_pass_pdf(
+    invitation_id: str,
+    guest_id: str,
+    _admin: User = Depends(require_admin_user),
+    db: Session = Depends(get_db),
+):
+    _get_invitation_or_404(db, invitation_id)
+    guest = db.query(InvitationGuest).filter(
+        InvitationGuest.id == guest_id,
+        InvitationGuest.invitation_id == invitation_id,
+    ).first()
+    if not guest:
+        raise HTTPException(status_code=404, detail="Invité introuvable.")
+    if guest.response != "yes":
+        raise HTTPException(status_code=400, detail="QR code disponible uniquement pour les invités confirmés.")
+    inv = _get_invitation_or_404(db, invitation_id)
+    _commit_guest_with_pass(guest, db)
+    pass_url = guest_pass_url(guest.check_in_token or "")
+    pdf_bytes = build_guest_pass_pdf(guest, inv, pass_url)
+    filename = guest_pass_pdf_filename(guest.full_name, guest.check_in_token or guest.id[:8])
+    return StreamingResponse(
+        iter([pdf_bytes]),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 # --- Public ---
@@ -858,8 +930,7 @@ def submit_public_rsvp(
         responded_at=datetime.utcnow(),
     )
     db.add(guest)
-    db.commit()
-    db.refresh(guest)
+    _commit_guest_with_pass(guest, db)
 
     _append_manual_notification(
         db,
@@ -877,4 +948,29 @@ def submit_public_rsvp(
         "status": "success",
         "message": "Merci — votre réponse a bien été enregistrée.",
         "data": guest_to_dict(guest),
+    }
+
+
+@router.get("/invitations/pass/{token}")
+def get_guest_pass(token: str, db: Session = Depends(get_db)):
+    guest, inv = _get_guest_by_check_in_token(db, token)
+    ensure_guest_check_in_token(guest, db)
+    db.commit()
+    db.refresh(guest)
+    return {"data": guest_pass_payload(guest, inv)}
+
+
+@router.post("/invitations/pass/{token}/check-in")
+def check_in_guest_pass(token: str, db: Session = Depends(get_db)):
+    guest, inv = _get_guest_by_check_in_token(db, token)
+    already = guest.checked_in_at is not None
+    if not already:
+        guest.checked_in_at = datetime.utcnow()
+        guest.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(guest)
+    return {
+        "status": "success",
+        "alreadyCheckedIn": already,
+        "data": guest_pass_payload(guest, inv),
     }

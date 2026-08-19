@@ -15,6 +15,16 @@ class Verify2FARequest(BaseModel):
 class Resend2FARequest(BaseModel):
     user_id: str
 
+class AdminUserUpsert(BaseModel):
+    id: Optional[str] = None
+    email: str
+    firstName: Optional[str] = None
+    lastName: Optional[str] = None
+    role: Optional[str] = None
+    status: Optional[str] = None
+    password: Optional[str] = None
+
+
 class RegisterRequest(BaseModel):
     first_name: str
     last_name: str

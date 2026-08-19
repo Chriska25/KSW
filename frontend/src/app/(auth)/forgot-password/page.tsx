@@ -2,10 +2,11 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Mail, ArrowLeft, Send } from 'lucide-react';
+import { ArrowLeft, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/use-auth';
 
 export default function ForgotPasswordPage() {
@@ -18,24 +19,24 @@ export default function ForgotPasswordPage() {
     try {
       await forgotPassword(email);
       setSent(true);
-    } catch (err) {
+    } catch {
       // Handled in hook
     }
   };
 
   return (
-    <Card className="glass-panel border-amber-400/30">
+    <Card>
       <CardHeader className="text-center space-y-2">
-        <CardTitle className="text-2xl font-bold">Mot de Passe Oublié</CardTitle>
+        <CardTitle className="text-h1">Mot de passe oublié</CardTitle>
         <CardDescription>
           Entrez votre adresse email pour recevoir un lien de réinitialisation sécurisé.
         </CardDescription>
       </CardHeader>
       <CardContent>
         {sent ? (
-          <div className="p-6 rounded-2xl bg-amber-400/10 border border-amber-400/30 text-center space-y-3">
-            <h3 className="font-bold text-white">Email Envoyé !</h3>
-            <p className="text-xs text-zinc-300">
+          <div className="p-6 rounded-lg bg-primary-muted border border-primary/25 text-center space-y-3">
+            <h3 className="font-medium text-foreground">Email envoyé</h3>
+            <p className="text-small text-muted-foreground">
               Consultez votre boîte de réception pour réinitialiser votre mot de passe.
             </p>
             <Link href="/login">
@@ -45,31 +46,33 @@ export default function ForgotPasswordPage() {
             </Link>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             {error && (
-              <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs">
+              <div className="p-3 rounded-lg bg-danger-muted border border-danger/25 text-danger text-small" role="alert">
                 {error}
               </div>
             )}
 
             <div>
-              <label className="text-xs text-zinc-400 block mb-1">Votre Adresse Email</label>
+              <Label htmlFor="forgot-email">Votre adresse email</Label>
               <Input
+                id="forgot-email"
                 required
                 type="email"
-                placeholder="client@studiolumiere.fr"
+                placeholder="client@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
 
-            <Button type="submit" variant="gold" size="lg" className="w-full justify-center" disabled={loading}>
-              {loading ? 'Envoi...' : 'Réinitialiser mon mot de passe'} <Send className="h-4 w-4 ml-2" />
+            <Button type="submit" variant="primary" size="lg" className="w-full" disabled={loading}>
+              {loading ? 'Envoi…' : 'Réinitialiser mon mot de passe'}
+              {!loading && <Send className="h-4 w-4" aria-hidden />}
             </Button>
 
-            <div className="pt-4 border-t border-zinc-800 text-center">
-              <Link href="/login" className="text-xs text-zinc-400 hover:text-white flex items-center justify-center">
-                <ArrowLeft className="h-3.5 w-3.5 mr-1" /> Retour à la connexion
+            <div className="pt-2 border-t border-border text-center">
+              <Link href="/login" className="text-small text-muted-foreground hover:text-foreground inline-flex items-center">
+                <ArrowLeft className="h-3.5 w-3.5 mr-1" aria-hidden /> Retour à la connexion
               </Link>
             </div>
           </form>

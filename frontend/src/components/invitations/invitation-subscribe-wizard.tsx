@@ -195,27 +195,27 @@ export function InvitationSubscribeWizard({
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 pb-16">
-      <Link href={backHref} className="inline-flex items-center text-zinc-400 text-sm hover:text-white">
+      <Link href={backHref} className="inline-flex items-center text-muted-foreground text-sm hover:text-foreground">
         <ArrowLeft className="h-4 w-4 mr-1" /> Retour
       </Link>
 
       <div className="space-y-2">
-        <Badge variant="gold" className="text-[10px] uppercase tracking-wider">
+        <Badge variant="primary" className="text-[10px] uppercase tracking-wider">
           Invitation électronique
         </Badge>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
-          Créez votre <span className="gold-gradient-text">invitation digitale</span>
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground">
+          Créez votre <span className="text-primary">invitation digitale</span>
         </h1>
-        <p className="text-sm text-zinc-400">
+        <p className="text-sm text-muted-foreground">
           Remplissez toutes les étapes librement — la connexion n&apos;est demandée qu&apos;à la validation finale.
         </p>
       </div>
 
       <InvitationSubscribeStepper currentStep={step} />
 
-      <Card className="glass-panel">
+      <Card className="">
         <CardHeader>
-          <CardTitle className="text-white text-lg">
+          <CardTitle className="text-foreground text-lg">
             {step === 1 && 'Votre événement'}
             {step === 2 && 'Visuels & identité'}
             {step === 3 && 'Informations complémentaires'}
@@ -232,11 +232,11 @@ export function InvitationSubscribeWizard({
           {step === 1 && (
             <>
               <div>
-                <label className="text-zinc-400 block mb-1">Type d&apos;événement</label>
+                <label className="text-muted-foreground block mb-1">Type d&apos;événement</label>
                 <select
                   value={draft.eventType}
                   onChange={(e) => patchDraft({ eventType: e.target.value as InvitationEventType })}
-                  className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-white"
+                  className="w-full rounded-lg border border-border bg-surface-muted px-3 py-2 text-foreground"
                 >
                   {EVENT_TYPE_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
@@ -255,7 +255,7 @@ export function InvitationSubscribeWizard({
               <Field label="Lieu" value={draft.venue} onChange={(v) => patchDraft({ venue: v })} />
               <Field label="Adresse complète" value={draft.address} onChange={(v) => patchDraft({ address: v })} />
 
-              <div className="pt-2 border-t border-zinc-800">
+              <div className="pt-2 border-t border-border">
                 <InvitationProgramEditor
                   value={draft.program}
                   onChange={(program) => patchDraft({ program })}
@@ -293,7 +293,7 @@ export function InvitationSubscribeWizard({
                 }
               />
 
-              <div className="pt-4 border-t border-zinc-800">
+              <div className="pt-4 border-t border-border">
                 <InvitationTemplatePicker
                   value={draft.templateKey}
                   onChange={(templateKey) => patchDraft({ templateKey })}
@@ -307,12 +307,12 @@ export function InvitationSubscribeWizard({
           {step === 3 && (
             <>
               <div>
-                <label className="text-zinc-400 block mb-1">Message / description</label>
+                <label className="text-muted-foreground block mb-1">Message / description</label>
                 <textarea
                   value={draft.description}
                   onChange={(e) => patchDraft({ description: e.target.value })}
                   rows={4}
-                  className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-white resize-none"
+                  className="w-full rounded-lg border border-border bg-surface-muted px-3 py-2 text-foreground resize-none"
                 />
               </div>
               <Field label="Contact (téléphone ou email)" value={draft.contact} onChange={(v) => patchDraft({ contact: v })} />
@@ -334,7 +334,7 @@ export function InvitationSubscribeWizard({
           )}
 
           {step === 4 && (
-            <div className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-950/60 p-4">
+            <div className="space-y-4 rounded-xl border border-border bg-surface-muted/60 p-4">
               <RecapRow label="Événement" value={`${eventTypeLabel} — ${draft.organizerNames}`} />
               <RecapRow
                 label="Date & lieu"
@@ -370,12 +370,12 @@ export function InvitationSubscribeWizard({
               />
 
               {showAuthGate && !authenticated && (
-                <div className="mt-4 p-5 rounded-xl border border-amber-400/30 bg-amber-400/5 space-y-4">
+                <div className="mt-4 p-5 rounded-xl border border-primary/30 bg-primary-muted space-y-4">
                   <div className="flex items-start gap-3">
-                    <Mail className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+                    <Mail className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-white font-semibold">Connectez-vous pour valider</p>
-                      <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                      <p className="text-foreground font-semibold">Connectez-vous pour valider</p>
+                      <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                         Vos informations sont sauvegardées. Créez un compte ou connectez-vous pour que la demande
                         soit enregistrée et suivie dans votre espace client.
                       </p>
@@ -383,7 +383,7 @@ export function InvitationSubscribeWizard({
                   </div>
                   <div className="flex flex-col sm:flex-row gap-2">
                     <Link href={`/login?redirect=${authRedirect}`} className="flex-1">
-                      <Button variant="gold" className="w-full">
+                      <Button variant="primary" className="w-full">
                         <LogIn className="h-4 w-4 mr-2" /> Se connecter
                       </Button>
                     </Link>
@@ -400,7 +400,7 @@ export function InvitationSubscribeWizard({
 
           {error && <p className="text-rose-400 text-xs">{error}</p>}
 
-          <div className="flex flex-col-reverse sm:flex-row gap-2 pt-2 border-t border-zinc-800">
+          <div className="flex flex-col-reverse sm:flex-row gap-2 pt-2 border-t border-border">
             {step > 1 && (
               <Button type="button" variant="outline" onClick={goBack} disabled={submitting}>
                 <ChevronLeft className="h-4 w-4 mr-1" /> Précédent
@@ -408,13 +408,13 @@ export function InvitationSubscribeWizard({
             )}
             <div className="flex-1" />
             {step < 4 ? (
-              <Button type="button" variant="gold" onClick={goNext} disabled={uploading !== null}>
+              <Button type="button" variant="primary" onClick={goNext} disabled={uploading !== null}>
                 Suivant <ArrowRight className="h-4 w-4 ml-1" />
               </Button>
             ) : (
               <Button
                 type="button"
-                variant="gold"
+                variant="primary"
                 onClick={() => void handleValidate()}
                 disabled={submitting || uploading !== null}
               >
@@ -450,8 +450,8 @@ function Field({
 }) {
   return (
     <div>
-      <label className="text-zinc-400 block mb-1">{label}</label>
-      <Input type={type} value={value} onChange={(e) => onChange(e.target.value)} className="bg-zinc-900" />
+      <label className="text-muted-foreground block mb-1">{label}</label>
+      <Input type={type} value={value} onChange={(e) => onChange(e.target.value)} className="bg-surface-muted" />
     </div>
   );
 }
@@ -459,7 +459,7 @@ function Field({
 function RecapRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <span className="text-[10px] uppercase tracking-wider text-zinc-500">{label}</span>
+      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
       <p className="text-zinc-200 text-sm mt-0.5 whitespace-pre-wrap">{value}</p>
     </div>
   );
@@ -484,13 +484,13 @@ function ImageUploadBlock({
 }) {
   return (
     <div>
-      <label className="text-zinc-400 block mb-2">{label}</label>
+      <label className="text-muted-foreground block mb-2">{label}</label>
       {previewUrl ? (
-        <div className={`relative ${compact ? 'h-20 w-20' : 'h-40 w-full max-w-sm'} rounded-xl overflow-hidden border border-zinc-700 mb-2`}>
+        <div className={`relative ${compact ? 'h-20 w-20' : 'h-40 w-full max-w-sm'} rounded-xl overflow-hidden border border-border mb-2`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={resolveAvatarUrl(previewUrl)} alt="" className="h-full w-full object-cover" />
           <button type="button" onClick={onClear} className="absolute top-2 right-2 bg-black/70 rounded-full p-1">
-            <X className="h-4 w-4 text-white" />
+            <X className="h-4 w-4 text-foreground" />
           </button>
         </div>
       ) : null}
@@ -528,10 +528,10 @@ function GalleryBlock({
 }) {
   return (
     <div>
-      <label className="text-zinc-400 block mb-2">Galerie photos (optionnel)</label>
+      <label className="text-muted-foreground block mb-2">Galerie photos (optionnel)</label>
       <div className="flex flex-wrap gap-2 mb-2">
         {urls.map((url, i) => (
-          <div key={`${url}-${i}`} className="relative h-16 w-16 rounded-lg overflow-hidden border border-zinc-700">
+          <div key={`${url}-${i}`} className="relative h-16 w-16 rounded-lg overflow-hidden border border-border">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={resolveAvatarUrl(url)} alt="" className="h-full w-full object-cover" />
             <button
@@ -539,7 +539,7 @@ function GalleryBlock({
               onClick={() => onRemove(i)}
               className="absolute top-0.5 right-0.5 bg-black/70 rounded-full p-0.5"
             >
-              <X className="h-3 w-3 text-white" />
+              <X className="h-3 w-3 text-foreground" />
             </button>
           </div>
         ))}

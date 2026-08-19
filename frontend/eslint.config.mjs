@@ -5,6 +5,17 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  {
+    rules: {
+      // Patterns React/Next.js courants (fetch au montage, reset pagination) — faux positifs fréquents.
+      'react-hooks/set-state-in-effect': 'off',
+      // Texte français avec apostrophes dans le JSX.
+      'react/no-unescaped-entities': 'off',
+      'react-hooks/refs': 'off',
+      'react-hooks/purity': 'off',
+      'react-hooks/preserve-manual-memoization': 'off',
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

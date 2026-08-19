@@ -16,11 +16,11 @@ export function AdminBreadcrumb() {
   return (
     <nav
       aria-label="Fil d'Ariane admin"
-      className="mb-4 sm:mb-5 flex flex-wrap items-center gap-1.5 text-xs text-zinc-500"
+      className="mb-4 sm:mb-5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground"
     >
       <Link
         href="/admin/dashboard"
-        className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 hover:text-amber-400 hover:bg-zinc-900/60 transition-colors"
+        className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 hover:text-primary hover:bg-surface-muted transition-colors"
       >
         <LayoutDashboard className="h-3.5 w-3.5" />
         <span>Admin</span>
@@ -28,11 +28,11 @@ export function AdminBreadcrumb() {
       {meta.section && (
         <>
           <ChevronRight className="h-3 w-3 opacity-40 shrink-0" />
-          <span className="text-zinc-600">{meta.section}</span>
+          <span className="text-muted-foreground">{meta.section}</span>
         </>
       )}
       <ChevronRight className="h-3 w-3 opacity-40 shrink-0" />
-      <span className="text-zinc-300 font-medium truncate max-w-[min(100%,20rem)]">{meta.title}</span>
+      <span className="text-foreground font-medium truncate max-w-[min(100%,20rem)]">{meta.title}</span>
     </nav>
   );
 }

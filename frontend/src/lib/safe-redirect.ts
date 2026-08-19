@@ -5,7 +5,32 @@ export function safeRedirect(path: string | null | undefined, fallback: string):
   if (!clean.startsWith('/') || clean.startsWith('//') || clean.includes('://')) {
     return fallback;
   }
+  let decoded = clean;
+  try {
+    decoded = decodeURIComponent(clean);
+  } catch {
+    return fallback;
+  }
+  if (/[\x00-\x1f\\@]/.test(decoded) || decoded.includes('//')) {
+    return fallback;
+  }
   return clean;
+}
+
+/** Redirection post-login selon le rôle attendu. */
+export function safeRedirectForRole(
+  path: string | null | undefined,
+  fallback: string,
+  role: 'admin' | 'client',
+): string {
+  const target = safeRedirect(path, fallback);
+  if (role === 'admin' && !target.startsWith('/admin')) {
+    return fallback;
+  }
+  if (role === 'client' && target.startsWith('/admin')) {
+    return fallback;
+  }
+  return target;
 }
 
 const STRIPE_HOSTS = new Set(['checkout.stripe.com', 'pay.stripe.com']);

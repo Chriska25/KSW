@@ -58,8 +58,8 @@ export function AdminInvitationMediaEditor({
   };
 
   return (
-    <div className="space-y-4 pt-2 border-t border-zinc-800">
-      <p className="text-zinc-400 text-xs font-medium uppercase tracking-wider">Visuels de l&apos;invitation</p>
+    <div className="space-y-4 pt-2 border-t border-border">
+      <p className="text-muted-foreground text-xs font-medium uppercase tracking-wider">Visuels de l&apos;invitation</p>
 
       <MediaBlock
         label="Photo de couverture"
@@ -81,10 +81,10 @@ export function AdminInvitationMediaEditor({
       />
 
       <div>
-        <label className="text-zinc-500 text-xs block mb-2">Galerie photos</label>
+        <label className="text-muted-foreground text-xs block mb-2">Galerie photos</label>
         <div className="flex flex-wrap gap-2 mb-2">
           {(invitation.galleryUrls || []).map((url, i) => (
-            <div key={`${url}-${i}`} className="relative h-14 w-14 rounded-lg overflow-hidden border border-zinc-700">
+            <div key={`${url}-${i}`} className="relative h-14 w-14 rounded-lg overflow-hidden border border-border">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={resolveAvatarUrl(url)} alt="" className="h-full w-full object-cover" />
               <button
@@ -92,7 +92,7 @@ export function AdminInvitationMediaEditor({
                 onClick={() => removeGalleryAt(i)}
                 className="absolute top-0.5 right-0.5 bg-black/70 rounded-full p-0.5"
               >
-                <X className="h-3 w-3 text-white" />
+                <X className="h-3 w-3 text-foreground" />
               </button>
             </div>
           ))}
@@ -146,10 +146,10 @@ function MediaBlock({
 }) {
   return (
     <div>
-      <label className="text-zinc-500 text-xs block mb-2">{label}</label>
+      <label className="text-muted-foreground text-xs block mb-2">{label}</label>
       {url ? (
         <div
-          className={`relative ${large ? 'h-36 w-full max-w-md' : 'h-16 w-16'} rounded-xl overflow-hidden border border-zinc-700 mb-2`}
+          className={`relative ${large ? 'h-36 w-full max-w-md' : 'h-16 w-16'} rounded-xl overflow-hidden border border-border mb-2`}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={resolveAvatarUrl(url)} alt="" className="h-full w-full object-cover" />
@@ -158,7 +158,7 @@ function MediaBlock({
             onClick={onClear}
             className="absolute top-2 right-2 bg-black/70 rounded-full p-1"
           >
-            <X className="h-4 w-4 text-white" />
+            <X className="h-4 w-4 text-foreground" />
           </button>
         </div>
       ) : null}

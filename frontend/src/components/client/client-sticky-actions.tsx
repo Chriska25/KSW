@@ -21,7 +21,7 @@ export function ClientStickyActions({
       <div
         className={cn(
           'admin-sticky-actions',
-          'border-t border-zinc-800/90 bg-zinc-950/95 backdrop-blur-md',
+          'border-t border-border/90 bg-surface-muted/95 backdrop-blur-md',
           'px-4 sm:px-0 py-3 sm:py-4',
           'flex items-center justify-end gap-2 sm:gap-3',
           mobileOnly

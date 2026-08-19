@@ -34,9 +34,9 @@ export function InvitationProgramEditor({ value, onChange }: InvitationProgramEd
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
           <p className="text-zinc-200 font-medium text-sm flex items-center gap-2">
-            <Clock className="h-4 w-4 text-amber-400" /> Programme de la journée
+            <Clock className="h-4 w-4 text-primary" /> Programme de la journée
           </p>
-          <p className="text-zinc-500 text-xs mt-0.5">Horaires affichés sur l&apos;invitation publique.</p>
+          <p className="text-muted-foreground text-xs mt-0.5">Horaires affichés sur l&apos;invitation publique.</p>
         </div>
         {items.length === 0 && (
           <Button type="button" variant="outline" size="sm" onClick={applySuggestions}>
@@ -55,19 +55,19 @@ export function InvitationProgramEditor({ value, onChange }: InvitationProgramEd
                 type="time"
                 value={item.time || ''}
                 onChange={(e) => patchItem(index, { time: e.target.value })}
-                className="bg-zinc-900 w-32 shrink-0 text-sm"
+                className="bg-surface-muted w-32 shrink-0 text-sm"
               />
               <Input
                 value={item.label || ''}
                 placeholder="Ex. Cérémonie, Dîner…"
                 onChange={(e) => patchItem(index, { label: e.target.value })}
-                className="bg-zinc-900 flex-1 text-sm"
+                className="bg-surface-muted flex-1 text-sm"
               />
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="shrink-0 text-zinc-500 hover:text-rose-400"
+                className="shrink-0 text-muted-foreground hover:text-rose-400"
                 onClick={() => removeItem(index)}
                 aria-label="Supprimer"
               >

@@ -34,11 +34,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   return (
     <AdminAuthGuard>
       <AdminToastProvider>
-        <div className="min-h-screen h-[100dvh] bg-zinc-950 flex text-zinc-100 overflow-hidden">
+        <div className="min-h-screen h-[100dvh] bg-background flex text-foreground overflow-hidden">
           <div
             className={`${
               sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-            } md:translate-x-0 fixed md:static inset-y-0 left-0 z-50 md:z-auto transition-transform duration-200 ease-out shrink-0 shadow-2xl md:shadow-none`}
+            } md:translate-x-0 fixed md:static inset-y-0 left-0 z-50 md:z-auto transition-transform duration-200 ease-out shrink-0 md:shadow-none`}
           >
             <AdminSidebar onCloseMobile={() => setSidebarOpen(false)} />
           </div>
@@ -47,7 +47,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               aria-label="Fermer le menu"
-              className="md:hidden fixed inset-0 z-40 bg-black/65 backdrop-blur-[2px]"
+              className="md:hidden fixed inset-0 z-40 bg-background/80"
               onClick={() => setSidebarOpen(false)}
             />
           )}

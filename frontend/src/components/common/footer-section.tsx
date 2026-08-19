@@ -11,46 +11,45 @@ export function FooterSection() {
   const { settings } = useSettings();
 
   return (
-    <footer className="bg-zinc-950 border-t border-zinc-900 text-zinc-400 pt-16 pb-12">
+    <footer className="bg-surface-muted border-t border-zinc-900 text-muted-foreground pt-16 pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
         {/* Col 1: Studio Profile */}
         <div className="space-y-4">
           <StudioLogo size="md" />
-          <p className="text-sm text-zinc-400 leading-relaxed pt-2">
-            {settings.studioDescription ||
-              "Studio photographique d'art spécialisé dans le mariage d'exception, le portrait de caractère et le reportage corporate haut de gamme en France et à l'international."}
+          <p className="text-sm text-muted-foreground leading-relaxed pt-2">
+            {settings.studioDescription ||"Studio photographique d'art spécialisé dans le mariage d'exception, le portrait de caractère et le reportage corporate haut de gamme en France et à l'international."}
           </p>
           <SocialLinksRow className="pt-2" showLabel />
         </div>
 
         {/* Col 2: Navigation rapide */}
         <div>
-          <h4 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">
+          <h4 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-4">
             Navigation
           </h4>
           <ul className="space-y-2.5 text-sm">
             <li>
-              <Link href="/prestations" className="hover:text-amber-400 transition-colors">
+              <Link href="/prestations" className="hover:text-primary transition-colors">
                 Mariages & Cérémonies
               </Link>
             </li>
             <li>
-              <Link href="/prestations" className="hover:text-amber-400 transition-colors">
+              <Link href="/prestations" className="hover:text-primary transition-colors">
                 Portraits & Studio
               </Link>
             </li>
             <li>
-              <Link href="/portfolio" className="hover:text-amber-400 transition-colors">
+              <Link href="/portfolio" className="hover:text-primary transition-colors">
                 Galeries d'Art & Portfolio
               </Link>
             </li>
             <li>
-              <Link href="/reservation" className="hover:text-amber-400 transition-colors">
+              <Link href="/reservation" className="hover:text-primary transition-colors">
                 Réservation en Ligne
               </Link>
             </li>
             <li>
-              <Link href="/blog" className="hover:text-amber-400 transition-colors">
+              <Link href="/blog" className="hover:text-primary transition-colors">
                 Conseils & Inspirations
               </Link>
             </li>
@@ -59,27 +58,27 @@ export function FooterSection() {
 
         {/* Col 3: Espace Professionnel & Client */}
         <div>
-          <h4 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">
+          <h4 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-4">
             Services Clients
           </h4>
           <ul className="space-y-2.5 text-sm">
             <li>
-              <Link href="/client/dashboard" className="hover:text-amber-400 transition-colors">
+              <Link href="/client/dashboard" className="hover:text-primary transition-colors">
                 Accès Galerie Privée Client
               </Link>
             </li>
             <li>
-              <Link href="/client/dashboard" className="hover:text-amber-400 transition-colors">
+              <Link href="/client/dashboard" className="hover:text-primary transition-colors">
                 Téléchargement Packs HD
               </Link>
             </li>
             <li>
-              <Link href="/client/dashboard" className="hover:text-amber-400 transition-colors">
+              <Link href="/client/dashboard" className="hover:text-primary transition-colors">
                 Devis, Contrats & Factures
               </Link>
             </li>
             <li>
-              <Link href="/admin/dashboard" className="hover:text-amber-400 transition-colors">
+              <Link href="/admin/dashboard" className="hover:text-primary transition-colors">
                 Administration Photographe
               </Link>
             </li>
@@ -88,22 +87,22 @@ export function FooterSection() {
 
         {/* Col 4: Contact & Distinctions */}
         <div className="space-y-3">
-          <h4 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">
+          <h4 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-4">
             Le Studio
           </h4>
           <div className="flex items-start space-x-3 text-sm">
-            <MapPin className="h-4 w-4 text-amber-400 mt-1 shrink-0" />
+            <MapPin className="h-4 w-4 text-primary mt-1 shrink-0" />
             <span>{settings.address}</span>
           </div>
           <div className="flex items-center space-x-3 text-sm">
-            <Phone className="h-4 w-4 text-amber-400 shrink-0" />
+            <Phone className="h-4 w-4 text-primary shrink-0" />
             <span>{settings.phone}</span>
           </div>
           <div className="flex items-center space-x-3 text-sm">
-            <Mail className="h-4 w-4 text-amber-400 shrink-0" />
+            <Mail className="h-4 w-4 text-primary shrink-0" />
             <span>{settings.contactEmail}</span>
           </div>
-          <div className="pt-2 flex items-center space-x-2 text-xs text-amber-400/90 font-medium">
+          <div className="pt-2 flex items-center space-x-2 text-xs text-primary/90 font-medium">
             <Award className="h-4 w-4" />
             <span>Fearless Photographers Award 2025</span>
           </div>
@@ -111,18 +110,18 @@ export function FooterSection() {
       </div>
 
       {/* Sub-footer */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 border-t border-zinc-900 flex flex-col md:flex-row items-center justify-between text-xs text-zinc-400 space-y-4 md:space-y-0">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 border-t border-zinc-900 flex flex-col md:flex-row items-center justify-between text-xs text-muted-foreground space-y-4 md:space-y-0">
         <div>
           © {new Date().getFullYear()} {settings.studioName || 'KSW STUDIO'} Haute Photographie. Tous droits réservés.
         </div>
         <div className="flex items-center space-x-6">
-          <Link href="/legal" className="hover:text-zinc-300">
+          <Link href="/legal" className="hover:text-foreground">
             Mentions Légales
           </Link>
-          <Link href="/privacy" className="hover:text-zinc-300">
+          <Link href="/privacy" className="hover:text-foreground">
             Politique de Confidentialité
           </Link>
-          <Link href="/contact" className="hover:text-zinc-300">
+          <Link href="/contact" className="hover:text-foreground">
             CGV & Droit à l&apos;Image
           </Link>
         </div>

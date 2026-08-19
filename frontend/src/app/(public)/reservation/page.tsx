@@ -344,12 +344,12 @@ export default function ReservationPage() {
   return (
     <div className="pt-28 pb-24 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
       <div className="text-center space-y-4 relative">
-        <div className="absolute inset-x-0 -top-8 h-32 bg-gradient-to-b from-amber-400/8 to-transparent pointer-events-none rounded-full blur-3xl" />
-        <Badge variant="gold" className="relative">Tunnel de Réservation Sécurisé</Badge>
-        <h1 className="relative text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight">
-          Réserver votre <span className="gold-gradient-text">séance photo</span>
+        <div className="absolute inset-x-0 -top-8 h-32 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none rounded-full blur-3xl" />
+        <Badge variant="primary" className="relative">Tunnel de Réservation Sécurisé</Badge>
+        <h1 className="relative text-3xl sm:text-4xl lg:text-5xl font-extrabold text-foreground tracking-tight">
+          Réserver votre <span className="text-primary">séance photo</span>
         </h1>
-        <p className="relative text-zinc-400 text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
+        <p className="relative text-muted-foreground text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
           Formule, créneau, coordonnées et acompte — un parcours fluide en quatre étapes.
         </p>
       </div>
@@ -357,8 +357,8 @@ export default function ReservationPage() {
       <ReservationStepper currentStep={step} />
 
       {step === 1 && (
-        <Card className="glass-panel border-zinc-800/80 overflow-hidden">
-          <CardHeader className="border-b border-zinc-800/60 bg-zinc-950/30">
+        <Card className="border-border/80 overflow-hidden">
+          <CardHeader className="border-b border-border/60 bg-surface-muted/30">
             <CardTitle className="text-xl">Choisissez votre formule</CardTitle>
             <CardDescription>
               Sélectionnez l&apos;offre adaptée à votre projet photographique.
@@ -374,20 +374,20 @@ export default function ReservationPage() {
                   onClick={() => setSelectedService(svc.id)}
                   className={`w-full p-5 rounded-2xl border text-left transition-all duration-200 flex items-center justify-between gap-4 ${
                     selected
-                      ? 'border-amber-400/50 bg-gradient-to-r from-amber-400/12 to-transparent shadow-[0_0_28px_-10px_rgba(251,191,36,0.4)]'
-                      : 'border-zinc-800/90 bg-zinc-950/40 hover:border-zinc-700 hover:bg-zinc-900/40'
+                      ? 'border-primary/50 bg-gradient-to-r from-primary-muted to-transparent'
+                      : 'border-border/90 bg-surface-muted hover:border-border hover:bg-surface-muted/40'
                   }`}
                 >
                   <div className="min-w-0">
-                    <h3 className="font-bold text-white text-base">{svc.title}</h3>
-                    <p className="text-xs text-zinc-500 mt-1 flex items-center gap-1.5">
+                    <h3 className="font-bold text-foreground text-base">{svc.title}</h3>
+                    <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
                       <Clock className="h-3.5 w-3.5" />
                       {svc.duration}
                     </p>
                   </div>
                   <div className="text-right shrink-0">
-                    <div className="text-lg font-extrabold text-white">{formatPrice(svc.price)}</div>
-                    <div className="text-[11px] font-semibold text-amber-400 mt-0.5">
+                    <div className="text-lg font-extrabold text-foreground">{formatPrice(svc.price)}</div>
+                    <div className="text-[11px] font-semibold text-primary mt-0.5">
                       Acompte {formatPrice(svc.deposit)}
                     </div>
                   </div>
@@ -396,7 +396,7 @@ export default function ReservationPage() {
             })}
 
             <div className="pt-4 flex justify-end">
-              <Button variant="gold" size="lg" onClick={() => setStep(2)} className="min-w-[200px]">
+              <Button variant="primary" size="lg" onClick={() => setStep(2)} className="min-w-[200px]">
                 Choisir la date <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </div>
@@ -405,8 +405,8 @@ export default function ReservationPage() {
       )}
 
       {step === 2 && (
-        <Card className="glass-panel border-zinc-800/80 overflow-hidden">
-          <CardHeader className="border-b border-zinc-800/60 bg-zinc-950/30">
+        <Card className="border-border/80 overflow-hidden">
+          <CardHeader className="border-b border-border/60 bg-surface-muted/30">
             <CardTitle className="text-xl">Date & créneau horaire</CardTitle>
             <CardDescription>
               Sélectionnez la date souhaitée et l&apos;heure de début de séance.
@@ -414,9 +414,9 @@ export default function ReservationPage() {
           </CardHeader>
           <CardContent className="p-4 sm:p-6 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="rounded-2xl border border-zinc-800/80 bg-zinc-950/50 p-4">
-                <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-500 block mb-3 flex items-center gap-2">
-                  <CalendarIcon className="h-3.5 w-3.5 text-amber-400" />
+              <div className="rounded-2xl border border-border/80 bg-surface-muted/50 p-4">
+                <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground block mb-3 flex items-center gap-2">
+                  <CalendarIcon className="h-3.5 w-3.5 text-primary" />
                   Date de la séance
                 </label>
                 <Input
@@ -428,9 +428,9 @@ export default function ReservationPage() {
                 />
               </div>
 
-              <div className="rounded-2xl border border-zinc-800/80 bg-zinc-950/50 p-4">
-                <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-500 block mb-3 flex items-center gap-2">
-                  <Clock className="h-3.5 w-3.5 text-amber-400" />
+              <div className="rounded-2xl border border-border/80 bg-surface-muted/50 p-4">
+                <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground block mb-3 flex items-center gap-2">
+                  <Clock className="h-3.5 w-3.5 text-primary" />
                   Créneaux disponibles
                 </label>
                 <div className="grid grid-cols-3 gap-2">
@@ -445,10 +445,10 @@ export default function ReservationPage() {
                       onClick={() => setSelectedTime(slot)}
                       className={`p-2.5 text-xs font-bold rounded-xl border transition-all duration-200 ${
                         isBooked
-                          ? 'border-zinc-800/80 bg-zinc-900/60 text-zinc-600 cursor-not-allowed line-through'
+                          ? 'border-border/80 bg-surface-muted/60 text-muted-foreground cursor-not-allowed line-through'
                           : isSelected
-                          ? 'border-amber-400 bg-amber-400 text-zinc-950 shadow-md shadow-amber-500/20'
-                          : 'border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200'
+                          ? 'border-primary bg-primary text-primary-foreground shadow-sm'
+                          : 'border-border bg-surface-muted text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground'
                       }`}
                     >
                       {slot}
@@ -457,10 +457,10 @@ export default function ReservationPage() {
                   })}
                 </div>
                 {availabilityLoading && (
-                  <p className="text-[11px] text-zinc-500 mt-2">Vérification des créneaux…</p>
+                  <p className="text-[11px] text-muted-foreground mt-2">Vérification des créneaux…</p>
                 )}
                 {!availabilityLoading && bookedSlots.size > 0 && (
-                  <p className="text-[11px] text-zinc-500 mt-2">
+                  <p className="text-[11px] text-muted-foreground mt-2">
                     {bookedSlots.size} créneau{bookedSlots.size > 1 ? 'x' : ''} déjà réservé{bookedSlots.size > 1 ? 's' : ''} ce jour.
                   </p>
                 )}
@@ -468,12 +468,12 @@ export default function ReservationPage() {
             </div>
 
             {(slotNotice || selectedSlotTaken) && (
-              <div className="rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4 space-y-3">
+              <div className="rounded-2xl border border-primary/30 bg-primary-muted p-4 space-y-3">
                 <div className="flex items-start gap-3">
-                  <AlertCircle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+                  <AlertCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                   <div className="space-y-1 min-w-0">
-                    <p className="text-sm font-semibold text-amber-200">Créneau indisponible</p>
-                    <p className="text-xs text-amber-100/90 leading-relaxed">
+                    <p className="text-sm font-semibold text-warning">Créneau indisponible</p>
+                    <p className="text-xs text-warning/90 leading-relaxed">
                       {slotNotice ||
                         (isWeddingBooking
                           ? `Le ${formatBookingDay(selectedDate)} à ${selectedTime} est déjà réservé. Pour un mariage, nous proposons généralement le jour suivant.`
@@ -483,19 +483,19 @@ export default function ReservationPage() {
                 </div>
                 {slotSuggestion && (
                   <div className="flex flex-col sm:flex-row sm:items-center gap-3 pl-8">
-                    <div className="text-xs text-zinc-200">
-                      <Sparkles className="h-3.5 w-3.5 inline mr-1 text-amber-400" />
+                    <div className="text-xs text-foreground">
+                      <Sparkles className="h-3.5 w-3.5 inline mr-1 text-primary" />
                       Proposition :{' '}
-                      <strong className="text-white">
+                      <strong className="text-foreground">
                         {formatBookingDay(slotSuggestion.date)} à {slotSuggestion.time}
                       </strong>
                       {isWeddingBooking && (
-                        <span className="text-zinc-400"> (report mariage)</span>
+                        <span className="text-muted-foreground"> (report mariage)</span>
                       )}
                     </div>
                     <Button
                       type="button"
-                      variant="gold"
+                      variant="primary"
                       size="sm"
                       className="shrink-0 text-xs"
                       onClick={() => applySlotSuggestion(slotSuggestion)}
@@ -508,7 +508,7 @@ export default function ReservationPage() {
             )}
 
             {isWeddingBooking && !selectedSlotTaken && (
-              <p className="text-[11px] text-zinc-500 leading-relaxed">
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
                 Prestation mariage : si votre créneau est déjà pris, le studio vous proposera automatiquement le jour suivant.
               </p>
             )}
@@ -528,7 +528,7 @@ export default function ReservationPage() {
               <Button variant="ghost" onClick={() => setStep(1)}>
                 <ChevronLeft className="h-4 w-4 mr-1" /> Retour
               </Button>
-              <Button variant="gold" onClick={handleProceedFromSchedule} className="min-w-[180px]">
+              <Button variant="primary" onClick={handleProceedFromSchedule} className="min-w-[180px]">
                 Coordonnées <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </div>
@@ -538,8 +538,8 @@ export default function ReservationPage() {
 
       {step === 3 && (
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
-          <Card className="glass-panel border-zinc-800/80 overflow-hidden">
-            <CardHeader className="border-b border-zinc-800/60 bg-zinc-950/30">
+          <Card className="border-border/80 overflow-hidden">
+            <CardHeader className="border-b border-border/60 bg-surface-muted/30">
               <CardTitle className="text-xl">Vos coordonnées</CardTitle>
               <CardDescription>
                 Informations pour le contrat, la facture et la galerie privée.
@@ -549,7 +549,7 @@ export default function ReservationPage() {
               <form onSubmit={handleSubmitBooking} className="space-y-5">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 block mb-1.5">Prénom</label>
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Prénom</label>
                     <Input
                       required
                       placeholder="Jean"
@@ -558,7 +558,7 @@ export default function ReservationPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 block mb-1.5">Nom</label>
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Nom</label>
                     <Input
                       required
                       placeholder="Dupont"
@@ -570,7 +570,7 @@ export default function ReservationPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 block mb-1.5">Email</label>
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Email</label>
                     <Input
                       required
                       type="email"
@@ -580,7 +580,7 @@ export default function ReservationPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 block mb-1.5">Téléphone</label>
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Téléphone</label>
                     <Input
                       required
                       placeholder="+33 6 12 34 56 78"
@@ -591,7 +591,7 @@ export default function ReservationPage() {
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 block mb-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">
                     Lieu de la séance
                   </label>
                   <Input
@@ -602,9 +602,9 @@ export default function ReservationPage() {
                   />
                 </div>
 
-                <div className="rounded-2xl border border-zinc-800/80 bg-zinc-950/40 p-4 sm:p-5 space-y-4">
+                <div className="rounded-2xl border border-border/80 bg-surface-muted p-4 sm:p-5 space-y-4">
                   <div>
-                    <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-500 block mb-3">
+                    <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground block mb-3">
                       Mode de paiement de l&apos;acompte
                     </label>
                     <PaymentMethodList
@@ -614,7 +614,7 @@ export default function ReservationPage() {
                       depositLabel={formatPrice(currentServiceObj?.deposit || 0)}
                     />
                   </div>
-                  <p className="text-[11px] text-zinc-500 flex items-start gap-2 leading-relaxed">
+                  <p className="text-[11px] text-muted-foreground flex items-start gap-2 leading-relaxed">
                     <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
                     Paiement sécurisé — finalisation à l&apos;étape suivante selon le mode choisi.
                   </p>
@@ -630,7 +630,7 @@ export default function ReservationPage() {
                   <Button type="button" variant="ghost" onClick={() => setStep(2)}>
                     <ChevronLeft className="h-4 w-4 mr-1" /> Retour
                   </Button>
-                  <Button type="submit" variant="gold" disabled={submitting || services.length === 0} className="min-w-[180px]">
+                  <Button type="submit" variant="primary" disabled={submitting || services.length === 0} className="min-w-[180px]">
                     {submitting ? 'Enregistrement…' : 'Valider la demande'}
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
@@ -655,13 +655,13 @@ export default function ReservationPage() {
       )}
 
       {step === 4 && currentServiceObj && (
-        <Card className="glass-panel-gold border-amber-400/30 gold-border-glow overflow-hidden">
-          <CardHeader className="text-center border-b border-amber-400/15 bg-amber-400/5 pb-8 pt-8">
+        <Card className="border-primary/30 overflow-hidden">
+          <CardHeader className="text-center border-b border-primary/15 bg-primary-muted pb-8 pt-8">
             <div
               className={`h-16 w-16 rounded-2xl flex items-center justify-center mx-auto mb-4 ${
                 paymentConfirmed
                   ? 'bg-emerald-500/20 text-emerald-400 ring-2 ring-emerald-500/30'
-                  : 'bg-amber-400/15 text-amber-400 ring-2 ring-amber-400/25'
+                  : 'bg-primary-muted text-primary ring-2 ring-primary/25'
               }`}
             >
               <CheckCircle2 className="h-9 w-9" />
@@ -685,9 +685,9 @@ export default function ReservationPage() {
           </CardHeader>
           <CardContent className="p-4 sm:p-8 space-y-6">
             {bookingRecord?.reference && (
-              <div className="rounded-xl border border-dashed border-amber-400/30 bg-amber-400/5 px-4 py-3 text-center">
-                <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 mb-1">Référence réservation</p>
-                <p className="font-mono text-lg font-bold text-amber-400">{bookingRecord.reference}</p>
+              <div className="rounded-xl border border-dashed border-primary/30 bg-primary-muted px-4 py-3 text-center">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1">Référence réservation</p>
+                <p className="font-mono text-lg font-bold text-primary">{bookingRecord.reference}</p>
               </div>
             )}
 
@@ -700,27 +700,27 @@ export default function ReservationPage() {
               depositRate={depositRate}
             />
 
-            <div className="flex gap-3 rounded-xl border border-zinc-800/80 bg-zinc-950/50 p-4 text-xs text-zinc-400 leading-relaxed">
-              <ImageIcon className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+            <div className="flex gap-3 rounded-xl border border-border/80 bg-surface-muted/50 p-4 text-xs text-muted-foreground leading-relaxed">
+              <ImageIcon className="h-5 w-5 text-primary shrink-0 mt-0.5" />
               <p>
                 Un espace galerie privé a été créé pour votre séance. Vous recevrez par email votre{' '}
-                <strong className="text-amber-400">clé d&apos;accès</strong> et votre{' '}
-                <strong className="text-amber-400">mot de passe</strong> pour consulter vos photos dès leur publication.
+                <strong className="text-primary">clé d&apos;accès</strong> et votre{' '}
+                <strong className="text-primary">mot de passe</strong> pour consulter vos photos dès leur publication.
               </p>
             </div>
 
             {!paymentConfirmed && !mobileMoneyPending && (
               <div className="space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-800/80 bg-zinc-950/60 px-4 py-3 text-xs">
-                  <span className="text-zinc-500">
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/80 bg-surface-muted px-4 py-3 text-xs">
+                  <span className="text-muted-foreground">
                     Mode choisi :{' '}
-                    <strong className="text-white">
+                    <strong className="text-foreground">
                       {paymentOptions.find((option) => option.id === paymentMethodChoice)?.label}
                     </strong>
                   </span>
                   <button
                     type="button"
-                    className="text-amber-400/90 hover:text-amber-400 font-semibold underline underline-offset-2"
+                    className="text-primary/90 hover:text-primary font-semibold underline underline-offset-2"
                     onClick={() => setStep(3)}
                   >
                     Modifier
@@ -728,16 +728,16 @@ export default function ReservationPage() {
                 </div>
 
                 {isOfflinePayment ? (
-                  <div className="rounded-2xl border border-zinc-800/80 bg-zinc-950/60 overflow-hidden">
-                    <div className="px-4 py-3 border-b border-zinc-800/80 bg-zinc-900/50 flex items-center gap-2">
+                  <div className="rounded-2xl border border-border/80 bg-surface-muted overflow-hidden">
+                    <div className="px-4 py-3 border-b border-border/80 bg-surface-muted/50 flex items-center gap-2">
                       {paymentMethodChoice === 'paypal' ? (
-                        <Wallet className="h-4 w-4 text-amber-400" />
+                        <Wallet className="h-4 w-4 text-primary" />
                       ) : paymentMethodChoice === 'cash' ? (
-                        <Banknote className="h-4 w-4 text-amber-400" />
+                        <Banknote className="h-4 w-4 text-primary" />
                       ) : (
-                        <Landmark className="h-4 w-4 text-amber-400" />
+                        <Landmark className="h-4 w-4 text-primary" />
                       )}
-                      <span className="text-sm font-semibold text-white">
+                      <span className="text-sm font-semibold text-foreground">
                         {paymentMethodChoice === 'paypal'
                           ? 'Paiement PayPal'
                           : paymentMethodChoice === 'cash'
@@ -746,14 +746,14 @@ export default function ReservationPage() {
                       </span>
                     </div>
                     <div className="p-4 sm:p-5 space-y-3 text-sm">
-                      <p className="text-zinc-400 text-xs leading-relaxed">
+                      <p className="text-muted-foreground text-xs leading-relaxed">
                         Réglez l&apos;acompte de{' '}
-                        <strong className="text-white">{formatPrice(currentServiceObj.deposit)}</strong>{' '}
+                        <strong className="text-foreground">{formatPrice(currentServiceObj.deposit)}</strong>{' '}
                         {paymentMethodChoice === 'cash' ? (
                           <>
                             en espèces au studio
                             {systemSettings.address ? (
-                              <> — <strong className="text-white">{systemSettings.address}</strong></>
+                              <> — <strong className="text-foreground">{systemSettings.address}</strong></>
                             ) : null}
                             . Mentionnez la référence{' '}
                           </>
@@ -762,9 +762,9 @@ export default function ReservationPage() {
                             par {paymentMethodChoice === 'paypal' ? 'PayPal' : 'virement'} avec la référence{' '}
                           </>
                         )}
-                        <strong className="font-mono text-amber-400">{bookingRecord?.reference}</strong>.
+                        <strong className="font-mono text-primary">{bookingRecord?.reference}</strong>.
                       </p>
-                      <div className="rounded-lg bg-zinc-900/80 border border-zinc-800 px-3 py-2 text-[11px] text-zinc-500">
+                      <div className="rounded-lg bg-surface-muted border border-border px-3 py-2 text-[11px] text-muted-foreground">
                         Contact : {systemSettings.contactEmail || 'contact@kswstudio.fr'}
                         {systemSettings.phone ? ` • ${systemSettings.phone}` : ''}
                       </div>
@@ -773,35 +773,35 @@ export default function ReservationPage() {
                 ) : paymentMethodChoice === 'mobile_money' ? (
                   <form
                     onSubmit={handleSubmitMobileMoney}
-                    className="rounded-2xl border border-zinc-800/80 bg-zinc-950/60 overflow-hidden space-y-0"
+                    className="rounded-2xl border border-border/80 bg-surface-muted overflow-hidden space-y-0"
                   >
-                    <div className="px-4 py-3 border-b border-zinc-800/80 bg-zinc-900/50 flex items-center gap-2">
-                      <Smartphone className="h-4 w-4 text-amber-400" />
-                      <span className="text-sm font-semibold text-white">Paiement {mobileMoneyProvider}</span>
+                    <div className="px-4 py-3 border-b border-border/80 bg-surface-muted/50 flex items-center gap-2">
+                      <Smartphone className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-semibold text-foreground">Paiement {mobileMoneyProvider}</span>
                     </div>
                     <div className="p-4 sm:p-5 space-y-4">
-                      <div className="rounded-xl bg-zinc-900/80 border border-zinc-800 p-4 space-y-2.5 text-xs">
+                      <div className="rounded-xl bg-surface-muted border border-border p-4 space-y-2.5 text-xs">
                         <div className="flex justify-between gap-4">
-                          <span className="text-zinc-500">Numéro à créditer</span>
-                          <span className="font-mono font-bold text-amber-400">{mobileMoneyNumber}</span>
+                          <span className="text-muted-foreground">Numéro à créditer</span>
+                          <span className="font-mono font-bold text-primary">{mobileMoneyNumber}</span>
                         </div>
                         <div className="flex justify-between gap-4">
-                          <span className="text-zinc-500">Montant acompte</span>
-                          <span className="font-bold text-white">{formatPrice(currentServiceObj.deposit)}</span>
+                          <span className="text-muted-foreground">Montant acompte</span>
+                          <span className="font-bold text-foreground">{formatPrice(currentServiceObj.deposit)}</span>
                         </div>
                         {bookingRecord?.reference && (
-                          <div className="flex justify-between gap-4 pt-2 border-t border-zinc-800">
-                            <span className="text-zinc-500">Référence</span>
-                            <span className="font-mono text-amber-400">{bookingRecord.reference}</span>
+                          <div className="flex justify-between gap-4 pt-2 border-t border-border">
+                            <span className="text-muted-foreground">Référence</span>
+                            <span className="font-mono text-primary">{bookingRecord.reference}</span>
                           </div>
                         )}
                         {mobileMoneyInstructions && (
-                          <p className="text-zinc-500 pt-2 border-t border-zinc-800 leading-relaxed">{mobileMoneyInstructions}</p>
+                          <p className="text-muted-foreground pt-2 border-t border-border leading-relaxed">{mobileMoneyInstructions}</p>
                         )}
                       </div>
                       <div className="grid sm:grid-cols-2 gap-4">
                         <div>
-                          <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 block mb-1.5">
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">
                             Votre numéro
                           </label>
                           <Input
@@ -812,7 +812,7 @@ export default function ReservationPage() {
                           />
                         </div>
                         <div>
-                          <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 block mb-1.5">
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">
                             Réf. transaction
                           </label>
                           <Input
@@ -830,7 +830,7 @@ export default function ReservationPage() {
                       )}
                       <Button
                         type="submit"
-                        variant="gold"
+                        variant="primary"
                         size="lg"
                         className="w-full justify-center"
                         disabled={submittingMobileMoney || !bookingRecord?.id}
@@ -840,10 +840,10 @@ export default function ReservationPage() {
                     </div>
                   </form>
                 ) : (
-                  <div className="rounded-2xl border border-zinc-800/80 bg-zinc-950/60 overflow-hidden">
-                    <div className="px-4 py-3 border-b border-zinc-800/80 bg-zinc-900/50 flex items-center gap-2">
-                      <CreditCard className="h-4 w-4 text-amber-400" />
-                      <span className="text-sm font-semibold text-white">Stripe Checkout</span>
+                  <div className="rounded-2xl border border-border/80 bg-surface-muted overflow-hidden">
+                    <div className="px-4 py-3 border-b border-border/80 bg-surface-muted/50 flex items-center gap-2">
+                      <CreditCard className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-semibold text-foreground">Stripe Checkout</span>
                       <span className="ml-auto text-[9px] font-bold uppercase tracking-wider text-emerald-400">SSL</span>
                     </div>
                     <div className="p-4 sm:p-5 space-y-3">
@@ -853,7 +853,7 @@ export default function ReservationPage() {
                         </p>
                       )}
                       <Button
-                        variant="gold"
+                        variant="primary"
                         size="lg"
                         className="w-full justify-center"
                         disabled={paying || !bookingRecord?.id}

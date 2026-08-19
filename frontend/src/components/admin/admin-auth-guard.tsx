@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { RefreshCw, AlertCircle } from 'lucide-react';
 import apiClient from '@/lib/api-client';
 import { clearSession, getSession, isAdminUser, persistSession } from '@/lib/session';
-import { canSkipAuthVerify, markAuthVerified } from '@/lib/auth-verify-cache';
+import { markAuthVerified } from '@/lib/auth-verify-cache';
 import { LoadingState } from '@/components/common/loading-state';
 import { Button } from '@/components/ui/button';
 import { getApiErrorMessage, isAuthApiError } from '@/lib/api-error';
@@ -15,9 +15,11 @@ export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const pathnameRef = useRef(pathname);
-  pathnameRef.current = pathname;
+  useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
 
-  const [ready, setReady] = useState(() => canSkipAuthVerify(isAdminUser));
+  const [ready, setReady] = useState(false);
   const [denied, setDenied] = useState(false);
   const [networkError, setNetworkError] = useState('');
   const verifyingRef = useRef(false);
@@ -32,11 +34,6 @@ export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (!force && canSkipAuthVerify(isAdminUser)) {
-      setReady(true);
-      return;
-    }
-
     verifyingRef.current = true;
     try {
       const res = await apiClient.get('/auth/me');
@@ -47,7 +44,7 @@ export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
         router.replace(buildLoginUrl({ redirect: pathnameRef.current || '/admin/dashboard', admin: true }));
         return;
       }
-      persistSession(localStorage.getItem('studio_token') || '', user);
+      persistSession('', user);
       markAuthVerified();
       setReady(true);
     } catch (err: unknown) {
@@ -55,10 +52,6 @@ export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
         clearSession();
         setDenied(true);
         router.replace(buildLoginUrl({ redirect: pathnameRef.current || '/admin/dashboard', admin: true }));
-        return;
-      }
-      if (canSkipAuthVerify(isAdminUser)) {
-        setReady(true);
         return;
       }
       setNetworkError(getApiErrorMessage(err, 'Impossible de joindre l\'API backend.'));
@@ -73,14 +66,14 @@ export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
 
   if (networkError) {
     return (
-      <div className="min-h-screen flex items-center justify-center py-24 px-4 bg-zinc-950">
-        <div className="max-w-md w-full glass-panel rounded-2xl border border-amber-400/20 p-8 text-center space-y-4">
-          <AlertCircle className="h-10 w-10 text-amber-400 mx-auto" />
-          <h2 className="text-lg font-bold text-white">API indisponible</h2>
-          <p className="text-sm text-zinc-400 leading-relaxed">{networkError}</p>
-          <Button type="button" variant="gold" size="sm" onClick={() => verify(true)} className="space-x-2">
-            <RefreshCw className="h-4 w-4" />
-            <span>Réessayer</span>
+      <div className="min-h-screen flex items-center justify-center py-24 px-4 bg-background">
+        <div className="max-w-md w-full surface rounded-lg p-8 text-center space-y-4">
+          <AlertCircle className="h-10 w-10 text-warning mx-auto" aria-hidden />
+          <h2 className="text-h2">API indisponible</h2>
+          <p className="text-small text-muted-foreground">{networkError}</p>
+          <Button type="button" variant="primary" size="sm" onClick={() => verify(true)}>
+            <RefreshCw className="h-4 w-4" aria-hidden />
+            Réessayer
           </Button>
         </div>
       </div>
@@ -89,7 +82,7 @@ export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
 
   if (denied || !ready) {
     return (
-      <div className="min-h-screen flex items-center justify-center py-24 bg-zinc-950">
+      <div className="min-h-screen flex items-center justify-center py-24 bg-background">
         <LoadingState message="Vérification de l'accès administrateur…" />
       </div>
     );

@@ -7,6 +7,7 @@ import { ArrowRight, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useAuth, isAdminUser } from '@/hooks/use-auth';
 import { safeRedirect } from '@/lib/safe-redirect';
 import { useSettings } from '@/context/settings-context';
@@ -15,7 +16,7 @@ import { buildLoginUrl, isAdminLoginContext } from '@/lib/auth-login-url';
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="text-zinc-400 text-sm text-center py-8">Chargement…</div>}>
+    <Suspense fallback={<div className="text-muted-foreground text-sm text-center py-8">Chargement…</div>}>
       <LoginPageContent />
     </Suspense>
   );
@@ -81,16 +82,16 @@ function LoginPageContent() {
   };
 
   return (
-    <Card className="glass-panel border-amber-400/30 gold-border-glow">
+    <Card>
       <CardHeader className="text-center space-y-2">
         {isAdminLogin && (
-          <div className="inline-flex items-center gap-2 mx-auto px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/30 text-amber-400 text-xs font-semibold uppercase tracking-wider">
-            <Shield className="h-3.5 w-3.5" />
+          <div className="inline-flex items-center gap-2 mx-auto px-3 py-1 rounded-md bg-primary-muted border border-primary/25 text-primary text-caption font-medium uppercase tracking-wider">
+            <Shield className="h-3.5 w-3.5" aria-hidden />
             Espace administrateur
           </div>
         )}
-        <CardTitle className="text-2xl font-bold">
-          Connexion à <span className="gold-gradient-text">{settings.studioName || 'KSW Studio'}</span>
+        <CardTitle className="text-h1">
+          Connexion à <span className="text-accent">{settings.studioName || 'KSW Studio'}</span>
         </CardTitle>
         <CardDescription>
           {isAdminLogin
@@ -101,15 +102,13 @@ function LoginPageContent() {
       <CardContent>
         <form onSubmit={handleLogin} className="space-y-4" noValidate>
           {displayError && (
-            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs">
+            <div className="p-3 rounded-lg bg-danger-muted border border-danger/25 text-danger text-small" role="alert">
               {displayError}
             </div>
           )}
 
           <div>
-            <label htmlFor="login-email" className="text-xs text-zinc-400 block mb-1">
-              Adresse email
-            </label>
+            <Label htmlFor="login-email">Adresse email</Label>
             <Input
               id="login-email"
               required
@@ -122,11 +121,11 @@ function LoginPageContent() {
           </div>
 
           <div>
-            <div className="flex justify-between items-center mb-1">
-              <label htmlFor="login-password" className="text-xs text-zinc-400">
+            <div className="flex justify-between items-center mb-1.5">
+              <Label htmlFor="login-password" className="mb-0">
                 Mot de passe
-              </label>
-              <Link href="/forgot-password" className="text-xs text-amber-400 hover:underline">
+              </Label>
+              <Link href="/forgot-password" className="text-caption text-primary hover:underline">
                 Oublié ?
               </Link>
             </div>
@@ -141,24 +140,18 @@ function LoginPageContent() {
             />
           </div>
 
-          <Button
-            type="submit"
-            variant="gold"
-            size="lg"
-            className="w-full justify-center font-bold"
-            disabled={loading}
-          >
+          <Button type="submit" variant="primary" size="lg" className="w-full" disabled={loading}>
             {loading ? 'Connexion en cours…' : 'Se connecter'}
-            {!loading && <ArrowRight className="h-4 w-4 ml-2" />}
+            {!loading && <ArrowRight className="h-4 w-4" aria-hidden />}
           </Button>
 
-          <div className="pt-2 border-t border-zinc-800 text-center text-xs text-zinc-400 space-y-2">
+          <div className="pt-2 border-t border-border text-center text-small text-muted-foreground space-y-2">
             {isAdminLogin ? (
               <>
-                <Link href="/" className="text-amber-400 font-semibold hover:underline block">
+                <Link href="/" className="text-primary font-medium hover:underline block">
                   Retour au site public
                 </Link>
-                <Link href="/login" className="text-zinc-500 hover:text-zinc-300 block">
+                <Link href="/login" className="hover:text-foreground block">
                   Connexion client →
                 </Link>
               </>
@@ -167,13 +160,13 @@ function LoginPageContent() {
                 Nouveau client ?{' '}
                 <Link
                   href={redirect ? `/register?redirect=${encodeURIComponent(redirect)}` : '/register'}
-                  className="text-amber-400 font-semibold hover:underline"
+                  className="text-primary font-medium hover:underline"
                 >
                   Créer un compte
                 </Link>
-                <span className="block pt-1 text-zinc-500">
+                <span className="block pt-1">
                   Personnel du studio ?{' '}
-                  <Link href={buildLoginUrl({ admin: true })} className="text-amber-400 font-semibold hover:underline">
+                  <Link href={buildLoginUrl({ admin: true })} className="text-primary font-medium hover:underline">
                     Accès administrateur
                   </Link>
                 </span>

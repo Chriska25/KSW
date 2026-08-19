@@ -26,21 +26,21 @@ function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-zinc-300 block font-semibold text-xs">{label}</label>
+      <label className="text-foreground block font-semibold text-xs">{label}</label>
       {multiline ? (
         <textarea
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           rows={3}
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-400/40"
+          className="w-full rounded-xl border border-border bg-surface-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         />
       ) : (
         <Input
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="bg-zinc-950 text-white"
+          className="bg-surface-muted text-foreground"
         />
       )}
     </div>
@@ -61,10 +61,10 @@ export function HomePageSettingsFields({ settings, onChange }: HomePageSettingsF
 
   return (
     <div className="space-y-6">
-      <Card className="glass-panel">
+      <Card className="">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            <Home className="h-5 w-5 text-amber-400" /> Bannière principale (Hero)
+            <Home className="h-5 w-5 text-primary" /> Bannière principale (Hero)
           </CardTitle>
           <CardDescription>Textes affichés en haut de la page d&apos;accueil.</CardDescription>
         </CardHeader>
@@ -106,10 +106,10 @@ export function HomePageSettingsFields({ settings, onChange }: HomePageSettingsF
         </CardContent>
       </Card>
 
-      <Card className="glass-panel">
+      <Card className="">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-amber-400" /> Badges de confiance (sous le hero)
+            <Sparkles className="h-5 w-5 text-primary" /> Badges de confiance (sous le hero)
           </CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
@@ -119,16 +119,16 @@ export function HomePageSettingsFields({ settings, onChange }: HomePageSettingsF
         </CardContent>
       </Card>
 
-      <Card className="glass-panel">
+      <Card className="">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-amber-400" /> Chiffres clés
+            <BarChart3 className="h-5 w-5 text-primary" /> Chiffres clés
           </CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
           {home.stats.map((stat, index) => (
-            <div key={index} className="p-4 rounded-xl border border-zinc-800 bg-zinc-950/60 space-y-3">
-              <p className="text-zinc-400 font-semibold uppercase tracking-wide text-[10px]">
+            <div key={index} className="p-4 rounded-xl border border-border bg-surface-muted space-y-3">
+              <p className="text-muted-foreground font-semibold uppercase tracking-wide text-[10px]">
                 Statistique {index + 1}
               </p>
               <Field
@@ -146,7 +146,7 @@ export function HomePageSettingsFields({ settings, onChange }: HomePageSettingsF
         </CardContent>
       </Card>
 
-      <Card className="glass-panel">
+      <Card className="">
         <CardHeader>
           <CardTitle className="text-lg">Section prestations (intro)</CardTitle>
           <CardDescription>Les cartes prestations viennent de l&apos;API — seuls les titres ci-dessous sont éditables.</CardDescription>
@@ -174,10 +174,10 @@ export function HomePageSettingsFields({ settings, onChange }: HomePageSettingsF
         </CardContent>
       </Card>
 
-      <Card className="glass-panel">
+      <Card className="">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            <Megaphone className="h-5 w-5 text-amber-400" /> Bandeau d&apos;appel à l&apos;action
+            <Megaphone className="h-5 w-5 text-primary" /> Bandeau d&apos;appel à l&apos;action
           </CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">

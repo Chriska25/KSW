@@ -1,9 +1,16 @@
 import type { Metadata } from 'next';
+import { Source_Sans_3 } from 'next/font/google';
 import './globals.css';
 import { JsonLdSchema } from '@/components/seo/json-ld';
 import { AppProviders } from '@/components/providers/app-providers';
 import { themeInitScript } from '@/lib/theme-script';
 import { fetchSettingsServer } from '@/lib/server-fetch';
+
+const sourceSans = Source_Sans_3({
+  subsets: ['latin', 'latin-ext'],
+  variable: '--font-sans',
+  display: 'swap',
+});
 
 export const revalidate = 30;
 
@@ -84,11 +91,11 @@ export default async function RootLayout({
   const initialSettings = await fetchSettingsServer();
 
   return (
-    <html lang="fr" className="h-full antialiased" suppressHydrationWarning>
+    <html lang="fr" className={`${sourceSans.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} suppressHydrationWarning />
       </head>
-      <body className="min-h-full flex flex-col bg-zinc-950 text-zinc-100 font-sans transition-colors duration-200">
+      <body className="min-h-full flex flex-col bg-background text-foreground font-sans transition-colors duration-200">
         <JsonLdSchema settings={initialSettings} />
         <AppProviders initialSettings={initialSettings}>
           {children}

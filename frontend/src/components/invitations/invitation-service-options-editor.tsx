@@ -65,8 +65,8 @@ export function InvitationServiceOptionsEditor({ value, onChange }: InvitationSe
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-white font-semibold text-sm">Repas, boissons & options invités</p>
-        <p className="text-zinc-500 text-xs mt-1">
+        <p className="text-foreground font-semibold text-sm">Repas, boissons & options invités</p>
+        <p className="text-muted-foreground text-xs mt-1">
           Paramétrez ce que vos invités pourront choisir lors de leur confirmation de présence.
         </p>
       </div>
@@ -74,16 +74,16 @@ export function InvitationServiceOptionsEditor({ value, onChange }: InvitationSe
       {GROUP_META.map(({ key, title, hint, icon: Icon, placeholder }) => {
         const group = value[key];
         return (
-          <div key={key} className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4 space-y-3">
+          <div key={key} className="rounded-xl border border-border bg-surface-muted/60 p-4 space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
               <div className="flex items-start gap-2">
-                <Icon className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+                <Icon className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                 <div>
                   <p className="text-zinc-200 font-medium text-sm">{title}</p>
-                  <p className="text-zinc-500 text-xs mt-0.5">{hint}</p>
+                  <p className="text-muted-foreground text-xs mt-0.5">{hint}</p>
                 </div>
               </div>
-              <label className="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer shrink-0">
+              <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer shrink-0">
                 <input
                   type="checkbox"
                   checked={group.enabled}
@@ -95,13 +95,13 @@ export function InvitationServiceOptionsEditor({ value, onChange }: InvitationSe
             </div>
 
             {group.enabled && (
-              <div className="space-y-3 pt-1 border-t border-zinc-800/80">
+              <div className="space-y-3 pt-1 border-t border-border/80">
                 <Field
                   label="Libellé affiché"
                   value={group.label}
                   onChange={(v) => patchGroup(key, { label: v })}
                 />
-                <label className="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer">
+                <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
                   <input
                     type="checkbox"
                     checked={group.required}
@@ -112,7 +112,7 @@ export function InvitationServiceOptionsEditor({ value, onChange }: InvitationSe
                 </label>
 
                 <div className="space-y-2">
-                  <span className="text-zinc-400 text-xs block">Options proposées</span>
+                  <span className="text-muted-foreground text-xs block">Options proposées</span>
                   {group.choices.length === 0 && (
                     <p className="text-zinc-600 text-xs">Aucune option — ajoutez au moins un choix.</p>
                   )}
@@ -122,13 +122,13 @@ export function InvitationServiceOptionsEditor({ value, onChange }: InvitationSe
                         value={choice}
                         placeholder={placeholder}
                         onChange={(e) => updateChoice(key, index, e.target.value)}
-                        className="bg-zinc-900 text-sm"
+                        className="bg-surface-muted text-sm"
                       />
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="shrink-0 text-zinc-500 hover:text-rose-400"
+                        className="shrink-0 text-muted-foreground hover:text-rose-400"
                         onClick={() => removeChoice(key, index)}
                         aria-label="Supprimer"
                       >
@@ -160,8 +160,8 @@ function Field({
 }) {
   return (
     <div>
-      <label className="text-zinc-400 text-xs block mb-1">{label}</label>
-      <Input value={value} onChange={(e) => onChange(e.target.value)} className="bg-zinc-900 text-sm" />
+      <label className="text-muted-foreground text-xs block mb-1">{label}</label>
+      <Input value={value} onChange={(e) => onChange(e.target.value)} className="bg-surface-muted text-sm" />
     </div>
   );
 }

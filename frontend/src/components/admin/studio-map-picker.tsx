@@ -103,9 +103,11 @@ export function StudioMapPicker({
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState('');
 
-  onChangeRef.current = onChange;
-  onPersistRef.current = onPersist;
-  valueRef.current = value;
+  useEffect(() => {
+    onChangeRef.current = onChange;
+    onPersistRef.current = onPersist;
+    valueRef.current = value;
+  }, [onChange, onPersist, value]);
 
   const emitCoords = (lat: number, lng: number, zoom?: number) => {
     const coords: StudioMapCoords = {
@@ -237,7 +239,7 @@ export function StudioMapPicker({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2 items-center justify-between">
-        <p className="text-[11px] text-zinc-500 max-w-xl">
+        <p className="text-[11px] text-muted-foreground max-w-xl">
           Cliquez sur la carte ou déplacez le marqueur — le point est enregistré automatiquement en base de données.
         </p>
         <div className="flex flex-wrap gap-2 items-center">
@@ -245,10 +247,10 @@ export function StudioMapPicker({
             <span
               className={`inline-flex items-center gap-1.5 text-[11px] font-medium ${
                 persistStatus === 'saved'
-                  ? 'text-emerald-400'
+                  ? 'text-success'
                   : persistStatus === 'error'
-                    ? 'text-rose-400'
-                    : 'text-amber-400'
+                    ? 'text-danger'
+                    : 'text-primary'
               }`}
             >
               {persistStatus === 'saving' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
@@ -257,7 +259,7 @@ export function StudioMapPicker({
             </span>
           )}
           {onPersist && (
-            <Button type="button" variant="gold" size="sm" disabled={persistStatus === 'saving'} onClick={persistNow}>
+            <Button type="button" variant="primary" size="sm" disabled={persistStatus === 'saving'} onClick={persistNow}>
               <Save className="h-3.5 w-3.5 mr-1.5" />
               Enregistrer ce point
             </Button>
@@ -273,7 +275,7 @@ export function StudioMapPicker({
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
-          <label className="text-zinc-400 block mb-1 font-semibold text-xs">Latitude</label>
+          <label className="text-muted-foreground block mb-1 font-semibold text-xs">Latitude</label>
           <Input
             type="number"
             step="0.000001"
@@ -283,7 +285,7 @@ export function StudioMapPicker({
           />
         </div>
         <div>
-          <label className="text-zinc-400 block mb-1 font-semibold text-xs">Longitude</label>
+          <label className="text-muted-foreground block mb-1 font-semibold text-xs">Longitude</label>
           <Input
             type="number"
             step="0.000001"
@@ -293,7 +295,7 @@ export function StudioMapPicker({
           />
         </div>
         <div>
-          <label className="text-zinc-400 block mb-1 font-semibold text-xs">Zoom carte</label>
+          <label className="text-muted-foreground block mb-1 font-semibold text-xs">Zoom carte</label>
           <Input
             type="number"
             min={10}
@@ -313,17 +315,17 @@ export function StudioMapPicker({
       </div>
 
       {loadError ? (
-        <p className="text-rose-400 text-xs">{loadError}</p>
+        <p className="text-danger text-xs">{loadError}</p>
       ) : (
         <div
           ref={mapContainerRef}
-          className="h-64 sm:h-72 w-full rounded-2xl overflow-hidden border border-zinc-800 z-0 [&_.leaflet-container]:h-full [&_.leaflet-container]:w-full [&_.leaflet-container]:bg-zinc-900"
+          className="h-64 sm:h-72 w-full rounded-2xl overflow-hidden border border-border z-0 [&_.leaflet-container]:h-full [&_.leaflet-container]:w-full [&_.leaflet-container]:bg-surface-muted"
         />
       )}
 
-      <div className="p-3 rounded-xl border border-dashed border-zinc-700 bg-zinc-900/40 space-y-2">
-        <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider text-zinc-500 font-mono">
-          <MapPin className="h-3.5 w-3.5 text-amber-400" />
+      <div className="p-3 rounded-xl border border-dashed border-border bg-surface-muted space-y-2">
+        <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
+          <MapPin className="h-3.5 w-3.5 text-primary" />
           Aperçu page Contact — {formatCoord(value.lat)}, {formatCoord(value.lng)}
         </div>
         <StudioMapEmbed coords={value} className="h-40 w-full" />

@@ -6,10 +6,21 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableEmpty,
+} from '@/components/ui/table';
+import { Select } from '@/components/ui/select';
 import { useSettings } from '@/context/settings-context';
 import { useAdminToast } from '@/components/admin/admin-toast';
 import { LoadingState } from '@/components/common/loading-state';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
+import { AdminModal } from '@/components/admin/admin-modal';
 import { fetchAdminBookings, recordBalancePayment, deleteBookingPermanently } from '@/lib/admin-crm-api';
 import { bookingsToInvoices, computeInvoiceSummary, type InvoiceRow } from '@/lib/admin-dashboard';
 import { BALANCE_PAYMENT_METHODS, type PaymentMethodType } from '@/lib/invoice-utils';
@@ -143,40 +154,46 @@ export default function AdminDevisFacturesPage() {
       />
 
       {error && (
-        <p className="text-rose-400 text-sm rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3">
+        <p className="text-danger text-sm rounded-lg border border-danger/30 bg-danger-muted px-4 py-3">
           {error}
         </p>
       )}
 
       <div className="grid sm:grid-cols-3 gap-4">
-        <Card className="glass-panel">
-          <CardContent className="pt-6">
-            <span className="text-xs text-zinc-400 font-semibold uppercase">Facturé</span>
-            <div className="text-3xl font-extrabold text-white mt-1">{formatPrice(summary.totalInvoiced)}</div>
+        <Card>
+          <CardHeader className="pb-2 space-y-0">
+            <CardTitle className="text-caption font-semibold uppercase">Facturé</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-semibold text-foreground tabular-nums">{formatPrice(summary.totalInvoiced)}</div>
           </CardContent>
         </Card>
-        <Card className="glass-panel">
-          <CardContent className="pt-6">
-            <span className="text-xs text-zinc-400 font-semibold uppercase">Encaissé</span>
-            <div className="text-3xl font-extrabold text-emerald-400 mt-1">{formatPrice(summary.totalPaid)}</div>
+        <Card>
+          <CardHeader className="pb-2 space-y-0">
+            <CardTitle className="text-caption font-semibold uppercase">Encaissé</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-semibold text-success tabular-nums">{formatPrice(summary.totalPaid)}</div>
           </CardContent>
         </Card>
-        <Card className="glass-panel">
-          <CardContent className="pt-6">
-            <span className="text-xs text-zinc-400 font-semibold uppercase">Solde restant</span>
-            <div className="text-3xl font-extrabold text-amber-400 mt-1">{formatPrice(summary.remaining)}</div>
+        <Card>
+          <CardHeader className="pb-2 space-y-0">
+            <CardTitle className="text-caption font-semibold uppercase">Solde restant</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-semibold text-primary tabular-nums">{formatPrice(summary.remaining)}</div>
           </CardContent>
         </Card>
       </div>
 
-      <Card className="glass-panel">
+      <Card>
         <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <CardTitle className="text-xl">Factures ({filteredInvoices.length})</CardTitle>
+            <CardTitle className="text-h2">Factures ({filteredInvoices.length})</CardTitle>
             <CardDescription>Acompte + solde — PDF imprimable avec détail des modes de paiement.</CardDescription>
           </div>
           <div className="relative w-full sm:w-72">
-            <Search className="h-4 w-4 absolute left-3 top-3 text-zinc-500" />
+            <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
             <Input
               placeholder="N° facture, client…"
               value={searchTerm}
@@ -187,65 +204,65 @@ export default function AdminDevisFacturesPage() {
         </CardHeader>
 
         <CardContent>
-          {filteredInvoices.length === 0 ? (
-            <p className="text-zinc-500 text-sm text-center py-8">Aucune facture — les réservations apparaîtront ici.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-zinc-300">
-                <thead className="bg-zinc-950/80 text-xs font-semibold uppercase text-zinc-400 border-b border-zinc-800">
-                  <tr>
-                    <th className="py-3 px-4">N° Facture</th>
-                    <th className="py-3 px-4">Client</th>
-                    <th className="py-3 px-4">Prestation</th>
-                    <th className="py-3 px-4">Total</th>
-                    <th className="py-3 px-4">Réglé</th>
-                    <th className="py-3 px-4">Solde</th>
-                    <th className="py-3 px-4">Paiement</th>
-                    <th className="py-3 px-4">Statut</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-800/60">
-                  {filteredInvoices.map((inv) => {
-                    const remaining = inv.remainingAmount ?? Math.max(0, inv.totalAmount - inv.paidAmount);
-                    const canRecordBalance =
-                      inv.status === 'partially_paid' && remaining > 0.01 && (inv.paymentLines?.length || 0) <= 1;
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>N° facture</TableHead>
+                <TableHead>Client</TableHead>
+                <TableHead>Prestation</TableHead>
+                <TableHead>Total</TableHead>
+                <TableHead>Réglé</TableHead>
+                <TableHead>Solde</TableHead>
+                <TableHead>Paiement</TableHead>
+                <TableHead>Statut</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredInvoices.length === 0 ? (
+                <TableEmpty colSpan={9} message="Aucune facture — les réservations apparaîtront ici." />
+              ) : (
+                filteredInvoices.map((inv) => {
+                  const remaining = inv.remainingAmount ?? Math.max(0, inv.totalAmount - inv.paidAmount);
+                  const canRecordBalance =
+                    inv.status === 'partially_paid' && remaining > 0.01 && (inv.paymentLines?.length || 0) <= 1;
 
-                    return (
-                      <tr key={inv.id} className="hover:bg-zinc-900/40 transition-colors">
-                        <td className="py-3.5 px-4 font-mono text-xs font-bold text-amber-400">{inv.number}</td>
-                        <td className="py-3.5 px-4 font-semibold text-white">{inv.clientName}</td>
-                        <td className="py-3.5 px-4 text-zinc-300 text-xs">{inv.serviceTitle}</td>
-                        <td className="py-3.5 px-4 font-extrabold text-white">{formatInvoiceAmount(inv.totalAmount, inv.currency)}</td>
-                        <td className="py-3.5 px-4 text-xs font-bold text-emerald-400">
-                          {formatInvoiceAmount(inv.paidAmount, inv.currency)}
-                        </td>
-                        <td className="py-3.5 px-4 text-xs font-bold text-amber-400">
-                          {formatInvoiceAmount(remaining, inv.currency)}
-                        </td>
-                        <td className="py-3.5 px-4 text-xs text-zinc-400">
-                          <div className="flex items-start gap-1">
-                            <CreditCard className="h-3.5 w-3.5 mr-0.5 text-amber-400 shrink-0 mt-0.5" />
-                            <span>{inv.paymentSummary || inv.paymentMethod}</span>
-                          </div>
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <Badge
-                            variant={
-                              inv.status === 'paid' ? 'success' : inv.status === 'partially_paid' ? 'gold' : 'warning'
-                            }
-                          >
-                            {inv.status === 'paid'
-                              ? 'Soldée'
-                              : inv.status === 'partially_paid'
-                                ? 'Acompte réglé'
-                                : 'En attente'}
-                          </Badge>
-                        </td>
-                        <td className="py-3.5 px-4 text-right space-x-1">
+                  return (
+                    <TableRow key={inv.id}>
+                      <TableCell className="font-mono text-xs font-semibold text-primary">{inv.number}</TableCell>
+                      <TableCell className="font-medium">{inv.clientName}</TableCell>
+                      <TableCell className="text-muted-foreground text-xs">{inv.serviceTitle}</TableCell>
+                      <TableCell className="font-semibold tabular-nums">{formatInvoiceAmount(inv.totalAmount, inv.currency)}</TableCell>
+                      <TableCell className="text-xs font-semibold text-success tabular-nums">
+                        {formatInvoiceAmount(inv.paidAmount, inv.currency)}
+                      </TableCell>
+                      <TableCell className="text-xs font-semibold text-primary tabular-nums">
+                        {formatInvoiceAmount(remaining, inv.currency)}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        <div className="flex items-start gap-1">
+                          <CreditCard className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+                          <span>{inv.paymentSummary || inv.paymentMethod}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            inv.status === 'paid' ? 'success' : inv.status === 'partially_paid' ? 'accent' : 'warning'
+                          }
+                        >
+                          {inv.status === 'paid'
+                            ? 'Soldée'
+                            : inv.status === 'partially_paid'
+                              ? 'Acompte réglé'
+                              : 'En attente'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="inline-flex items-center gap-1">
                           {canRecordBalance && (
                             <Button
-                              variant="gold"
+                              variant="primary"
                               size="sm"
                               className="text-xs h-8"
                               onClick={() => handleOpenBalanceModal(inv)}
@@ -257,9 +274,10 @@ export default function AdminDevisFacturesPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-amber-400"
+                            className="h-8 w-8 text-primary"
                             onClick={() => handleDownloadPdf(inv)}
                             title="Imprimer / PDF"
+                            aria-label="Télécharger PDF"
                           >
                             <Download className="h-4 w-4" />
                           </Button>
@@ -267,130 +285,122 @@ export default function AdminDevisFacturesPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-rose-500 hover:text-rose-400"
+                              className="h-8 w-8 text-destructive hover:text-destructive/80"
                               onClick={() => handleDeleteInvoice(inv)}
                               title="Supprimer facture et réservation (super admin)"
+                              aria-label="Supprimer"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 
-      {balanceInvoice && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <Card className="glass-panel max-w-md w-full border-amber-400/40">
-            <CardHeader className="flex flex-row items-center justify-between border-b border-zinc-800 pb-3">
-              <div>
-                <CardTitle className="text-xl">Encaisser le solde</CardTitle>
-                <CardDescription className="mt-1">
-                  {balanceInvoice.number} — {balanceInvoice.clientName}
-                </CardDescription>
+      <AdminModal
+        open={!!balanceInvoice}
+        onClose={() => setBalanceInvoice(null)}
+        title="Encaisser le solde"
+        size="md"
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => setBalanceInvoice(null)}>
+              Annuler
+            </Button>
+            <Button type="submit" form="balance-form" variant="primary" disabled={recordingBalance}>
+              {recordingBalance ? 'Enregistrement…' : 'Valider et imprimer'}
+            </Button>
+          </>
+        }
+      >
+        {balanceInvoice && (
+          <>
+            <p className="text-sm text-muted-foreground mb-4">
+              {balanceInvoice.number} — {balanceInvoice.clientName}
+            </p>
+            <form id="balance-form" onSubmit={handleRecordBalance} className="space-y-4 text-sm">
+              <div className="p-3 rounded-lg border border-border bg-surface-muted grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <span className="text-muted-foreground block">Total TTC</span>
+                  <span className="text-foreground font-semibold">{formatPrice(balanceInvoice.totalAmount)}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block">Déjà réglé</span>
+                  <span className="text-success font-semibold">{formatPrice(balanceInvoice.paidAmount)}</span>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-muted-foreground block">Solde restant</span>
+                  <span className="text-primary font-semibold text-lg">
+                    {formatPrice(balanceInvoice.remainingAmount ?? 0)}
+                  </span>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setBalanceInvoice(null)}
-                className="text-zinc-400 hover:text-white"
-              >
-                ✕
-              </button>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleRecordBalance} className="space-y-4 text-sm">
-                <div className="p-3 rounded-xl border border-zinc-800 bg-zinc-950 grid grid-cols-2 gap-3 text-xs">
-                  <div>
-                    <span className="text-zinc-500 block">Total TTC</span>
-                    <span className="text-white font-bold">{formatPrice(balanceInvoice.totalAmount)}</span>
-                  </div>
-                  <div>
-                    <span className="text-zinc-500 block">Déjà réglé</span>
-                    <span className="text-emerald-400 font-bold">{formatPrice(balanceInvoice.paidAmount)}</span>
-                  </div>
-                  <div className="col-span-2">
-                    <span className="text-zinc-500 block">Solde restant</span>
-                    <span className="text-amber-400 font-bold text-lg">
-                      {formatPrice(balanceInvoice.remainingAmount ?? 0)}
-                    </span>
-                  </div>
-                </div>
 
-                <div>
-                  <label className="text-xs text-zinc-400 block mb-1 font-semibold">Montant encaissé</label>
-                  <Input
-                    required
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    value={balanceAmount}
-                    onChange={(e) => setBalanceAmount(e.target.value)}
-                  />
-                </div>
+              <div>
+                <label className="text-caption font-medium text-muted-foreground block mb-1.5">Montant encaissé</label>
+                <Input
+                  required
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={balanceAmount}
+                  onChange={(e) => setBalanceAmount(e.target.value)}
+                />
+              </div>
 
-                <div>
-                  <label className="text-xs text-zinc-400 block mb-1 font-semibold">Mode de paiement du solde</label>
-                  <select
-                    value={balanceMethod}
-                    onChange={(e) => setBalanceMethod(e.target.value as PaymentMethodType)}
-                    className="w-full h-10 rounded-md border border-zinc-800 bg-zinc-950 px-3 text-sm text-white"
-                  >
-                    {BALANCE_PAYMENT_METHODS.map((method) => (
-                      <option key={method} value={method}>
-                        {method}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div>
+                <label className="text-caption font-medium text-muted-foreground block mb-1.5">Mode de paiement du solde</label>
+                <Select
+                  value={balanceMethod}
+                  onChange={(e) => setBalanceMethod(e.target.value as PaymentMethodType)}
+                >
+                  {BALANCE_PAYMENT_METHODS.map((method) => (
+                    <option key={method} value={method}>
+                      {method}
+                    </option>
+                  ))}
+                </Select>
+              </div>
 
-                <div>
-                  <label className="text-xs text-zinc-400 block mb-1 font-semibold">
-                    Référence transaction (optionnel)
-                  </label>
-                  <Input
-                    placeholder="Ex: TXN-123456"
-                    value={balanceReference}
-                    onChange={(e) => setBalanceReference(e.target.value)}
-                    className="font-mono text-xs"
-                  />
-                </div>
+              <div>
+                <label className="text-caption font-medium text-muted-foreground block mb-1.5">
+                  Référence transaction (optionnel)
+                </label>
+                <Input
+                  placeholder="Ex: TXN-123456"
+                  value={balanceReference}
+                  onChange={(e) => setBalanceReference(e.target.value)}
+                  className="font-mono text-xs"
+                />
+              </div>
 
-                <div>
-                  <label className="text-xs text-zinc-400 block mb-1 font-semibold">Notes internes (optionnel)</label>
-                  <Input
-                    value={balanceNotes}
-                    onChange={(e) => setBalanceNotes(e.target.value)}
-                    placeholder="Commentaire admin…"
-                  />
-                </div>
+              <div>
+                <label className="text-caption font-medium text-muted-foreground block mb-1.5">Notes internes (optionnel)</label>
+                <Input
+                  value={balanceNotes}
+                  onChange={(e) => setBalanceNotes(e.target.value)}
+                  placeholder="Commentaire admin…"
+                />
+              </div>
 
-                {balanceError && (
-                  <p className="text-rose-400 text-xs rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2">
-                    {balanceError}
-                  </p>
-                )}
+              {balanceError && (
+                <p className="text-danger text-xs rounded-lg border border-danger/30 bg-danger-muted px-3 py-2">
+                  {balanceError}
+                </p>
+              )}
+            </form>
+          </>
+        )}
+      </AdminModal>
 
-                <div className="flex justify-end gap-3 pt-1">
-                  <Button type="button" variant="outline" onClick={() => setBalanceInvoice(null)}>
-                    Annuler
-                  </Button>
-                  <Button type="submit" variant="gold" disabled={recordingBalance}>
-                    {recordingBalance ? 'Enregistrement…' : 'Valider et imprimer la facture'}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      <p className="text-zinc-500 text-xs flex items-center gap-2">
+      <p className="text-muted-foreground text-caption flex items-center gap-2">
         <Download className="h-3.5 w-3.5" />
         Cliquez sur l&apos;icône PDF pour imprimer ou enregistrer la facture (acompte + solde + modes de paiement).
       </p>

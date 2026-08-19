@@ -37,19 +37,23 @@ export function AdminModal({ open, onClose, title, children, size = 'lg', footer
 
   return (
     <div
-      className="fixed inset-0 z-[999998] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-[999998] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-background/80"
       onClick={onClose}
+      role="presentation"
     >
       <Card
-        className={`glass-panel w-full ${sizeClasses[size]} border-amber-400/30 max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-200`}
+        className={`surface-elevated w-full ${sizeClasses[size]} max-h-[92dvh] sm:max-h-[92vh] flex flex-col rounded-t-lg sm:rounded-lg`}
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="admin-modal-title"
       >
-        <CardHeader className="flex flex-row items-center justify-between border-b border-zinc-800 pb-3 shrink-0">
-          <CardTitle className="text-lg font-bold">{title}</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between border-b border-border pb-3 shrink-0">
+          <CardTitle id="admin-modal-title" className="text-h2">{title}</CardTitle>
           <button
             type="button"
             onClick={onClose}
-            className="h-8 w-8 rounded-lg flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+            className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-surface-muted transition-colors"
             aria-label="Fermer"
           >
             <X className="h-4 w-4" />
@@ -57,7 +61,9 @@ export function AdminModal({ open, onClose, title, children, size = 'lg', footer
         </CardHeader>
         <CardContent className="overflow-y-auto flex-1 py-5">{children}</CardContent>
         {footer && (
-          <div className="px-6 py-4 border-t border-zinc-800 shrink-0 flex justify-end gap-3">{footer}</div>
+          <div className="px-4 sm:px-6 py-4 border-t border-border shrink-0 flex flex-wrap justify-end gap-2 sm:gap-3">
+            {footer}
+          </div>
         )}
       </Card>
     </div>

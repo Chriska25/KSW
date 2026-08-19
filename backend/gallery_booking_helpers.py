@@ -6,11 +6,12 @@ import secrets
 import string
 import uuid
 from datetime import date, timedelta
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
 from models import Gallery
+from gallery_password import hash_gallery_password
 
 BOOKINGS_KEY = "bookings"
 
@@ -52,10 +53,11 @@ def _compute_expires_at(session_date: Optional[str]) -> str:
 
 def _unique_access_key(db: Session, base_key: str) -> str:
     candidate = (base_key or "GAL").upper().replace(" ", "-")
+    suffix = secrets.token_urlsafe(6).upper().replace("-", "")[:8]
+    candidate = f"{candidate}-{suffix}"
     if not db.query(Gallery).filter(Gallery.access_key.ilike(candidate)).first():
         return candidate
-    suffix = secrets.token_hex(2).upper()
-    return f"{candidate}-{suffix}"
+    return f"{candidate}-{secrets.token_hex(2).upper()}"
 
 
 def get_gallery_for_booking(db: Session, booking_id: str) -> Optional[Gallery]:
@@ -74,14 +76,14 @@ def create_gallery_for_booking(
     get_json_setting_list,
     find_booking_index,
     save_json_setting_list,
-) -> Optional[Gallery]:
+) -> Tuple[Optional[Gallery], Optional[str]]:
     booking_id = str(booking.get("id") or "")
     if not booking_id:
-        return None
+        return None, None
 
     existing = get_gallery_for_booking(db, booking_id)
     if existing:
-        return existing
+        return existing, None
 
     ref = str(booking.get("reference") or booking_id[:8]).upper()
     client_name = f"{booking.get('firstName', '')} {booking.get('lastName', '')}".strip() or "Client"
@@ -89,7 +91,7 @@ def create_gallery_for_booking(
     service_title = booking.get("serviceTitle") or "Séance photo"
 
     access_key = _unique_access_key(db, ref)
-    password = _generate_gallery_password()
+    plain_password = _generate_gallery_password()
     album_id = f"alb-{uuid.uuid4().hex[:8]}"
 
     gallery = Gallery(
@@ -100,7 +102,7 @@ def create_gallery_for_booking(
         category=_infer_category(service_title),
         is_private=True,
         access_key=access_key,
-        password=password,
+        password=hash_gallery_password(plain_password),
         expires_at=_compute_expires_at(booking.get("date")),
         cover_url=None,
         booking_id=booking_id,
@@ -125,4 +127,4 @@ def create_gallery_for_booking(
         items[idx]["galleryAccessKey"] = gallery.access_key
         save_json_setting_list(db, BOOKINGS_KEY, items)
 
-    return gallery
+    return gallery, plain_password

@@ -102,13 +102,13 @@ export function HeroBannerPhotosFields({ images, onChange, pageLabel = 'la page'
 
   return (
     <>
-      <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-950/60 space-y-4">
+      <div className="p-4 rounded-xl border border-border bg-surface-muted space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-zinc-200 font-semibold flex items-center gap-2">
-              <ImageIcon className="h-4 w-4 text-amber-400" /> Photos de bannière
+            <p className="text-foreground font-semibold flex items-center gap-2">
+              <ImageIcon className="h-4 w-4 text-primary" /> Photos de bannière
             </p>
-            <p className="text-zinc-500 mt-1">
+            <p className="text-muted-foreground mt-1">
               Téléversez ou ajoutez des URLs pour {pageLabel}. Plusieurs photos = diaporama automatique.
             </p>
           </div>
@@ -116,7 +116,7 @@ export function HeroBannerPhotosFields({ images, onChange, pageLabel = 'la page'
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
             <Button
               type="button"
-              variant="gold"
+              variant="primary"
               size="sm"
               disabled={uploading || !!cropState}
               onClick={() => fileInputRef.current?.click()}
@@ -127,29 +127,29 @@ export function HeroBannerPhotosFields({ images, onChange, pageLabel = 'la page'
           </div>
         </div>
 
-        {uploadError && <p className="text-red-400 text-[11px]">{uploadError}</p>}
+        {uploadError && <p className="text-destructive text-[11px]">{uploadError}</p>}
 
         {images.length === 0 ? (
-          <div className="py-8 text-center border border-dashed border-zinc-700 rounded-xl text-zinc-500">
+          <div className="py-8 text-center border border-dashed border-border rounded-xl text-muted-foreground">
             Aucune photo — ajoutez-en une pour personnaliser la bannière.
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {images.map((url, index) => (
-              <div key={`${url}-${index}`} className="flex gap-3 p-3 rounded-xl border border-zinc-800 bg-zinc-900/50">
-                <div className="relative h-20 w-28 rounded-lg overflow-hidden border border-zinc-700 shrink-0 group">
+              <div key={`${url}-${index}`} className="flex gap-3 p-3 rounded-xl border border-border bg-surface-muted">
+                <div className="relative h-20 w-28 rounded-lg overflow-hidden border border-border shrink-0 group">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={url} alt="" className="h-full w-full object-cover" />
                   <button
                     type="button"
                     onClick={() => openCropForIndex(index)}
-                    className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[10px] gap-1 transition-opacity cursor-pointer"
+                    className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-foreground text-[10px] gap-1 transition-opacity cursor-pointer"
                   >
                     <Crop className="h-3.5 w-3.5" /> Recadrer
                   </button>
                 </div>
                 <div className="flex-1 min-w-0 space-y-2">
-                  <span className="text-[10px] font-mono text-amber-400/80">
+                  <span className="text-[10px] font-mono text-primary/80">
                     {index === 0 ? 'PRINCIPALE' : `PHOTO ${index + 1}`}
                   </span>
                   <Input
@@ -159,7 +159,7 @@ export function HeroBannerPhotosFields({ images, onChange, pageLabel = 'la page'
                       next[index] = e.target.value;
                       onChange(next);
                     }}
-                    className="bg-zinc-950 text-[11px] h-9"
+                    className="bg-surface-muted text-[11px] h-9"
                   />
                   <div className="flex flex-wrap gap-1">
                     <Button type="button" variant="outline" size="sm" className="h-7 px-2" onClick={() => openCropForIndex(index)}>
@@ -189,7 +189,7 @@ export function HeroBannerPhotosFields({ images, onChange, pageLabel = 'la page'
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="h-7 px-2 text-rose-300 border-rose-500/30"
+                      className="h-7 px-2 text-danger border-danger/30"
                       onClick={() => removeImage(index)}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -206,7 +206,7 @@ export function HeroBannerPhotosFields({ images, onChange, pageLabel = 'la page'
             value={urlDraft}
             onChange={(e) => setUrlDraft(e.target.value)}
             placeholder="https://… ou /uploads/…"
-            className="bg-zinc-950 flex-1"
+            className="bg-surface-muted flex-1"
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();

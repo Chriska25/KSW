@@ -56,21 +56,21 @@ function ClientInvitationsContent() {
               <RefreshCw className="h-4 w-4 mr-1" /> Actualiser
             </Button>
             <Link href="/client/invitations/nouvelle">
-              <Button variant="gold" size="sm">Nouvelle demande</Button>
+              <Button variant="primary" size="sm">Nouvelle demande</Button>
             </Link>
           </>
         }
       />
 
       {error && (
-        <div className="p-4 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-300 text-sm">{error}</div>
+        <div className="p-4 rounded-xl border border-danger/30 bg-danger/10 text-rose-300 text-sm">{error}</div>
       )}
 
       {items.length === 0 ? (
-        <Card className="glass-panel">
-          <CardContent className="py-12 text-center text-zinc-500 text-sm">
+        <Card className="">
+          <CardContent className="py-12 text-center text-muted-foreground text-sm">
             Aucune demande pour le moment.{' '}
-            <Link href="/client/invitations/nouvelle" className="text-amber-400 hover:underline">
+            <Link href="/client/invitations/nouvelle" className="text-primary hover:underline">
               Souscrire au service
             </Link>
           </CardContent>
@@ -78,11 +78,11 @@ function ClientInvitationsContent() {
       ) : (
         <div className="space-y-4">
           {items.map((inv) => (
-            <Card key={inv.id} className="glass-panel">
+            <Card key={inv.id} className="">
               <CardHeader className="pb-2">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <CardTitle className="text-lg text-white">{inv.organizerNames}</CardTitle>
+                    <CardTitle className="text-lg text-foreground">{inv.organizerNames}</CardTitle>
                     <CardDescription>
                       {inv.eventTypeLabel} — {inv.eventDate}
                       {inv.eventTime ? ` à ${inv.eventTime}` : ''}
@@ -93,7 +93,7 @@ function ClientInvitationsContent() {
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 {inv.status === 'rejected' && inv.rejectionReason && (
-                  <p className="text-rose-400 text-xs">{inv.rejectionReason}</p>
+                  <p className="text-danger text-xs">{inv.rejectionReason}</p>
                 )}
                 {inv.stats && (
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -108,7 +108,7 @@ function ClientInvitationsContent() {
                     href={invitationPublicUrl(inv.publicToken)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-amber-400 text-xs hover:underline"
+                    className="inline-flex items-center gap-1 text-primary text-xs hover:underline"
                   >
                     <ExternalLink className="h-3.5 w-3.5" /> Voir l&apos;invitation publique
                   </a>
@@ -132,11 +132,11 @@ function StatPill({
   value: number;
 }) {
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 px-3 py-2">
-      <p className="text-[10px] text-zinc-500 uppercase tracking-wider flex items-center gap-1">
+    <div className="rounded-lg border border-border bg-surface-muted/50 px-3 py-2">
+      <p className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1">
         {Icon && <Icon className="h-3 w-3" />} {label}
       </p>
-      <p className="text-white font-semibold">{value}</p>
+      <p className="text-foreground font-semibold">{value}</p>
     </div>
   );
 }

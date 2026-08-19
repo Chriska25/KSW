@@ -66,8 +66,8 @@ export function AdminQuickActionsMenu({ variant = 'menu', onDone }: AdminQuickAc
 
   const itemClass =
     variant === 'menu'
-      ? 'w-full text-left px-3 py-2 rounded-xl text-xs text-zinc-300 hover:bg-zinc-800/80 hover:text-white flex items-center gap-2.5 transition-colors'
-      : 'flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-zinc-400 hover:text-amber-400 hover:bg-zinc-800/50 transition-colors';
+      ? 'w-full text-left px-3 py-2 rounded-xl text-xs text-foreground hover:bg-surface-muted hover:text-foreground flex items-center gap-2.5 transition-colors'
+      : 'flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-muted-foreground hover:text-primary hover:bg-surface-muted transition-colors';
 
   return (
     <div className={variant === 'menu' ? 'space-y-0.5' : 'flex flex-col gap-0.5'}>
@@ -83,9 +83,9 @@ export function AdminQuickActionsMenu({ variant = 'menu', onDone }: AdminQuickAc
             className={itemClass}
           >
             {busy ? (
-              <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-amber-400" />
+              <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-primary" />
             ) : (
-              <Icon className="h-3.5 w-3.5 shrink-0 text-amber-400/90" />
+              <Icon className="h-3.5 w-3.5 shrink-0 text-primary/90" />
             )}
             <span>{action.label}</span>
           </button>
@@ -110,7 +110,7 @@ export function AdminLogoutButton({ onDone }: { onDone?: () => void }) {
       variant="ghost"
       size="sm"
       onClick={handleLogout}
-      className="w-full justify-start text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10"
+      className="w-full justify-start text-xs text-destructive hover:text-red-300 hover:bg-red-500/10"
     >
       <LogOut className="h-3.5 w-3.5 mr-2" /> Déconnexion
     </Button>

@@ -31,7 +31,7 @@ export default function AnalyticsCharts({ visits, stats, formatPrice, currencySy
     <>
       {visits && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          <Card className="lg:col-span-8 glass-panel p-6 space-y-4">
+          <Card className="lg:col-span-8 p-6 space-y-4">
             <CardHeader className="p-0">
               <CardTitle className="text-lg">Visites — 30 derniers jours</CardTitle>
               <CardDescription>Pages vues et visiteurs uniques par jour.</CardDescription>
@@ -54,7 +54,7 @@ export default function AnalyticsCharts({ visits, stats, formatPrice, currencySy
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <Card className="lg:col-span-8 glass-panel p-6 space-y-4">
+        <Card className="lg:col-span-8 p-6 space-y-4">
           <CardHeader className="p-0">
             <CardTitle className="text-lg">Réservations par mois</CardTitle>
             <CardDescription>Nombre de demandes enregistrées.</CardDescription>
@@ -72,13 +72,13 @@ export default function AnalyticsCharts({ visits, stats, formatPrice, currencySy
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-4 glass-panel p-6 space-y-4">
+        <Card className="lg:col-span-4 p-6 space-y-4">
           <CardHeader className="p-0">
             <CardTitle className="text-lg">Répartition</CardTitle>
           </CardHeader>
           <CardContent className="p-0 pt-4 h-64">
             {stats.serviceDistribution.length === 0 ? (
-              <p className="text-zinc-500 text-sm text-center pt-16">Aucune donnée</p>
+              <p className="text-muted-foreground text-sm text-center pt-16">Aucune donnée</p>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -95,7 +95,7 @@ export default function AnalyticsCharts({ visits, stats, formatPrice, currencySy
         </Card>
       </div>
 
-      <Card className="glass-panel space-y-4">
+      <Card className="space-y-4">
         <CardHeader>
           <CardTitle className="text-lg">CA mensuel ({currencySymbol})</CardTitle>
         </CardHeader>

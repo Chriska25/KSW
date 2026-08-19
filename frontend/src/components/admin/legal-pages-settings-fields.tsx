@@ -36,16 +36,16 @@ function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-zinc-300 block font-semibold text-xs">{label}</label>
+      <label className="text-foreground block font-semibold text-xs">{label}</label>
       {multiline ? (
         <textarea
           value={value}
           onChange={(e) => onChange(e.target.value)}
           rows={rows}
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-400/40 font-mono leading-relaxed"
+          className="w-full rounded-xl border border-border bg-surface-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring font-mono leading-relaxed"
         />
       ) : (
-        <Input value={value} onChange={(e) => onChange(e.target.value)} className="bg-zinc-950 text-white" />
+        <Input value={value} onChange={(e) => onChange(e.target.value)} className="bg-surface-muted text-foreground" />
       )}
     </div>
   );
@@ -92,7 +92,7 @@ function PageEditor({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-[11px] text-zinc-500 leading-relaxed max-w-2xl">{LEGAL_CONTENT_PLACEHOLDERS_HELP}</p>
+        <p className="text-[11px] text-muted-foreground leading-relaxed max-w-2xl">{LEGAL_CONTENT_PLACEHOLDERS_HELP}</p>
         <Link href={previewHref} target="_blank">
           <Button type="button" variant="outline" size="sm" className="text-xs gap-1.5">
             <ExternalLink className="h-3.5 w-3.5" />
@@ -116,21 +116,21 @@ function PageEditor({
 
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-3">
-          <h3 className="text-sm font-bold text-white">Sections ({page.sections.length})</h3>
+          <h3 className="text-sm font-bold text-foreground">Sections ({page.sections.length})</h3>
           <Button type="button" variant="outline" size="sm" onClick={addSection} className="text-xs gap-1">
             <Plus className="h-3.5 w-3.5" /> Ajouter une section
           </Button>
         </div>
 
         {page.sections.map((section, index) => (
-          <Card key={section.id || index} className="glass-panel border-zinc-800">
+          <Card key={section.id || index} className="border-border">
             <CardHeader className="pb-3 flex flex-row items-start justify-between gap-3">
-              <CardTitle className="text-sm text-zinc-200">Section {index + 1}</CardTitle>
+              <CardTitle className="text-sm text-foreground">Section {index + 1}</CardTitle>
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="text-rose-400 hover:text-rose-300 h-8 px-2"
+                className="text-danger hover:text-danger h-8 px-2"
                 onClick={() => removeSection(index)}
                 disabled={page.sections.length <= 1}
               >
@@ -179,8 +179,8 @@ export function LegalPagesSettingsFields({ settings, onChange }: LegalPagesSetti
           onClick={() => setActivePage('legal')}
           className={`px-4 py-2 rounded-xl text-xs font-semibold border transition-colors flex items-center gap-2 ${
             activePage === 'legal'
-              ? 'border-amber-400 bg-amber-400/15 text-amber-300'
-              : 'border-zinc-800 text-zinc-400 hover:border-zinc-600'
+              ? 'border-amber-400 bg-primary-muted text-primary'
+              : 'border-border text-muted-foreground hover:border-muted-foreground/40'
           }`}
         >
           <Scale className="h-3.5 w-3.5" /> Mentions légales
@@ -190,8 +190,8 @@ export function LegalPagesSettingsFields({ settings, onChange }: LegalPagesSetti
           onClick={() => setActivePage('privacy')}
           className={`px-4 py-2 rounded-xl text-xs font-semibold border transition-colors flex items-center gap-2 ${
             activePage === 'privacy'
-              ? 'border-amber-400 bg-amber-400/15 text-amber-300'
-              : 'border-zinc-800 text-zinc-400 hover:border-zinc-600'
+              ? 'border-amber-400 bg-primary-muted text-primary'
+              : 'border-border text-muted-foreground hover:border-muted-foreground/40'
           }`}
         >
           <Shield className="h-3.5 w-3.5" /> Confidentialité
@@ -200,23 +200,23 @@ export function LegalPagesSettingsFields({ settings, onChange }: LegalPagesSetti
           type="button"
           variant="ghost"
           size="sm"
-          className="text-xs text-zinc-500 ml-auto gap-1"
+          className="text-xs text-muted-foreground ml-auto gap-1"
           onClick={() => resetPage(activePage)}
         >
           <RotateCcw className="h-3.5 w-3.5" /> Réinitialiser cette page
         </Button>
       </div>
 
-      <Card className="glass-panel">
+      <Card className="">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             {activePage === 'legal' ? (
               <>
-                <Scale className="h-5 w-5 text-amber-400" /> Mentions légales
+                <Scale className="h-5 w-5 text-primary" /> Mentions légales
               </>
             ) : (
               <>
-                <Shield className="h-5 w-5 text-amber-400" /> Politique de confidentialité
+                <Shield className="h-5 w-5 text-primary" /> Politique de confidentialité
               </>
             )}
           </CardTitle>

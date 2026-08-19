@@ -93,14 +93,15 @@ export default function DebugPage() {
           const s = res.data.data;
           liveSettings = `${s.studioNameFirstPart || '?'} ${s.studioNameSecondPart || '?'}`;
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         const duration = Date.now() - epStart;
+        const message = err instanceof Error ? err.message : String(err);
         results.push({
           name: ep.name,
           url: `${aUrl}${ep.path}`,
           status: 'error',
           latency: duration,
-          message: err.message || 'Échec de connexion API',
+          message: message || 'Échec de connexion API',
         });
       }
     }
@@ -126,19 +127,19 @@ export default function DebugPage() {
   }, []);
 
   return (
-    <div className="pt-32 pb-20 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+    <div className="pt-8 sm:pt-12 pb-20 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <Badge variant="gold" className="mb-2">Module d'Auto-Diagnostic & Ngrok</Badge>
-          <h1 className="text-3xl font-extrabold text-white">
-            Diagnostic Réseau & <span className="gold-gradient-text">Santé Système</span>
+          <Badge variant="primary" className="mb-2">Module d'Auto-Diagnostic & Ngrok</Badge>
+          <h1 className="text-3xl font-extrabold text-foreground">
+            Diagnostic Réseau & <span className="text-primary">Santé Système</span>
           </h1>
-          <p className="text-zinc-400 text-xs mt-1">
+          <p className="text-muted-foreground text-xs mt-1">
             Vérification en temps réel des liaisons Frontend ↔ Backend, variables d'environnement, base de données et stockage.
           </p>
         </div>
-        <Button variant="gold" size="sm" onClick={runDiagnostics} disabled={loading} className="space-x-2">
+        <Button variant="primary" size="sm" onClick={runDiagnostics} disabled={loading} className="space-x-2">
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           <span>Relancer l'Analyse</span>
         </Button>
@@ -146,26 +147,26 @@ export default function DebugPage() {
 
       {/* Main Status Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="glass-panel border-zinc-800">
+        <Card className="border-border">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-semibold text-zinc-400 uppercase">
+            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">
               URL Frontend
             </CardTitle>
-            <Globe className="h-4 w-4 text-amber-400" />
+            <Globe className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-sm font-mono font-bold text-white truncate">{diagnostics.frontendUrl || '---'}</div>
-            <div className="text-[11px] text-zinc-500 mt-1">Host: {diagnostics.hostname || '—'}</div>
-            <div className="text-[11px] text-amber-400/90 mt-1 font-semibold">BDD: {diagnostics.liveSettings}</div>
+            <div className="text-sm font-mono font-bold text-foreground truncate">{diagnostics.frontendUrl || '---'}</div>
+            <div className="text-[11px] text-muted-foreground mt-1">Host: {diagnostics.hostname || '—'}</div>
+            <div className="text-[11px] text-primary/90 mt-1 font-semibold">BDD: {diagnostics.liveSettings}</div>
           </CardContent>
         </Card>
 
-        <Card className="glass-panel border-zinc-800">
+        <Card className="border-border">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-semibold text-zinc-400 uppercase">
+            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">
               Liaison API Backend
             </CardTitle>
-            <Server className="h-4 w-4 text-amber-400" />
+            <Server className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="flex items-center space-x-2">
@@ -181,16 +182,16 @@ export default function DebugPage() {
                 </>
               )}
             </div>
-            <div className="text-[11px] text-zinc-500 font-mono mt-1 truncate">{diagnostics.apiUrl || '---'}</div>
+            <div className="text-[11px] text-muted-foreground font-mono mt-1 truncate">{diagnostics.apiUrl || '---'}</div>
           </CardContent>
         </Card>
 
-        <Card className="glass-panel border-zinc-800">
+        <Card className="border-border">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-semibold text-zinc-400 uppercase">
+            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">
               Base PostgreSQL
             </CardTitle>
-            <Database className="h-4 w-4 text-amber-400" />
+            <Database className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="flex items-center space-x-2">
@@ -206,16 +207,16 @@ export default function DebugPage() {
                 </>
               )}
             </div>
-            <div className="text-[11px] text-zinc-500 mt-1">Liaison PostgreSQL Docker</div>
+            <div className="text-[11px] text-muted-foreground mt-1">Liaison PostgreSQL Docker</div>
           </CardContent>
         </Card>
 
-        <Card className="glass-panel border-zinc-800">
+        <Card className="border-border">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-semibold text-zinc-400 uppercase">
+            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">
               Stockage Fichiers (Storage)
             </CardTitle>
-            <HardDrive className="h-4 w-4 text-amber-400" />
+            <HardDrive className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="flex items-center space-x-2">
@@ -231,7 +232,7 @@ export default function DebugPage() {
                 </>
               )}
             </div>
-            <div className="text-[11px] text-zinc-500 mt-1">Uploads FastAPI /uploads</div>
+            <div className="text-[11px] text-muted-foreground mt-1">Uploads FastAPI /uploads</div>
           </CardContent>
         </Card>
       </div>
@@ -239,10 +240,10 @@ export default function DebugPage() {
       {/* Detailed Tables */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Environment Variables Card */}
-        <Card className="glass-panel border-zinc-800">
+        <Card className="border-border">
           <CardHeader>
             <CardTitle className="text-base flex items-center">
-              <Cpu className="h-4 w-4 text-amber-400 mr-2" /> Variables d'Environnement
+              <Cpu className="h-4 w-4 text-primary mr-2" /> Variables d'Environnement
             </CardTitle>
             <CardDescription className="text-xs">
               Configuration active du client web (Next.js).
@@ -250,19 +251,19 @@ export default function DebugPage() {
           </CardHeader>
           <CardContent className="space-y-3 font-mono text-xs">
             {Object.entries(diagnostics.envVars).map(([key, val]) => (
-              <div key={key} className="flex justify-between items-center p-2.5 rounded-xl bg-zinc-950/80 border border-zinc-800">
-                <span className="text-zinc-400">{key}</span>
-                <span className="text-amber-400 font-bold">{val}</span>
+              <div key={key} className="flex justify-between items-center p-2.5 rounded-xl bg-surface-muted/80 border border-border">
+                <span className="text-muted-foreground">{key}</span>
+                <span className="text-primary font-bold">{val}</span>
               </div>
             ))}
           </CardContent>
         </Card>
 
         {/* API Endpoint Tests Table */}
-        <Card className="glass-panel border-zinc-800">
+        <Card className="border-border">
           <CardHeader>
             <CardTitle className="text-base flex items-center">
-              <Activity className="h-4 w-4 text-amber-400 mr-2" /> Tests des Endpoints API
+              <Activity className="h-4 w-4 text-primary mr-2" /> Tests des Endpoints API
             </CardTitle>
             <CardDescription className="text-xs">
               Vérification directe des routes de réponse JSON.
@@ -271,16 +272,16 @@ export default function DebugPage() {
           <CardContent>
             <div className="space-y-3 text-xs">
               {diagnostics.apiEndpointsTest.map((test, idx) => (
-                <div key={idx} className="p-3 rounded-xl bg-zinc-950/80 border border-zinc-800 flex items-center justify-between">
+                <div key={idx} className="p-3 rounded-xl bg-surface-muted/80 border border-border flex items-center justify-between">
                   <div>
-                    <div className="font-bold text-white">{test.name}</div>
-                    <div className="text-[11px] text-zinc-500 font-mono">{test.url}</div>
+                    <div className="font-bold text-foreground">{test.name}</div>
+                    <div className="text-[11px] text-muted-foreground font-mono">{test.url}</div>
                   </div>
                   <div className="text-right">
                     <Badge variant={test.status === 'ok' ? 'success' : 'outline'}>
                       {test.status === 'ok' ? `${test.latency}ms` : 'Échec'}
                     </Badge>
-                    <div className="text-[10px] text-zinc-400 mt-1">{test.message}</div>
+                    <div className="text-[10px] text-muted-foreground mt-1">{test.message}</div>
                   </div>
                 </div>
               ))}

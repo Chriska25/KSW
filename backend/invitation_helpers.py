@@ -187,6 +187,49 @@ def generate_public_token(db: Session) -> str:
     return secrets.token_urlsafe(16).upper().replace("-", "")[:12]
 
 
+def generate_guest_check_in_token(db: Session) -> str:
+    alphabet = string.ascii_uppercase + string.digits
+    for _ in range(40):
+        token = "G" + "".join(secrets.choice(alphabet) for _ in range(10))
+        exists = db.query(InvitationGuest).filter(InvitationGuest.check_in_token == token).first()
+        if not exists:
+            return token
+    return "G" + secrets.token_urlsafe(12).upper().replace("-", "")[:10]
+
+
+def guest_pass_url(check_in_token: str) -> str:
+    import os
+
+    base = (os.getenv("FRONTEND_URL") or os.getenv("NEXT_PUBLIC_SITE_URL") or "http://localhost:3000").rstrip("/")
+    return f"{base}/invitation/pass/{check_in_token}"
+
+
+def ensure_guest_check_in_token(guest: InvitationGuest, db: Session) -> None:
+    if guest.response != "yes":
+        guest.check_in_token = None
+        return
+    if not guest.check_in_token:
+        guest.check_in_token = generate_guest_check_in_token(db)
+
+
+def guest_pass_payload(guest: InvitationGuest, inv: ElectronicInvitation) -> Dict[str, Any]:
+    token = guest.check_in_token or ""
+    return {
+        "guestId": guest.id,
+        "fullName": guest.full_name,
+        "guestCount": guest.guest_count or 1,
+        "companions": guest.companions or [],
+        "organizerNames": inv.organizer_names,
+        "eventTypeLabel": EVENT_TYPES.get(inv.event_type, inv.event_type),
+        "eventDate": inv.event_date,
+        "eventTime": inv.event_time,
+        "venue": inv.venue,
+        "checkInToken": token,
+        "passUrl": guest_pass_url(token) if token else None,
+        "checkedInAt": _dt_iso(guest.checked_in_at),
+    }
+
+
 def invitation_to_dict(
     inv: ElectronicInvitation,
     db: Optional[Session] = None,
@@ -236,6 +279,7 @@ def invitation_to_dict(
 
 
 def guest_to_dict(g: InvitationGuest) -> Dict[str, Any]:
+    token = g.check_in_token or ""
     return {
         "id": g.id,
         "invitationId": g.invitation_id,
@@ -247,6 +291,9 @@ def guest_to_dict(g: InvitationGuest) -> Dict[str, Any]:
         "message": g.message,
         "preferences": g.preferences or {},
         "source": g.source,
+        "checkInToken": token or None,
+        "passUrl": guest_pass_url(token) if token else None,
+        "checkedInAt": _dt_iso(g.checked_in_at),
         "respondedAt": _dt_iso(g.responded_at),
         "createdAt": _dt_iso(g.created_at),
         "updatedAt": _dt_iso(g.updated_at),
