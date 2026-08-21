@@ -17,6 +17,10 @@ services:
     env_file:
       - .env
     environment:
+      # Priorité sur DATABASE_URL du .env : dev Docker = Postgres local (stable, sans dépendance réseau Supabase).
+      # Pour Supabase : docker compose -f docker-compose.supabase.yml up -d
+      - DATABASE_URL=postgresql://studio_user:studio_password@postgres:5432/studio_photo
+      - DB_SSLMODE=prefer
       - POSTGRES_USER=studio_user
       - POSTGRES_PASSWORD=studio_password
       - POSTGRES_DB=studio_photo

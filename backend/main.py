@@ -1,6 +1,7 @@
 import os
 import json
 import uuid
+import secrets
 import shutil
 import io
 import zipfile
@@ -46,13 +47,16 @@ from security import (
     resolve_booking_pricing,
     validate_redirect_url,
     validate_user_role_change,
+    assert_can_modify_user,
+    filter_admin_settings_update,
+    verify_booking_payment_token,
     redact_settings_payload,
     is_blocked_upload,
     is_production,
     validate_security_at_startup,
     validate_password_policy,
 )
-from auth_cookies import AUTH_COOKIE_NAME, build_auth_json_response, clear_auth_cookie
+from auth_cookies import AUTH_COOKIE_NAME, build_auth_json_response, build_pre_2fa_json_response, clear_auth_cookie
 from auth import (
     ACCESS_TOKEN_HOURS,
     create_access_token,
@@ -822,7 +826,8 @@ def update_settings(payload: SettingUpdate, db: Session = Depends(get_db), _admi
     from security import should_preserve_secret_on_update
 
     try:
-        for k, v in payload.settings.items():
+        allowed = filter_admin_settings_update(payload.settings)
+        for k, v in allowed.items():
             if v is None:
                 continue
             if should_preserve_secret_on_update(k, v):
@@ -837,7 +842,7 @@ def update_settings(payload: SettingUpdate, db: Session = Depends(get_db), _admi
         return {
             "status": "success",
             "message": "Paramètres enregistrés et persistés avec succès en BDD PostgreSQL (Python FastAPI)",
-            "data": redact_settings_payload(payload.settings),
+            "data": redact_settings_payload(allowed),
         }
     except Exception as e:
         db.rollback()
@@ -997,19 +1002,22 @@ def login(req: LoginRequest, request: Request, db: Session = Depends(get_db)):
             if is_development():
                 print(f"[DEV 2FA] Code pour {delivery_email}: {code} (123456 accepté en dev)")
         pre_token = create_pre_2fa_token(user)
-        return {
-            "token": pre_token,
-            "user": res_user,
-            "requires_2fa": True,
-            "user_id": user.id,
-            "two_fa_email": delivery_email,
-            "email_sent": email_sent,
-            "message": (
-                f"Code de connexion envoyé à {delivery_email}."
-                if email_sent
-                else "Code généré — vérifiez la configuration SMTP ou utilisez le code affiché en console serveur."
-            ),
-        }
+        dev_hint = " En développement local, saisissez 123456 ou consultez les logs Docker (backend)." if is_development() else ""
+        return build_pre_2fa_json_response(
+            {
+                "user": res_user,
+                "requires_2fa": True,
+                "user_id": user.id,
+                "two_fa_email": delivery_email,
+                "email_sent": email_sent,
+                "message": (
+                    f"Code de connexion envoyé à {delivery_email}."
+                    if email_sent
+                    else f"Email non envoyé (SMTP indisponible).{dev_hint}"
+                ),
+            },
+            pre_token,
+        )
 
     if (user.role or "client") == "client":
         geo = lookup_geo(client_ip)
@@ -1251,6 +1259,7 @@ def create_or_update_user(
     if existing:
         if is_superuser(existing) and not is_superuser(admin):
             raise HTTPException(status_code=403, detail="Ce compte système ne peut pas être modifié.")
+        assert_can_modify_user(admin.role or "client", existing.role or "client", action="modifier")
         if payload.role is not None:
             role = payload.role.strip().lower()
             validate_user_role_change(admin.role or "client", role)
@@ -1293,11 +1302,12 @@ def create_or_update_user(
 def delete_user(
     user_id: str,
     db: Session = Depends(get_db),
-    _admin: User = Depends(require_admin_user),
+    admin: User = Depends(require_admin_user),
 ):
     user = db.query(User).filter(User.id == str(user_id)).first()
     if not user:
         raise HTTPException(status_code=404, detail="Utilisateur introuvable.")
+    assert_can_modify_user(admin.role or "client", user.role or "client", action="supprimer")
     if is_superuser(user):
         raise HTTPException(status_code=403, detail="Impossible de supprimer le compte super administrateur système.")
     if (user.role or "") == "admin" and user.email == "admin@kswstudio.fr":
@@ -1557,6 +1567,8 @@ def _append_json_setting(db: Session, key: str, item: Dict[str, Any]) -> Dict[st
     }
     if key == BOOKINGS_KEY and "reference" not in entry:
         entry["reference"] = f"RES-{datetime.utcnow().year}-{entry['id'][:8].upper()}"
+    if key == BOOKINGS_KEY and "paymentToken" not in entry:
+        entry["paymentToken"] = secrets.token_urlsafe(32)
     items.insert(0, entry)
     val_str = json.dumps(items)
     if setting:
@@ -2226,6 +2238,7 @@ def create_stripe_checkout_session(payload: StripeCheckoutCreate, request: Reque
         raise HTTPException(status_code=404, detail="Réservation introuvable.")
 
     booking = items[idx]
+    verify_booking_payment_token(booking, payload.payment_token)
     deposit = float(booking.get("depositAmount") or 0)
     if deposit <= 0:
         raise HTTPException(status_code=400, detail="Montant d'acompte invalide.")
@@ -2279,9 +2292,11 @@ def create_stripe_checkout_session(payload: StripeCheckoutCreate, request: Reque
 @app.get("/api/v1/bookings/stripe/session-status")
 def stripe_session_status(
     session_id: str,
+    request: Request,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
+    check_rate_limit(f"stripe-status:{extract_client_ip(request)}", max_attempts=30, window_seconds=3600)
     import stripe
 
     if not session_id:
@@ -2333,6 +2348,7 @@ def submit_mobile_money_payment(payload: MobileMoneyPaymentSubmit, request: Requ
         raise HTTPException(status_code=404, detail="Réservation introuvable.")
 
     item = items[idx]
+    verify_booking_payment_token(item, payload.payment_token)
     if item.get("paymentStatus") == "paid":
         raise HTTPException(status_code=400, detail="Cette réservation est déjà payée.")
 

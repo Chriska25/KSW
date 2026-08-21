@@ -81,9 +81,9 @@ export function PublicHeader() {
             </AppLink>
             <ButtonLink
               href="/reservation"
-              variant="primary"
+              variant="gold"
               size="sm"
-              className="font-bold shadow-mdpx-2.5 sm:px-4"
+              className="font-bold shadow-md px-2.5 sm:px-4"
             >
               <Calendar className="h-3.5 w-3.5 md:hidden" aria-hidden />
               <span className="hidden md:inline">Réserver une Séance</span>

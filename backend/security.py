@@ -225,6 +225,89 @@ def validate_user_role_change(actor_role: str, target_role: str) -> None:
         raise HTTPException(status_code=403, detail="Seul un administrateur peut attribuer ce rôle.")
 
 
+def assert_can_modify_user(actor_role: str, target_role: str, *, action: str = "modifier") -> None:
+    """Empêche photographer/assistant de toucher aux comptes staff (dont admin)."""
+    actor = (actor_role or "client").strip().lower()
+    target = (target_role or "client").strip().lower()
+    if target in PRIVILEGED_ROLES and actor != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail=f"Seul un administrateur peut {action} un compte {target}.",
+        )
+
+
+# Clés autorisées pour POST /settings (whitelist — pas de mass assignment)
+ADMIN_WRITABLE_SETTING_KEYS = frozenset(
+    {
+        "studioName",
+        "studioNameFirstPart",
+        "studioNameSecondPart",
+        "studioSubtitle",
+        "studioDescription",
+        "siteTitle",
+        "contactEmail",
+        "phone",
+        "address",
+        "studioMapLat",
+        "studioMapLng",
+        "studioMapZoom",
+        "currency",
+        "timezone",
+        "depositRate",
+        "cancellationNoticeDays",
+        "autoApproveBookings",
+        "socialLinks",
+        "stripePublicKey",
+        "stripeSecretKey",
+        "stripeWebhookSecret",
+        "stripeTestMode",
+        "payPalEnabled",
+        "mobileMoneyEnabled",
+        "mobileMoneyProvider",
+        "mobileMoneyInstructions",
+        "mobileMoneyNumber",
+        "watermarkText",
+        "watermarkPosition",
+        "watermarkOpacity",
+        "watermarkShowText",
+        "watermarkLogoEnabled",
+        "watermarkLogoUrl",
+        "watermarkLogoPosition",
+        "watermarkLogoSize",
+        "watermarkLogoOpacity",
+        "webpQuality",
+        "force2FAForAdmin",
+        "sessionLifetimeHours",
+        "smtpEnabled",
+        "smtpHost",
+        "smtpPort",
+        "smtpUser",
+        "smtpPassword",
+        "smtpFrom",
+        "gmailUseApi",
+        "homePageContent",
+        "portfolioContent",
+        "prestationsContent",
+        "legalPagesContent",
+        "invoiceLogoUrl",
+        "showLogoOnInvoice",
+    }
+)
+
+
+def filter_admin_settings_update(settings: Dict[str, object]) -> Dict[str, object]:
+    """Retourne uniquement les clés autorisées ; ignore le reste (deny unknown keys)."""
+    return {k: v for k, v in settings.items() if k in ADMIN_WRITABLE_SETTING_KEYS}
+
+
+def verify_booking_payment_token(booking: dict, token: str) -> None:
+    """Vérifie le jeton de paiement lié à une réservation (anti-IDOR)."""
+    expected = str(booking.get("paymentToken") or "").strip()
+    supplied = (token or "").strip()
+    if not expected or not supplied or supplied != expected:
+        raise HTTPException(status_code=403, detail="Jeton de paiement invalide pour cette réservation.")
+
+
 def is_empty_secret_value(value: object) -> bool:
     if value is None:
         return True

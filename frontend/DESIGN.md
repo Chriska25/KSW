@@ -5,7 +5,7 @@ Identité visuelle pour une application studio photo professionnelle : sobre, li
 ## Principes
 
 - **Contenu d'abord** — hiérarchie claire, pas de décor superflu
-- **Un accent** — bronze chaud (`primary`) pour actions et repères, jamais de dégradés décoratifs
+- **Un accent** — or doré (`primary`) pour actions et repères ; dégradé `.gold-gradient-text` sur les titres hero
 - **Surfaces solides** — bordures + espacement, ombres réservées aux overlays (dropdown, modal)
 - **Lucide React** — seule bibliothèque d'icônes
 
@@ -48,9 +48,9 @@ Identité visuelle pour une application studio photo professionnelle : sobre, li
 ## Classes utilitaires
 
 - `.surface` / `.surface-muted` / `.surface-elevated`
-- `.text-accent` — accent sans dégradé
-- `.gold-gradient-text` — **rétrocompat** → couleur unie primary
-- `.glass-panel` — **rétrocompat** → surface solide (plus de blur)
+- `.text-accent` / `.gold-gradient-text` — dégradé or sur les mots clés
+- `.gold-border-glow` — halo doré discret sur les encarts
+- `.glass-panel-gold` — panneau CTA avec bordure dorée
 
 ## Espacement
 

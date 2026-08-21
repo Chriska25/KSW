@@ -84,13 +84,13 @@ export default function PrestationsPage() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_20%,_rgba(212,175,55,0.14),_transparent_55%)]" />
 
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 pb-14">
-          <Badge variant="primary" className="mb-5 px-4 py-1.5 text-[10px] uppercase tracking-[0.2em]">
+          <Badge variant="gold" className="mb-5 px-4 py-1.5 text-[10px] uppercase tracking-[0.2em]">
             <Sparkles className="h-3.5 w-3.5 mr-2 inline" />
             {content.heroBadge}
           </Badge>
           <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-foreground tracking-tight leading-[1.05] max-w-4xl">
             {content.heroTitleLine1}{' '}
-            <span className="text-primary block sm:inline">{content.heroTitleHighlight}</span>
+            <span className="gold-gradient-text block sm:inline">{content.heroTitleHighlight}</span>
           </h1>
           <p className="mt-6 max-w-2xl text-base sm:text-lg text-foreground leading-relaxed font-light">
             {content.heroSubtitle.includes('Chez ')

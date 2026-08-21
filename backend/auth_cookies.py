@@ -45,3 +45,15 @@ def build_auth_json_response(body: dict, token: str, *, max_age_hours: int) -> J
     response = JSONResponse(content=payload)
     set_auth_cookie(response, token, max_age_seconds=max(1, max_age_hours) * 3600)
     return response
+
+
+def build_pre_2fa_json_response(body: dict, pre_token: str, *, max_age_minutes: int = 10) -> JSONResponse:
+    """Réponse login staff en attente de 2FA — cookie + token JSON (dev)."""
+    payload = dict(body)
+    if is_production():
+        payload.pop("token", None)
+    else:
+        payload["token"] = pre_token
+    response = JSONResponse(content=payload)
+    set_auth_cookie(response, pre_token, max_age_seconds=max(60, max_age_minutes * 60))
+    return response

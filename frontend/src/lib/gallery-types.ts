@@ -45,6 +45,8 @@ export interface GalleryAdminItem {
   isPrivate: boolean;
   accessKey: string;
   password?: string;
+  /** Indique qu'un mot de passe est déjà enregistré côté serveur (sans exposer la valeur). */
+  hasPassword?: boolean;
   expiresAt?: string;
   coverUrl: string;
   albums: AlbumItem[];

@@ -17,11 +17,11 @@
     --border: 240 6% 88%;
     --border-subtle: 240 6% 92%;
 
-    /* Brand accent — bronze chaud (studio photo), sobre */
-    --primary: 32 52% 44%;
-    --primary-hover: 32 52% 38%;
-    --primary-foreground: 0 0% 100%;
-    --primary-muted: 32 40% 94%;
+    /* Brand accent — or doré studio */
+    --primary: 43 74% 53%;
+    --primary-hover: 43 74% 46%;
+    --primary-foreground: 240 10% 4%;
+    --primary-muted: 43 55% 92%;
 
     --secondary: 240 5% 96%;
     --secondary-foreground: 240 8% 12%;
@@ -80,10 +80,10 @@
     --border: 240 5% 18%;
     --border-subtle: 240 5% 14%;
 
-    --primary: 36 58% 58%;
-    --primary-hover: 36 58% 52%;
-    --primary-foreground: 240 8% 8%;
-    --primary-muted: 36 30% 14%;
+    --primary: 43 96% 56%;
+    --primary-hover: 43 96% 50%;
+    --primary-foreground: 240 10% 4%;
+    --primary-muted: 43 45% 14%;
 
     --secondary: 240 5% 14%;
     --secondary-foreground: 0 0% 96%;
@@ -221,7 +221,35 @@
   }
 
   .text-accent {
-    color: hsl(var(--primary));
+    background: linear-gradient(135deg, #fce074 0%, #d4af37 50%, #c9a227 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .gold-gradient-text {
+    background: linear-gradient(135deg, #fce074 0%, #d4af37 50%, #aa820a 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .gold-border-glow {
+    box-shadow: 0 0 25px -5px rgb(212 175 55 / 0.35);
+  }
+
+  .light .gold-border-glow {
+    box-shadow: 0 0 20px -5px rgb(212 175 55 / 0.28);
+  }
+
+  .glass-panel-gold {
+    background: rgb(212 175 55 / 0.06);
+    border: 1px solid rgb(212 175 55 / 0.28);
+  }
+
+  .light .glass-panel-gold {
+    background: rgb(212 175 55 / 0.1);
+    border: 1px solid rgb(212 175 55 / 0.35);
   }
 }
 

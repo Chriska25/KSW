@@ -36,7 +36,7 @@ export function StudioLogo({
       className={`flex items-center gap-3 group select-none ${className}`}
     >
       <div
-        className={`${iconBoxSize} bg-surface border border-border text-primary flex items-center justify-center shrink-0 transition-colors group-hover:border-primary/40`}
+        className={`${iconBoxSize} bg-surface border border-amber-400/30 text-primary flex items-center justify-center shrink-0 transition-colors group-hover:border-amber-400/50`}
       >
         <Camera className={iconSize} aria-hidden />
       </div>
@@ -44,7 +44,7 @@ export function StudioLogo({
       <div className="flex flex-col justify-center min-w-0">
         <div className={`${titleTextSize} font-semibold tracking-wide uppercase leading-none flex items-center gap-1.5`}>
           <span className="text-foreground">{firstPart}</span>
-          <span className="text-primary">{secondPart}</span>
+          <span className="gold-gradient-text">{secondPart}</span>
         </div>
 
         {showSubtitle && (

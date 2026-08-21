@@ -46,8 +46,8 @@ export function ThemeSwitcher({ variant = 'default', className }: ThemeSwitcherP
               className={cn(
                 'p-2 rounded-lg transition-all cursor-pointer',
                 active
-                  ? 'bg-amber-400 text-zinc-100 shadow-sm'
-                  : 'text-muted-foreground hover:text-zinc-100 hover:bg-surface-muted/80'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-surface-muted/80'
               )}
             >
               <Icon className="h-4 w-4" />
@@ -76,8 +76,8 @@ export function ThemeSwitcher({ variant = 'default', className }: ThemeSwitcherP
               className={cn(
                 'flex flex-col items-center gap-2 p-4 rounded-xl border text-sm font-semibold transition-all cursor-pointer',
                 active
-                  ? 'border-primary/30 bg-primary-muted text-primary shadow-md 
-                  : 'border-border bg-surface-muted/60 text-muted-foreground hover:border-border hover:text-zinc-200'
+                  ? 'border-primary/30 bg-primary-muted text-primary shadow-md'
+                  : 'border-border bg-surface-muted/60 text-muted-foreground hover:border-border hover:text-foreground'
               )}
             >
               <Icon className="h-5 w-5" />

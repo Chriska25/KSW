@@ -302,13 +302,14 @@ export default function ReservationPage() {
   };
 
   const handlePayDeposit = async () => {
-    if (!bookingRecord?.id) return;
+    if (!bookingRecord?.id || !bookingRecord.paymentToken) return;
     setPaying(true);
     setPaymentError('');
     try {
       const origin = window.location.origin;
       const { checkoutUrl } = await createStripeCheckoutSession({
         bookingId: bookingRecord.id,
+        paymentToken: bookingRecord.paymentToken,
         successUrl: `${origin}/reservation?session_id={CHECKOUT_SESSION_ID}`,
         cancelUrl: `${origin}/reservation?cancelled=1`,
       });
@@ -324,12 +325,13 @@ export default function ReservationPage() {
 
   const handleSubmitMobileMoney = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!bookingRecord?.id) return;
+    if (!bookingRecord?.id || !bookingRecord.paymentToken) return;
     setSubmittingMobileMoney(true);
     setPaymentError('');
     try {
       const updated = await submitMobileMoneyPayment({
         bookingId: bookingRecord.id,
+        paymentToken: bookingRecord.paymentToken,
         payerPhone: mobileMoneyPhone,
         transactionReference: mobileMoneyReference,
       });

@@ -10,7 +10,7 @@ export function Badge({ className, variant = 'default', ...props }: BadgeProps) 
     default: 'bg-surface-muted text-muted-foreground border-border',
     accent: 'bg-primary-muted text-primary border-primary/25',
     primary: 'bg-primary-muted text-primary border-primary/25',
-    gold: 'bg-primary-muted text-primary border-primary/25',
+    gold: 'bg-amber-400/15 text-amber-300 border-amber-400/35',
     outline: 'bg-transparent text-muted-foreground border-border',
     success: 'bg-success-muted text-success border-success/30',
     warning: 'bg-warning-muted text-warning border-warning/30',

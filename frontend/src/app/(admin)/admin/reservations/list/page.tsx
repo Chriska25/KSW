@@ -429,12 +429,12 @@ export default function AdminReservationsPage() {
                             Suppr.
                           </Button>
                         )}
-                      </TableCell>
+                      </div>
+                    </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-            </div>
           )}
         </CardContent>
       </Card>

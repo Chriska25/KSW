@@ -151,11 +151,13 @@ class BookingUpdate(BaseModel):
 
 class StripeCheckoutCreate(BaseModel):
     booking_id: str
+    payment_token: str
     success_url: str
     cancel_url: str
 
 class MobileMoneyPaymentSubmit(BaseModel):
     booking_id: str
+    payment_token: str
     payer_phone: str
     transaction_reference: str
 

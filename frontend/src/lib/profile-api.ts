@@ -1,6 +1,6 @@
 import apiClient from '@/lib/api-client';
 import type { AuthUser } from '@/hooks/use-auth';
-import { getToken, persistSession } from '@/lib/session';
+import { getSession, getToken, persistSession } from '@/lib/session';
 
 export interface UserProfile {
   id: string;
@@ -90,7 +90,7 @@ export async function updateUserProfile(payload: ProfileUpdatePayload): Promise<
   });
   const profile = normalizeProfile(res.data?.data || {});
   if (getSession()) {
-    persistSession('', profileToAuthUser(profile));
+    persistSession(getToken() || '', profileToAuthUser(profile));
   }
   return profile;
 }

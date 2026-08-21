@@ -11,6 +11,8 @@ export interface BookingRecord {
   totalPrice?: number;
   status?: string;
   paymentStatus?: string;
+  /** Jeton serveur requis pour initier un paiement (anti-IDOR). */
+  paymentToken?: string;
 }
 
 export async function submitContactMessage(data: {
@@ -68,11 +70,13 @@ export async function submitBooking(data: {
 
 export async function createStripeCheckoutSession(data: {
   bookingId: string;
+  paymentToken: string;
   successUrl: string;
   cancelUrl: string;
 }): Promise<{ checkoutUrl: string; sessionId: string }> {
   const res = await apiClient.post('/bookings/stripe/create-checkout-session', {
     booking_id: data.bookingId,
+    payment_token: data.paymentToken,
     success_url: data.successUrl,
     cancel_url: data.cancelUrl,
   });
@@ -95,11 +99,13 @@ export async function getStripeSessionStatus(sessionId: string): Promise<{
 
 export async function submitMobileMoneyPayment(data: {
   bookingId: string;
+  paymentToken: string;
   payerPhone: string;
   transactionReference: string;
 }): Promise<BookingRecord> {
   const res = await apiClient.post('/bookings/mobile-money/submit', {
     booking_id: data.bookingId,
+    payment_token: data.paymentToken,
     payer_phone: data.payerPhone.trim(),
     transaction_reference: data.transactionReference.trim(),
   });

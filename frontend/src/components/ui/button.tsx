@@ -29,7 +29,8 @@ const buttonVariants: Record<ButtonVariant, string> = {
   ghost: 'text-muted-foreground hover:text-foreground hover:bg-surface-muted border border-transparent',
   danger:
     'bg-danger text-white hover:bg-danger/90 border border-transparent',
-  gold: 'bg-primary text-primary-foreground hover:bg-primary-hover border border-transparent',
+  gold:
+    'bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 text-zinc-950 font-semibold hover:from-amber-400 hover:via-amber-300 hover:to-yellow-400 border border-amber-400/30 shadow-[0_4px_14px_-4px_rgba(251,191,36,0.45)]',
 };
 
 const buttonSizes: Record<ButtonSize, string> = {
@@ -48,7 +49,7 @@ export function getButtonClassName({
   size?: ButtonSize;
   className?: string;
 } = {}) {
-  const resolvedVariant = variant === 'gold' ? 'primary' : variant;
+  const resolvedVariant = variant;
   return cn(buttonBaseStyles, buttonVariants[resolvedVariant], buttonSizes[size], className);
 }
 

@@ -91,7 +91,7 @@ function LoginPageContent() {
           </div>
         )}
         <CardTitle className="text-h1">
-          Connexion à <span className="text-accent">{settings.studioName || 'KSW Studio'}</span>
+          Connexion à <span className="gold-gradient-text">{settings.studioName || 'KSW Studio'}</span>
         </CardTitle>
         <CardDescription>
           {isAdminLogin
@@ -148,6 +148,13 @@ function LoginPageContent() {
           <div className="pt-2 border-t border-border text-center text-small text-muted-foreground space-y-2">
             {isAdminLogin ? (
               <>
+                {process.env.NODE_ENV === 'development' && (
+                  <p className="text-caption text-left rounded-lg border border-border bg-surface-muted px-3 py-2">
+                    Comptes staff de démo : <strong className="text-foreground">admin@kswstudio.fr</strong> /{' '}
+                    <strong className="text-foreground font-mono">Password123!</strong> — puis code 2FA{' '}
+                    <strong className="text-foreground font-mono">123456</strong> si l&apos;email ne part pas.
+                  </p>
+                )}
                 <Link href="/" className="text-primary font-medium hover:underline block">
                   Retour au site public
                 </Link>

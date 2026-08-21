@@ -20,6 +20,8 @@ function Verify2FAForm() {
   const [code, setCode] = useState('');
   const [resendMessage, setResendMessage] = useState<string | null>(null);
   const [deliveryEmail, setDeliveryEmail] = useState<string | null>(null);
+  const [loginMessage, setLoginMessage] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState<boolean | null>(null);
 
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -36,6 +38,9 @@ function Verify2FAForm() {
         }
       })();
     setDeliveryEmail(stored);
+    setLoginMessage(sessionStorage.getItem('studio_2fa_message'));
+    const sentFlag = sessionStorage.getItem('studio_2fa_email_sent');
+    setEmailSent(sentFlag === '1' ? true : sentFlag === '0' ? false : null);
   }, []);
 
   const handleVerify = async (e: React.FormEvent) => {
@@ -43,11 +48,15 @@ function Verify2FAForm() {
     if (!userId) return;
     try {
       const res = await verify2FA(userId, code);
-      if (isAdminUser(res.user)) {
-        router.replace(safeRedirect(redirect, '/admin/dashboard'));
-      } else {
-        router.replace(safeRedirect(redirect, '/client/dashboard'));
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('studio_2fa_message');
+        sessionStorage.removeItem('studio_2fa_email_sent');
       }
+      const target = isAdminUser(res.user)
+        ? safeRedirect(redirect, '/admin/dashboard')
+        : safeRedirect(redirect, '/client/dashboard');
+      router.replace(target);
+      router.refresh();
     } catch {
       // Erreur gérée dans le hook
     }
@@ -83,16 +92,33 @@ function Verify2FAForm() {
           <ShieldCheck className="h-6 w-6" aria-hidden />
         </div>
         <CardTitle className="text-h1">Double authentification</CardTitle>
-        <CardDescription className="text-left sm:text-center">
+        <CardDescription className="text-left sm:text-center space-y-2">
           {deliveryEmail ? (
-            <>
-              Entrez le code à 6 chiffres envoyé à{' '}
-              <strong className="text-foreground">{deliveryEmail}</strong> (vérifiez aussi les spams).
-            </>
+            <span className="block">
+              {emailSent === false ? (
+                <>
+                  L&apos;email n&apos;a pas pu être envoyé à{' '}
+                  <strong className="text-foreground">{deliveryEmail}</strong> (SMTP / Gmail OAuth à configurer).
+                </>
+              ) : (
+                <>
+                  Entrez le code à 6 chiffres envoyé à{' '}
+                  <strong className="text-foreground">{deliveryEmail}</strong> (vérifiez aussi les spams).
+                </>
+              )}
+            </span>
           ) : (
-            <>Entrez le code à 6 chiffres envoyé à votre adresse email.</>
-          )}{' '}
-          En développement local, consultez la console Docker ou utilisez <strong>123456</strong>.
+            <span className="block">Entrez le code à 6 chiffres envoyé à votre adresse email.</span>
+          )}
+          {loginMessage && (
+            <span className="block text-warning text-caption">{loginMessage}</span>
+          )}
+          {process.env.NODE_ENV === 'development' && (
+            <span className="block text-caption">
+              En local : code universel <strong className="text-foreground font-mono">123456</strong> ou voir{' '}
+              <code className="text-primary">docker logs studio_photography_backend</code>.
+            </span>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent>

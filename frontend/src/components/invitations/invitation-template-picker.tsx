@@ -8,7 +8,7 @@ const TEMPLATE_PREVIEW: Record<
   InvitationTemplateKey,
   { gradient: string; accent: string; border: string }
 > = {
-  elegant: { gradient: 'from-zinc-900 to-zinc-950', accent: 'bg-amber-400', border: 'border-primary/30 },
+  elegant: { gradient: 'from-zinc-900 to-zinc-950', accent: 'bg-amber-400', border: 'border-primary/30' },
   modern: { gradient: 'from-slate-900 to-indigo-950', accent: 'bg-sky-400', border: 'border-sky-400/40' },
   minimal: { gradient: 'from-zinc-900 to-zinc-900', accent: 'bg-zinc-100', border: 'border-zinc-600' },
   romantic: { gradient: 'from-rose-950/80 to-zinc-950', accent: 'bg-rose-300', border: 'border-rose-400/40' },

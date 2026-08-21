@@ -165,10 +165,16 @@ export function useAuth() {
       } else if (typeof window !== 'undefined') {
         try {
           sessionStorage.setItem('studio_pending_2fa_user', JSON.stringify(normalized));
-          sessionStorage.setItem('studio_pre_2fa_token', data.token);
+          if (data.token) {
+            sessionStorage.setItem('studio_pre_2fa_token', data.token);
+          }
           if (data.two_fa_email) {
             sessionStorage.setItem('studio_two_fa_email', String(data.two_fa_email));
           }
+          if (data.message) {
+            sessionStorage.setItem('studio_2fa_message', String(data.message));
+          }
+          sessionStorage.setItem('studio_2fa_email_sent', data.email_sent ? '1' : '0');
         } catch {
           // ignore
         }

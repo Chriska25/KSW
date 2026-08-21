@@ -131,9 +131,9 @@ export default function ContactPage() {
     <div className="pt-28 pb-20 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 space-y-16">
       {/* Header */}
       <div className="text-center max-w-3xl mx-auto space-y-4">
-        <Badge variant="primary">Contact & Conciergerie</Badge>
+        <Badge variant="gold">Contact & Conciergerie</Badge>
         <h1 className="text-4xl sm:text-5xl font-extrabold text-foreground tracking-tight">
-          Écrivez à <span className="text-primary">{settings.studioName}</span>
+          Écrivez à <span className="gold-gradient-text">{settings.studioName}</span>
         </h1>
         <p className="text-muted-foreground text-base leading-relaxed">
           Une question sur un projet de mariage, une séance portrait ou une prestation corporate ? Le studio vous répond avec soin sous 24 heures.
