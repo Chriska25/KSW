@@ -19,8 +19,36 @@ JWT_ALGORITHM = "HS256"
 ACCESS_TOKEN_HOURS = int(os.getenv("JWT_ACCESS_TOKEN_HOURS", "24"))
 PRE_2FA_TOKEN_MINUTES = 10
 
+from settings_store import get_setting_bool
+
 ADMIN_ROLES = {"admin", "photographer", "assistant"}
 STAFF_ROLES = {"admin", "photographer", "assistant"}
+
+
+def staff_requires_2fa(user: User, db: Session) -> bool:
+    """2FA staff si réglage global actif et compte non exempté."""
+    if is_superuser(user):
+        return False
+    role = user.role or "client"
+    if role not in STAFF_ROLES:
+        return False
+    if not get_setting_bool(db, "force2FAForAdmin", True):
+        return False
+    if getattr(user, "two_factor_enabled", None) is False:
+        return False
+    return True
+
+
+def staff_two_factor_enabled_flag(user: User, db: Session) -> bool:
+    """État effectif 2FA pour l'UI admin."""
+    role = user.role or "client"
+    if role not in STAFF_ROLES:
+        return False
+    if getattr(user, "two_factor_enabled", None) is False:
+        return False
+    if not get_setting_bool(db, "force2FAForAdmin", True):
+        return False
+    return True
 
 from pending_auth_store import clear_2fa_code, consume_2fa_code, store_2fa_code
 
@@ -59,9 +87,10 @@ def create_access_token(
     *,
     two_fa_verified: bool = True,
     hours: Optional[int] = None,
+    db: Optional[Session] = None,
 ) -> str:
     role = user.role or "client"
-    requires_2fa = role in STAFF_ROLES
+    requires_2fa = staff_requires_2fa(user, db) if db is not None else role in STAFF_ROLES
     token_hours = hours if hours is not None else ACCESS_TOKEN_HOURS
     payload = {
         "sub": user.id,
@@ -178,7 +207,7 @@ def get_current_user(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Compte suspendu.")
 
     role = user.role or "client"
-    if role in STAFF_ROLES and not payload.get("2fa_verified"):
+    if staff_requires_2fa(user, db) and not payload.get("2fa_verified"):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Validation 2FA requise.")
 
     return user

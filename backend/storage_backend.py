@@ -14,6 +14,9 @@ from app.core.config import settings
 
 UPLOAD_PREFIX = "uploads"
 
+_STORAGE_INSTANCES: dict[str, MediaStorage] = {}
+_STORAGE_BUCKETS_ENSURED: set[str] = set()
+
 
 def _guess_content_type(filename: str) -> str:
     ctype, _ = mimetypes.guess_type(filename)
@@ -214,14 +217,24 @@ def use_supabase_storage() -> bool:
 
 
 def get_media_storage(upload_dir: str) -> MediaStorage:
+    cached = _STORAGE_INSTANCES.get(upload_dir)
+    if cached is not None:
+        return cached
+
     if use_supabase_storage():
         storage = SupabaseMediaStorage(upload_dir)
-        try:
-            storage.ensure_bucket()
-        except Exception as exc:
-            print(f"[STORAGE] Bucket Supabase: {exc}")
+        if upload_dir not in _STORAGE_BUCKETS_ENSURED:
+            try:
+                storage.ensure_bucket()
+                _STORAGE_BUCKETS_ENSURED.add(upload_dir)
+            except Exception as exc:
+                print(f"[STORAGE] Bucket Supabase: {exc}")
+        _STORAGE_INSTANCES[upload_dir] = storage
         return storage
-    return LocalMediaStorage(upload_dir)
+
+    storage = LocalMediaStorage(upload_dir)
+    _STORAGE_INSTANCES[upload_dir] = storage
+    return storage
 
 
 def resolve_storage_path(url: str, upload_dir: str) -> Optional[str]:

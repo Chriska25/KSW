@@ -119,7 +119,8 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'images.unsplash.com' },
       { protocol: 'https', hostname: 'fztcgnbhwkrrlzpetqsi.supabase.co', pathname: '/storage/v1/object/public/**' },
       { protocol: 'https', hostname: 'studiolumiere.fr' },
-      { protocol: 'https', hostname: 'kswstudio.fr' },
+      { protocol: 'https', hostname: 'kswstudio.fr', pathname: '/**' },
+      { protocol: 'https', hostname: 'www.kswstudio.fr', pathname: '/**' },
       { protocol: 'http', hostname: 'localhost', port: '8050', pathname: '/uploads/**' },
       { protocol: 'http', hostname: '127.0.0.1', port: '8050', pathname: '/uploads/**' },
     ],
@@ -168,6 +169,10 @@ const nextConfig: NextConfig = {
               ]
             : []),
         ],
+      },
+      {
+        source: '/uploads/:path*',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
       },
       {
         source: '/static/:_path*',

@@ -414,23 +414,31 @@ def resolve_photo_thumb_url(
     url: Optional[str],
     thumb_url: Optional[str] = None,
     upload_dir: str = "",
+    *,
+    verify_exists: bool = False,
 ) -> Optional[str]:
-    """Retourne thumbUrl si le fichier existe (sans génération synchrone)."""
-    if not upload_dir:
-        return thumb_url or thumb_url_for(str(url or ""))
-
-    storage = get_media_storage(upload_dir)
-    candidates: list[str] = []
+    """Retourne thumbUrl. Par défaut sans HEAD réseau (perf API publique)."""
     if thumb_url:
-        candidates.append(str(thumb_url))
-    predicted = _thumb_url_for_storage(str(url or ""), upload_dir) or thumb_url_for(str(url or ""))
-    if predicted:
-        candidates.append(predicted)
+        candidate = str(thumb_url)
+        if verify_exists and upload_dir:
+            storage = get_media_storage(upload_dir)
+            return candidate if storage.exists(candidate) else None
+        return candidate
 
-    for candidate in candidates:
-        if candidate and storage.exists(candidate):
-            return candidate
-    return None
+    predicted: Optional[str] = None
+    if upload_dir:
+        predicted = _thumb_url_for_storage(str(url or ""), upload_dir) or thumb_url_for(str(url or ""))
+    else:
+        predicted = thumb_url_for(str(url or ""))
+
+    if not predicted:
+        return None
+
+    if verify_exists and upload_dir:
+        storage = get_media_storage(upload_dir)
+        return predicted if storage.exists(predicted) else None
+
+    return predicted
 
 
 def save_raw_image_bytes(data: bytes, upload_dir: str) -> Tuple[str, int]:

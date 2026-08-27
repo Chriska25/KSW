@@ -48,7 +48,7 @@ apiClient.interceptors.request.use(
       config.baseURL = getApiBaseUrl();
 
       const legacyToken = localStorage.getItem('studio_token');
-      if (legacyToken && config.headers) {
+      if (legacyToken && config.headers && !config.headers.Authorization) {
         config.headers.Authorization = `Bearer ${legacyToken}`;
       }
       if (config.headers) {

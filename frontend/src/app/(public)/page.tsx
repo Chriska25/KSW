@@ -17,20 +17,32 @@ import { Badge } from '@/components/ui/badge';
 import { ServicePackagesGrid } from '@/components/public/service-packages-grid';
 import { useSettings } from '@/context/settings-context';
 import { getHomePageContent } from '@/lib/home-page-content';
+import Image from 'next/image';
+import { isPreGeneratedThumb, resolveHeroImageUrl } from '@/lib/optimize-image-url';
 
 export default function HomePage() {
   const { settings } = useSettings();
   const home = getHomePageContent(settings);
+  const heroSrc = resolveHeroImageUrl(home.heroBackgroundUrl, 1400, 70);
+  const heroUnoptimized = isPreGeneratedThumb(heroSrc);
 
   return (
     <div className="space-y-24 pb-20">
       {/* 1. HERO SECTION */}
       <section className="relative min-h-[92vh] flex items-center justify-center pt-24 pb-16 overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-500/10 via-zinc-950/80 to-zinc-950" />
-        <div
-          className="absolute inset-0 opacity-20 mix-blend-overlay bg-cover bg-center"
-          style={{ backgroundImage: `url("${home.heroBackgroundUrl}")` }}
-        />
+        <div className="absolute inset-0 opacity-20 mix-blend-overlay" aria-hidden>
+          <Image
+            src={heroSrc}
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            quality={heroUnoptimized ? undefined : 70}
+            unoptimized={heroUnoptimized}
+            className="object-cover object-center"
+          />
+        </div>
 
         <div className="relative max-w-5xl mx-auto px-4 text-center space-y-8 z-10">
           <Badge variant="gold" className="px-4 py-1.5 text-xs font-semibold uppercase tracking-widest">

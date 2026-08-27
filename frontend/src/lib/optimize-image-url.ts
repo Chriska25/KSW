@@ -62,17 +62,27 @@ export function isPreGeneratedThumb(url: string): boolean {
   return (url.startsWith('/uploads/') || url.includes('/storage/v1/object/public/')) && url.includes('_thumb');
 }
 
-/** URL grille : miniature locale si disponible, sinon URL optimisée. */
+/** URL grille : miniature serveur si disponible, sinon miniature inférée, sinon originale optimisée. */
 export function resolveGridImageUrl(
   url: string,
   thumbUrl?: string | null,
   width = 800,
   quality = 75
 ): string {
-  if (thumbUrl && (thumbUrl.startsWith('/uploads/') || thumbUrl.startsWith('http'))) return thumbUrl;
+  if (thumbUrl && (thumbUrl.startsWith('/uploads/') || thumbUrl.startsWith('http'))) {
+    return thumbUrl;
+  }
 
   const inferred = inferThumbUrl(url);
   if (inferred) return inferred;
 
+  return optimizeImageUrl(url, width, quality);
+}
+
+/** URL hero / bannière — préfère miniature inférée pour les uploads studio. */
+export function resolveHeroImageUrl(url: string, width = 1400, quality = 70): string {
+  if (!url) return url;
+  const inferred = inferThumbUrl(url);
+  if (inferred) return inferred;
   return optimizeImageUrl(url, width, quality);
 }

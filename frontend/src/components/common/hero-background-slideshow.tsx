@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { isPreGeneratedThumb, optimizeImageUrl } from '@/lib/optimize-image-url';
+import { isPreGeneratedThumb, resolveHeroImageUrl } from '@/lib/optimize-image-url';
 
 interface HeroBackgroundSlideshowProps {
   images: string[];
@@ -11,7 +11,7 @@ interface HeroBackgroundSlideshowProps {
 
 /** Une seule image chargée à la fois — diaporama léger. */
 export function HeroBackgroundSlideshow({ images, intervalMs = 6500 }: HeroBackgroundSlideshowProps) {
-  const slides = images.filter(Boolean).map((url) => optimizeImageUrl(url, 1400, 70));
+  const slides = images.filter(Boolean).map((url) => resolveHeroImageUrl(url, 1400, 70));
   const [index, setIndex] = useState(0);
   const [reduceMotion, setReduceMotion] = useState(false);
 

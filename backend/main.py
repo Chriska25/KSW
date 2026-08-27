@@ -24,7 +24,7 @@ from storage_backend import get_media_storage
 from app.core.config import settings
 from database import engine, Base, get_db, SessionLocal, check_db_connection
 from models import Setting, User, Service, Testimonial, Gallery, ElectronicInvitation, InvitationGuest
-from schemas import SettingUpdate, LoginRequest, Verify2FARequest, Resend2FARequest, RegisterRequest, ForgotPasswordRequest, ResetPasswordRequest, ChangePasswordRequest, ProfileUpdateRequest, ServiceCreate, TestimonialCreate, GalleriesSaveAll, TestimonialsSaveAll, BlogPostsSaveAll, FaqSaveAll, VisitTrack, ClientPresenceHeartbeat, SyncFromLocalPayload, BackupRestorePayload, GalleryUnlockRequest, GalleryDownloadZipRequest, GalleryDownloadPhotoRequest, ContactCreate, BookingCreate, BookingStatusUpdate, BookingUpdate, StripeCheckoutCreate, MobileMoneyPaymentSubmit, MobileMoneyConfirm, BalancePaymentRecord, NotificationMarkRead, ClientNotificationMarkRead, AdminEmailTest, AdminUserUpsert
+from schemas import SettingUpdate, LoginRequest, Verify2FARequest, Resend2FARequest, RegisterRequest, ForgotPasswordRequest, ResetPasswordRequest, ChangePasswordRequest, ProfileUpdateRequest, ServiceCreate, TestimonialCreate, GalleriesSaveAll, TestimonialsSaveAll, BlogPostsSaveAll, BlogPostUpsert, BlogCommentCreate, BlogCommentModerate, FaqSaveAll, VisitTrack, ClientPresenceHeartbeat, SyncFromLocalPayload, BackupRestorePayload, GalleryUnlockRequest, GalleryDownloadZipRequest, GalleryDownloadPhotoRequest, ContactCreate, BookingCreate, BookingStatusUpdate, BookingUpdate, StripeCheckoutCreate, MobileMoneyPaymentSubmit, MobileMoneyConfirm, BalancePaymentRecord, NotificationMarkRead, ClientNotificationMarkRead, AdminEmailTest, AdminUserUpsert
 from superuser import is_superuser, ensure_superuser_column, ensure_superuser_account, SUPERUSER_EMAIL, SUPERUSER_ID
 from pending_auth_store import ensure_pending_auth_table
 from visit_analytics import track_visit, get_visit_analytics_summary
@@ -75,6 +75,8 @@ from auth import (
     require_superuser,
     get_token_from_credentials,
     resolve_token,
+    staff_requires_2fa,
+    staff_two_factor_enabled_flag,
 )
 from image_processor import (
     load_media_settings,
@@ -88,7 +90,6 @@ from image_processor import (
     apply_watermark_to_bytes,
     delivery_source_url,
     should_apply_watermark_at_delivery,
-    infer_original_url_from_hd,
 )
 from email_service import notify_contact_received, notify_booking_created, notify_payment_received, notify_session_confirmed, send_gallery_access_email, send_gallery_access_for_gallery, send_gallery_photos_ready_email, send_test_email, send_password_reset_email, send_2fa_code_email, admin_email, resolve_2fa_delivery_email, is_mailtrap_live_host, is_mailtrap_sandbox_host, is_gmail_host, is_gmail_api_configured, gmail_api_missing_keys, check_email_connectivity
 from booking_availability import (
@@ -120,6 +121,7 @@ from settings_store import get_json_setting_list, get_json_settings_batch, get_s
 # Ensure uploads directory exists
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
 BLOG_POSTS_KEY = "blog_posts"
+BLOG_COMMENTS_KEY = "blog_comments"
 FAQ_ITEMS_KEY = "faq_items"
 CONTACT_MESSAGES_KEY = "contact_messages"
 BOOKINGS_KEY = "bookings"
@@ -142,10 +144,12 @@ PUBLIC_CACHE_GET_PREFIXES = (
 def _cache_control_header(method: str, path: str) -> str:
     if method != "GET":
         return "no-cache, no-store, must-revalidate, max-age=0"
+    if path.startswith("/uploads/"):
+        return "public, max-age=31536000, immutable"
     if path.startswith("/api/v1/admin") or path.startswith("/api/v1/auth") or path.startswith("/api/v1/client"):
         return "no-cache, no-store, must-revalidate, max-age=0"
     if any(path == prefix or path.startswith(f"{prefix}/") for prefix in PUBLIC_CACHE_GET_PREFIXES):
-        return "public, max-age=60, stale-while-revalidate=300"
+        return "public, max-age=300, stale-while-revalidate=600"
     return "no-cache, no-store, must-revalidate, max-age=0"
 
 
@@ -206,6 +210,7 @@ def validate_security_on_startup():
     _ensure_gallery_deleted_at_column()
     ensure_superuser_column(engine)
     _ensure_user_profile_columns()
+    _ensure_user_two_factor_column()
     _ensure_user_presence_columns()
     _ensure_invitation_guest_preferences_column()
     _ensure_invitation_link_schedule_columns()
@@ -355,6 +360,8 @@ def _ensure_user_profile_columns() -> None:
                 conn.execute(text("ALTER TABLE users ADD COLUMN phone VARCHAR"))
             if "avatar_url" not in cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN avatar_url TEXT"))
+            if "two_factor_enabled" not in cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN two_factor_enabled BOOLEAN"))
     except Exception as exc:
         print(f"[MIGRATION] colonnes profil users: {exc}")
 
@@ -510,6 +517,48 @@ async def upload_base64(
         "format": "webp",
     }
 
+
+def _ensure_smtp_env_settings(db: Session) -> None:
+    """Aligne les paramètres SMTP studio sur .env (Gmail API / Mailtrap) au démarrage."""
+    from email_service import is_gmail_api_configured, ensure_email_provider
+
+    patches: Dict[str, Any] = {}
+    if os.getenv("SMTP_HOST", "").strip():
+        patches["smtpHost"] = os.getenv("SMTP_HOST", "").strip()
+    if os.getenv("SMTP_PORT", "").strip():
+        patches["smtpPort"] = int(os.getenv("SMTP_PORT", "587"))
+    if os.getenv("SMTP_USER", "").strip():
+        patches["smtpUser"] = os.getenv("SMTP_USER", "").strip()
+    if os.getenv("SMTP_FROM", "").strip():
+        patches["smtpFrom"] = os.getenv("SMTP_FROM", "").strip()
+    if os.getenv("GMAIL_USE_API", "").lower() in ("true", "1", "yes"):
+        patches["gmailUseApi"] = True
+    if (
+        os.getenv("SMTP_HOST", "").strip()
+        or is_gmail_api_configured()
+        or os.getenv("MAILTRAP_API_TOKEN", "").strip()
+    ):
+        patches["smtpEnabled"] = True
+        patches["smtpPasswordConfigured"] = bool(
+            os.getenv("GMAIL_REFRESH_TOKEN", "").strip()
+            or os.getenv("GMAIL_APP_PASSWORD", "").strip()
+            or os.getenv("MAILTRAP_API_TOKEN", "").strip()
+        )
+
+    if not patches:
+        return
+
+    for key, val in patches.items():
+        existing = db.query(Setting).filter(Setting.key == key).first()
+        val_str = json.dumps(val)
+        if existing:
+            existing.value = val_str
+        else:
+            db.add(Setting(key=key, value=val_str))
+    db.commit()
+    print(f"[STARTUP] Paramètres SMTP synchronisés depuis .env ({', '.join(patches.keys())})")
+
+
 @app.on_event("startup")
 def startup_event():
     db = SessionLocal()
@@ -521,6 +570,8 @@ def startup_event():
         ensure_superuser_account(db)
         migrate_gallery_passwords(db)
         ensure_password_reset_table()
+        _ensure_smtp_env_settings(db)
+        ensure_email_provider(db)
     except Exception as exc:
         print(f"[STARTUP] Initialisation base ignorée: {exc}")
     finally:
@@ -788,9 +839,9 @@ def _request_is_admin(request: Request, db: Session) -> bool:
         if not user:
             return False
         role = user.role or "client"
-        if role not in {"admin", "photographer", "assistant"}:
+        if role not in ADMIN_ROLES:
             return False
-        if role in {"admin", "photographer", "assistant"} and not payload.get("2fa_verified"):
+        if staff_requires_2fa(user, db) and not payload.get("2fa_verified"):
             return False
         return True
     except Exception:
@@ -859,13 +910,29 @@ def _normalize_login_email(email: str) -> str:
     return email_clean
 
 
-def _staff_requires_2fa(user: User, db: Session) -> bool:
-    if is_superuser(user):
-        return False
-    role = user.role or "client"
-    if role not in ADMIN_ROLES:
-        return False
-    return get_setting_bool(db, "force2FAForAdmin", True)
+def _apply_user_two_factor_pref(user: User, role: str, enabled: Optional[bool]) -> None:
+    if enabled is None:
+        return
+    if role in ADMIN_ROLES:
+        user.two_factor_enabled = bool(enabled)
+    else:
+        user.two_factor_enabled = None
+
+
+def _ensure_user_two_factor_column() -> None:
+    from sqlalchemy import inspect, text
+
+    try:
+        insp = inspect(engine)
+        if "users" not in insp.get_table_names():
+            return
+        cols = {c["name"] for c in insp.get_columns("users")}
+        if "two_factor_enabled" in cols:
+            return
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE users ADD COLUMN two_factor_enabled BOOLEAN"))
+    except Exception as exc:
+        print(f"[MIGRATION] two_factor_enabled sur users: {exc}")
 
 
 def _staff_session_hours(db: Session, user: User) -> int:
@@ -986,7 +1053,7 @@ def login(req: LoginRequest, request: Request, db: Session = Depends(get_db)):
 
     res_user = serialize_user(user)
 
-    if _staff_requires_2fa(user, db):
+    if staff_requires_2fa(user, db):
         code = issue_2fa_code(user.id)
         delivery_email = resolve_2fa_delivery_email(db, user.email)
         email_sent, email_error = send_2fa_code_email(
@@ -1010,6 +1077,7 @@ def login(req: LoginRequest, request: Request, db: Session = Depends(get_db)):
                 "user_id": user.id,
                 "two_fa_email": delivery_email,
                 "email_sent": email_sent,
+                "email_error": email_error if not email_sent else None,
                 "message": (
                     f"Code de connexion envoyé à {delivery_email}."
                     if email_sent
@@ -1034,7 +1102,7 @@ def login(req: LoginRequest, request: Request, db: Session = Depends(get_db)):
         )
 
     session_hours = _staff_session_hours(db, user)
-    access_token = create_access_token(user, two_fa_verified=True, hours=session_hours)
+    access_token = create_access_token(user, two_fa_verified=True, hours=session_hours, db=db)
     return build_auth_json_response(
         {
             "user": res_user,
@@ -1083,6 +1151,15 @@ def resend_2fa(
     print(f"[2FA EMAIL] Échec renvoi à {delivery_email} : {email_error}")
     if is_development():
         print(f"[DEV 2FA] Code pour {delivery_email}: {code} (123456 accepté en dev)")
+        return {
+            "status": "success",
+            "message": (
+                f"Email non envoyé ({email_error or 'SMTP indisponible'}). "
+                "En développement, utilisez le code 123456 ou consultez les logs Docker."
+            ),
+            "email_sent": False,
+            "dev_code_hint": True,
+        }
     raise HTTPException(
         status_code=503,
         detail=email_error or "Impossible d'envoyer le code par email. Vérifiez la configuration SMTP.",
@@ -1116,7 +1193,7 @@ def verify_2fa(
 
     res_user = serialize_user(user)
     session_hours = _staff_session_hours(db, user)
-    access_token = create_access_token(user, two_fa_verified=True, hours=session_hours)
+    access_token = create_access_token(user, two_fa_verified=True, hours=session_hours, db=db)
     return build_auth_json_response({"user": res_user}, access_token, max_age_hours=session_hours)
 
 @app.post("/api/v1/auth/logout")
@@ -1228,6 +1305,7 @@ def list_users(db: Session = Depends(get_db), admin: User = Depends(require_admi
             "email": u.email,
             "role": u.role or "admin",
             "status": u.status or "active",
+            "twoFactorEnabled": staff_two_factor_enabled_flag(u, db),
             "createdAt": u.created_at.strftime("%Y-%m-%d") if u.created_at else "2026-07-28",
             "lastLogin": u.last_login_at.isoformat() + "Z" if getattr(u, "last_login_at", None) else None,
             "lastSeenAt": u.last_seen_at.isoformat() + "Z" if getattr(u, "last_seen_at", None) else None,
@@ -1271,6 +1349,8 @@ def create_or_update_user(
         if password:
             validate_password_policy(password)
             existing.password = hash_password(password)
+        effective_role = existing.role or "client"
+        _apply_user_two_factor_pref(existing, effective_role, payload.twoFactorEnabled)
         db.commit()
         db.refresh(existing)
         return {"status": "success", "message": "Utilisateur mis à jour", "user": {"id": existing.id, "email": existing.email, "role": existing.role}}
@@ -1292,6 +1372,7 @@ def create_or_update_user(
         role=role,
         status=user_status,
     )
+    _apply_user_two_factor_pref(new_u, role, payload.twoFactorEnabled)
     db.add(new_u)
     db.commit()
     db.refresh(new_u)
@@ -1461,6 +1542,125 @@ def _normalize_blog_posts(posts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return normalized
 
 
+_FRENCH_MONTHS = (
+    "janvier", "février", "mars", "avril", "mai", "juin",
+    "juillet", "août", "septembre", "octobre", "novembre", "décembre",
+)
+
+
+def _format_blog_published_date(dt: datetime) -> str:
+    month = _FRENCH_MONTHS[dt.month - 1]
+    return f"{dt.day} {month.capitalize()} {dt.year}"
+
+
+def _estimate_read_time(content: str) -> str:
+    words = len((content or "").split())
+    minutes = max(1, round(words / 200))
+    return f"{minutes} min"
+
+
+def _persist_blog_posts(db: Session, posts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    normalized = _normalize_blog_posts(posts)
+    val_str = json.dumps(normalized)
+    existing = db.query(Setting).filter(Setting.key == BLOG_POSTS_KEY).first()
+    if existing:
+        existing.value = val_str
+    else:
+        db.add(Setting(key=BLOG_POSTS_KEY, value=val_str))
+    db.commit()
+    return normalized
+
+
+def _prepare_blog_post_payload(
+    payload: BlogPostUpsert,
+    *,
+    existing: Optional[Dict[str, Any]] = None,
+    default_author: str = "KSW Studio",
+) -> Dict[str, Any]:
+    data = payload.model_dump(exclude_none=True)
+    if existing:
+        merged = {**existing, **data}
+    else:
+        merged = data
+        merged.setdefault("id", f"blog-{uuid.uuid4().hex[:8]}")
+        merged.setdefault("commentsCount", 0)
+    merged.setdefault("author", default_author)
+    if merged.get("isPublished", True) and not merged.get("publishedAt"):
+        merged["publishedAt"] = _format_blog_published_date(datetime.utcnow())
+    if not merged.get("readTime"):
+        merged["readTime"] = _estimate_read_time(str(merged.get("content") or ""))
+    if merged.get("tags") is None:
+        merged["tags"] = existing.get("tags", []) if existing else []
+    merged.setdefault("contentFormat", "markdown")
+    return merged
+
+
+def _get_blog_comments_from_db(db: Session) -> List[Dict[str, Any]]:
+    setting = db.query(Setting).filter(Setting.key == BLOG_COMMENTS_KEY).first()
+    if setting and setting.value:
+        try:
+            parsed = json.loads(setting.value)
+            if isinstance(parsed, list):
+                return parsed
+        except Exception:
+            pass
+    return []
+
+
+def _persist_blog_comments(db: Session, comments: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    val_str = json.dumps(comments)
+    existing = db.query(Setting).filter(Setting.key == BLOG_COMMENTS_KEY).first()
+    if existing:
+        existing.value = val_str
+    else:
+        db.add(Setting(key=BLOG_COMMENTS_KEY, value=val_str))
+    db.commit()
+    return comments
+
+
+def _sync_blog_comment_counts(db: Session) -> None:
+    comments = _get_blog_comments_from_db(db)
+    posts = _get_blog_posts_from_db(db)
+    counts: Dict[str, int] = {}
+    for comment in comments:
+        if str(comment.get("status") or "") != "approved":
+            continue
+        post_id = str(comment.get("postId") or "")
+        if post_id:
+            counts[post_id] = counts.get(post_id, 0) + 1
+    changed = False
+    for post in posts:
+        post_id = str(post.get("id") or "")
+        next_count = counts.get(post_id, 0)
+        if int(post.get("commentsCount") or 0) != next_count:
+            post["commentsCount"] = next_count
+            changed = True
+    if changed:
+        _persist_blog_posts(db, posts)
+
+
+def _find_blog_post_by_slug(db: Session, slug: str) -> Optional[Dict[str, Any]]:
+    posts = _get_blog_posts_from_db(db)
+    return next(
+        (p for p in posts if str(p.get("slug", "")) == slug or str(p.get("id", "")) == slug),
+        None,
+    )
+
+
+def _normalize_blog_comment(raw: Dict[str, Any], *, post: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "id": str(raw.get("id") or f"cmt-{uuid.uuid4().hex[:8]}"),
+        "postId": str(post.get("id") or ""),
+        "postSlug": str(post.get("slug") or ""),
+        "postTitle": str(post.get("title") or ""),
+        "authorName": str(raw.get("authorName") or "").strip(),
+        "authorEmail": str(raw.get("authorEmail") or "").strip().lower(),
+        "content": str(raw.get("content") or "").strip(),
+        "status": str(raw.get("status") or "pending"),
+        "createdAt": raw.get("createdAt") or datetime.utcnow().isoformat() + "Z",
+    }
+
+
 def _get_blog_posts_from_db(db: Session) -> List[Dict[str, Any]]:
     setting = db.query(Setting).filter(Setting.key == BLOG_POSTS_KEY).first()
     if setting and setting.value:
@@ -1494,15 +1694,164 @@ def admin_list_blog_posts(db: Session = Depends(get_db), _admin: User = Depends(
 
 @app.post("/api/v1/admin/blog/save-all")
 def save_all_blog_posts(payload: BlogPostsSaveAll, db: Session = Depends(get_db), _admin: User = Depends(require_admin_user)):
-    posts = _normalize_blog_posts(payload.posts)
-    existing = db.query(Setting).filter(Setting.key == BLOG_POSTS_KEY).first()
-    val_str = json.dumps(posts)
-    if existing:
-        existing.value = val_str
-    else:
-        db.add(Setting(key=BLOG_POSTS_KEY, value=val_str))
-    db.commit()
+    posts = _persist_blog_posts(db, payload.posts)
     return {"status": "success", "count": len(posts), "data": posts}
+
+
+@app.post("/api/v1/admin/blog")
+def create_blog_post(
+    payload: BlogPostUpsert,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin_user),
+):
+    posts = _get_blog_posts_from_db(db)
+    author_default = admin.name or admin.email or "KSW Studio"
+    post = _prepare_blog_post_payload(payload, default_author=author_default)
+    posts.insert(0, post)
+    saved = _persist_blog_posts(db, posts)
+    created = next((p for p in saved if str(p.get("id")) == str(post["id"])), post)
+    return {"status": "success", "message": "Article créé", "data": created}
+
+
+@app.put("/api/v1/admin/blog/{post_id}")
+def update_blog_post(
+    post_id: str,
+    payload: BlogPostUpsert,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin_user),
+):
+    posts = _get_blog_posts_from_db(db)
+    idx = next((i for i, p in enumerate(posts) if str(p.get("id")) == str(post_id)), None)
+    if idx is None:
+        raise HTTPException(status_code=404, detail="Article introuvable.")
+    author_default = admin.name or admin.email or "KSW Studio"
+    merged = _prepare_blog_post_payload(payload, existing=posts[idx], default_author=author_default)
+    merged["id"] = posts[idx].get("id")
+    posts[idx] = merged
+    saved = _persist_blog_posts(db, posts)
+    updated = next((p for p in saved if str(p.get("id")) == str(post_id)), merged)
+    return {"status": "success", "message": "Article mis à jour", "data": updated}
+
+
+@app.delete("/api/v1/admin/blog/{post_id}")
+def delete_blog_post(
+    post_id: str,
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_admin_user),
+):
+    posts = _get_blog_posts_from_db(db)
+    filtered = [p for p in posts if str(p.get("id")) != str(post_id)]
+    if len(filtered) == len(posts):
+        raise HTTPException(status_code=404, detail="Article introuvable.")
+    saved = _persist_blog_posts(db, filtered)
+    comments = _get_blog_comments_from_db(db)
+    remaining = [c for c in comments if str(c.get("postId")) != str(post_id)]
+    if len(remaining) != len(comments):
+        _persist_blog_comments(db, remaining)
+    return {"status": "success", "message": "Article supprimé", "count": len(saved)}
+
+
+@app.get("/api/v1/blog/{slug}/comments")
+def list_public_blog_comments(slug: str, db: Session = Depends(get_db)):
+    post = _find_blog_post_by_slug(db, slug)
+    if not post or not post.get("isPublished", True):
+        raise HTTPException(status_code=404, detail="Article introuvable.")
+    post_id = str(post.get("id") or "")
+    comments = [
+        {
+            "id": c.get("id"),
+            "authorName": c.get("authorName"),
+            "content": c.get("content"),
+            "createdAt": c.get("createdAt"),
+        }
+        for c in _get_blog_comments_from_db(db)
+        if str(c.get("postId")) == post_id and str(c.get("status")) == "approved"
+    ]
+    comments.sort(key=lambda c: str(c.get("createdAt") or ""), reverse=True)
+    return {"data": comments}
+
+
+@app.post("/api/v1/blog/{slug}/comments")
+def create_public_blog_comment(
+    slug: str,
+    payload: BlogCommentCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    client_ip = extract_client_ip(request)
+    check_rate_limit(f"blog-comment:{client_ip}", max_attempts=5, window_seconds=900)
+    post = _find_blog_post_by_slug(db, slug)
+    if not post or not post.get("isPublished", True):
+        raise HTTPException(status_code=404, detail="Article introuvable.")
+    name = (payload.authorName or "").strip()
+    email = (payload.authorEmail or "").strip().lower()
+    content = (payload.content or "").strip()
+    if len(name) < 2:
+        raise HTTPException(status_code=400, detail="Nom requis (2 caractères minimum).")
+    if "@" not in email or len(email) < 5:
+        raise HTTPException(status_code=400, detail="Email invalide.")
+    if len(content) < 5:
+        raise HTTPException(status_code=400, detail="Commentaire trop court.")
+    comment = _normalize_blog_comment(
+        {
+            "authorName": name,
+            "authorEmail": email,
+            "content": content,
+            "status": "pending",
+        },
+        post=post,
+    )
+    comments = _get_blog_comments_from_db(db)
+    comments.insert(0, comment)
+    _persist_blog_comments(db, comments)
+    return {
+        "status": "success",
+        "message": "Commentaire envoyé — il sera visible après modération.",
+        "data": {"id": comment["id"]},
+    }
+
+
+@app.get("/api/v1/admin/blog/comments")
+def admin_list_blog_comments(db: Session = Depends(get_db), _admin: User = Depends(require_admin_user)):
+    comments = _get_blog_comments_from_db(db)
+    comments.sort(key=lambda c: str(c.get("createdAt") or ""), reverse=True)
+    return {"data": comments}
+
+
+@app.patch("/api/v1/admin/blog/comments/{comment_id}")
+def moderate_blog_comment(
+    comment_id: str,
+    payload: BlogCommentModerate,
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_admin_user),
+):
+    status = (payload.status or "").strip().lower()
+    if status not in {"pending", "approved", "rejected"}:
+        raise HTTPException(status_code=400, detail="Statut invalide.")
+    comments = _get_blog_comments_from_db(db)
+    idx = next((i for i, c in enumerate(comments) if str(c.get("id")) == str(comment_id)), None)
+    if idx is None:
+        raise HTTPException(status_code=404, detail="Commentaire introuvable.")
+    comments[idx]["status"] = status
+    saved = _persist_blog_comments(db, comments)
+    _sync_blog_comment_counts(db)
+    updated = next((c for c in saved if str(c.get("id")) == str(comment_id)), comments[idx])
+    return {"status": "success", "message": "Commentaire mis à jour", "data": updated}
+
+
+@app.delete("/api/v1/admin/blog/comments/{comment_id}")
+def delete_blog_comment(
+    comment_id: str,
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_admin_user),
+):
+    comments = _get_blog_comments_from_db(db)
+    filtered = [c for c in comments if str(c.get("id")) != str(comment_id)]
+    if len(filtered) == len(comments):
+        raise HTTPException(status_code=404, detail="Commentaire introuvable.")
+    _persist_blog_comments(db, filtered)
+    _sync_blog_comment_counts(db)
+    return {"status": "success", "message": "Commentaire supprimé"}
 
 
 def _get_faq_items_from_db(db: Session) -> List[Dict[str, Any]]:
@@ -3476,10 +3825,6 @@ def _enrich_photos_with_thumbs(photos: list) -> list:
             p["thumbUrl"] = resolved
         if p.get("url") and not p.get("hdUrl"):
             p["hdUrl"] = p["url"]
-        if not p.get("originalUrl") and p.get("url"):
-            inferred = infer_original_url_from_hd(str(p.get("url")), UPLOAD_DIR)
-            if inferred:
-                p["originalUrl"] = inferred
         enriched.append(p)
     return enriched
 
@@ -3492,7 +3837,13 @@ def _bg_generate_missing_thumbs(photos: list) -> None:
         if not isinstance(photo, dict):
             continue
         url = str(photo.get("url") or "")
-        if not url.startswith("/uploads/") or url in seen:
+        if not url or url in seen:
+            continue
+        if not (
+            url.startswith("/uploads/")
+            or url.startswith("http://")
+            or url.startswith("https://")
+        ):
             continue
         seen.add(url)
         try:

@@ -8,6 +8,10 @@ Prérequis :
   3. Ajouter magickasai@gmail.com comme utilisateur test (écran de consentement)
 
 Usage :
+  # Depuis la racine du projet (lit automatiquement .env) :
+  python3 backend/scripts/gmail_oauth_setup.py
+
+  # Ou avec variables exportées :
   export GMAIL_CLIENT_ID="xxx.apps.googleusercontent.com"
   export GMAIL_CLIENT_SECRET="GOCSPX-..."
   python3 backend/scripts/gmail_oauth_setup.py
@@ -31,6 +35,28 @@ OAUTH_PORT = int(os.environ.get("GMAIL_OAUTH_PORT", "8765"))
 SCOPE = "https://mail.google.com/"
 AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 TOKEN_URL = "https://oauth2.googleapis.com/token"
+
+
+def _load_project_env() -> None:
+    """Charge le fichier .env à la racine du repo (sans écraser l'environnement existant)."""
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.abspath(os.path.join(script_dir, "..", ".."))
+    env_path = os.path.join(project_root, ".env")
+    if not os.path.isfile(env_path):
+        return
+    with open(env_path, encoding="utf-8") as handle:
+        for raw_line in handle:
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            key = key.strip()
+            if not key or key in os.environ:
+                continue
+            cleaned = value.strip()
+            if len(cleaned) >= 2 and cleaned[0] == cleaned[-1] and cleaned[0] in "\"'":
+                cleaned = cleaned[1:-1]
+            os.environ[key] = cleaned
 
 
 class OAuthCallbackHandler(BaseHTTPRequestHandler):
@@ -104,12 +130,16 @@ def exchange_code(client_id: str, client_secret: str, code: str) -> dict:
 
 
 def main() -> int:
+    _load_project_env()
     client_id = os.environ.get("GMAIL_CLIENT_ID", "").strip()
     client_secret = os.environ.get("GMAIL_CLIENT_SECRET", "").strip()
     if not client_id or not client_secret:
         print(
-            "Definissez GMAIL_CLIENT_ID et GMAIL_CLIENT_SECRET avant de lancer ce script.\n"
-            "Google Cloud → Identifiants → Creer → ID client OAuth → Application de bureau",
+            "GMAIL_CLIENT_ID et GMAIL_CLIENT_SECRET introuvables.\n"
+            "Ajoutez-les dans le fichier .env à la racine du projet, ou exportez-les :\n"
+            "  GMAIL_CLIENT_ID=xxx.apps.googleusercontent.com\n"
+            "  GMAIL_CLIENT_SECRET=GOCSPX-...\n\n"
+            "Google Cloud → Identifiants → Créer → ID client OAuth → Application de bureau",
             file=sys.stderr,
         )
         return 1

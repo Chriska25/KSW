@@ -173,17 +173,17 @@ export default function AdminUsersPage() {
     try {
       const res = await apiClient.get('/admin/users');
       const rows = Array.isArray(res.data?.data) ? res.data.data : [];
-      const formattedUsers = rows.map((u: Record<string, string>) => ({
-        id: u.id,
-        name: u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email,
-        firstName: u.firstName || '',
-        lastName: u.lastName || '',
-        email: u.email,
-        role: u.role || 'client',
-        status: (u.status || 'active') as UserAccountItem['status'],
-        twoFactorEnabled: u.role === 'admin' || u.role === 'photographer',
-        createdAt: u.createdAt || '',
-        lastLogin: u.lastLogin,
+      const formattedUsers = rows.map((u: Record<string, string | boolean>) => ({
+        id: u.id as string,
+        name: (u.name as string) || `${u.firstName || ''} ${u.lastName || ''}`.trim() || (u.email as string),
+        firstName: (u.firstName as string) || '',
+        lastName: (u.lastName as string) || '',
+        email: u.email as string,
+        role: (u.role as string) || 'client',
+        status: ((u.status as string) || 'active') as UserAccountItem['status'],
+        twoFactorEnabled: Boolean(u.twoFactorEnabled),
+        createdAt: (u.createdAt as string) || '',
+        lastLogin: u.lastLogin as string | undefined,
       }));
       setUsers(formattedUsers);
     } catch (e) {
@@ -203,6 +203,7 @@ export default function AdminUsersPage() {
       email: user.email,
       role: user.role,
       status: user.status,
+      twoFactorEnabled: user.twoFactorEnabled,
       password: password || undefined,
     });
   };
@@ -844,10 +845,14 @@ export default function AdminUsersPage() {
             <input
               type="checkbox"
               checked={userFormData.twoFactorEnabled}
+              disabled={!['admin', 'photographer', 'assistant'].includes(userFormData.role)}
               onChange={(e) => setUserFormData({ ...userFormData, twoFactorEnabled: e.target.checked })}
-              className="h-4 w-4 rounded accent-primary"
+              className="h-4 w-4 rounded accent-primary disabled:opacity-40"
             />
           </div>
+          {!['admin', 'photographer', 'assistant'].includes(userFormData.role) && (
+            <p className="text-[11px] text-muted-foreground">La 2FA s&apos;applique uniquement aux comptes staff.</p>
+          )}
         </form>
       </AdminModal>
 

@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import {
   isPreGeneratedThumb,
@@ -31,11 +32,24 @@ export function OptimizedPhoto({
   className,
   priority = false,
   sizes = '(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw',
-  width = 800,
+  width = 640,
   thumbSrc,
 }: OptimizedPhotoProps) {
-  const resolved = resolveGridImageUrl(src || FALLBACK, thumbSrc, width);
+  const source = src || FALLBACK;
+  const primary = resolveGridImageUrl(source, thumbSrc, width);
+  const [resolved, setResolved] = useState(primary);
   const unoptimized = isPreGeneratedThumb(resolved);
+
+  useEffect(() => {
+    setResolved(primary);
+  }, [primary]);
+
+  const handleError = () => {
+    const fallback = optimizeImageUrl(source, width);
+    if (resolved !== fallback) {
+      setResolved(fallback);
+    }
+  };
 
   return (
     <Image
@@ -46,6 +60,7 @@ export function OptimizedPhoto({
       priority={priority}
       quality={unoptimized ? undefined : 75}
       unoptimized={unoptimized}
+      onError={handleError}
       className={cn('object-cover', className)}
     />
   );

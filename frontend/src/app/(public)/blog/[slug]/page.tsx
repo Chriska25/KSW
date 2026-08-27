@@ -12,14 +12,17 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { fetchBlogPostBySlug } from '@/lib/blog-api';
+import { fetchBlogPostBySlug, fetchBlogComments, type BlogComment } from '@/lib/blog-api';
 import { LoadingState } from '@/components/common/loading-state';
 import { RevealPhotoCard, RevealPhotoImage } from '@/components/common/reveal-photo-card';
+import { MarkdownContent } from '@/components/blog/markdown-content';
+import { BlogCommentSection } from '@/components/blog/blog-comment-section';
 
 export default function BlogDetailPage() {
   const params = useParams();
   const slug = String(params.slug || '');
   const [article, setArticle] = useState<Awaited<ReturnType<typeof fetchBlogPostBySlug>>>(null);
+  const [comments, setComments] = useState<BlogComment[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -28,11 +31,15 @@ export default function BlogDetailPage() {
     const load = async () => {
       setLoading(true);
       try {
-        const post = await fetchBlogPostBySlug(slug);
+        const [post, postComments] = await Promise.all([
+          fetchBlogPostBySlug(slug),
+          fetchBlogComments(slug).catch(() => []),
+        ]);
         if (!post) {
           setNotFound(true);
         } else {
           setArticle(post);
+          setComments(postComments);
         }
       } catch {
         setNotFound(true);
@@ -61,6 +68,8 @@ export default function BlogDetailPage() {
       </div>
     );
   }
+
+  const body = article.content || article.excerpt || '';
 
   return (
     <div className="pt-28 pb-20 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
@@ -96,14 +105,18 @@ export default function BlogDetailPage() {
         </RevealPhotoCard>
       )}
 
-      <div className="prose prose-invert max-w-none text-foreground leading-relaxed text-base space-y-6">
-        {(article.content || article.excerpt || '')
-          .split('\n\n')
-          .filter(Boolean)
-          .map((paragraph, idx) => (
-            <p key={idx}>{paragraph.trim()}</p>
-          ))}
-      </div>
+      {article.contentFormat === 'plain' ? (
+        <div className="prose prose-invert max-w-none text-foreground leading-relaxed text-base space-y-6">
+          {body
+            .split('\n\n')
+            .filter(Boolean)
+            .map((paragraph, idx) => (
+              <p key={idx}>{paragraph.trim()}</p>
+            ))}
+        </div>
+      ) : (
+        <MarkdownContent content={body} />
+      )}
 
       {(article.tags || []).length > 0 && (
         <div className="flex items-center space-x-2 pt-4 border-t border-border">
@@ -117,6 +130,8 @@ export default function BlogDetailPage() {
           </div>
         </div>
       )}
+
+      <BlogCommentSection slug={slug} initialComments={comments} />
     </div>
   );
 }

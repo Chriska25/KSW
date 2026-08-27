@@ -55,6 +55,7 @@ function PortfolioPhotoCard({ photo, index, onClick }: PortfolioPhotoCardProps) 
         src={photo.url}
         thumbSrc={photo.thumbUrl}
         alt={photo.title}
+        width={640}
         priority={index < 6}
         className="portfolio-photo-image absolute inset-0 h-full w-full object-cover"
       />

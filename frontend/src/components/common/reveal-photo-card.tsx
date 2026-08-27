@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { optimizeImageUrl } from '@/lib/optimize-image-url';
+import { OptimizedPhoto } from '@/components/common/optimized-photo';
 import { useRevealInView } from '@/lib/use-reveal-in-view';
 import { cn } from '@/lib/utils';
 
@@ -59,12 +59,11 @@ export function RevealPhotoImage({
   width = 640,
 }: RevealPhotoImageProps & { width?: number }) {
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={optimizeImageUrl(src, width, 75)}
+    <OptimizedPhoto
+      src={src}
       alt={alt}
-      loading="lazy"
-      decoding="async"
+      width={width}
+      sizes="(max-width: 768px) 100vw, 640px"
       className={cn('portfolio-photo-image absolute inset-0 h-full w-full object-cover', className)}
     />
   );

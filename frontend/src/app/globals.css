@@ -340,11 +340,10 @@
 
 .portfolio-photo-card {
   opacity: 0;
-  content-visibility: auto;
-  contain-intrinsic-size: 220px;
 }
 
 .portfolio-photo-card.is-visible {
+  opacity: 1;
   animation: portfolio-photo-reveal 0.5s var(--ease-out) both;
 }
 
@@ -400,11 +399,10 @@
 /* ─── Prestations ─── */
 .prestations-card {
   opacity: 0;
-  content-visibility: auto;
-  contain-intrinsic-size: 320px;
 }
 
 .prestations-card.is-visible {
+  opacity: 1;
   animation: portfolio-photo-reveal 0.5s var(--ease-out) both;
 }
 
@@ -421,7 +419,23 @@
 }
 
 .prestations-step.is-visible {
+  opacity: 1;
   animation: portfolio-photo-reveal 0.45s var(--ease-out) both;
+}
+
+/* Mobile / tactile : afficher les photos sans attendre l'animation reveal */
+@media (max-width: 768px), (pointer: coarse) {
+  .portfolio-photo-card,
+  .prestations-card,
+  .prestations-step {
+    opacity: 1;
+  }
+
+  .portfolio-photo-card.is-visible,
+  .prestations-card.is-visible,
+  .prestations-step.is-visible {
+    animation: none;
+  }
 }
 
 .prestations-hero-slide-active,

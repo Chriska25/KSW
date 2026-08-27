@@ -26,6 +26,7 @@ class User(Base):
     is_superuser = Column(Boolean, default=False)
     phone = Column(String, nullable=True)
     avatar_url = Column(Text, nullable=True)
+    two_factor_enabled = Column(Boolean, nullable=True)  # null = défaut global ; False = 2FA off pour ce staff
     last_login_at = Column(DateTime, nullable=True)
     last_seen_at = Column(DateTime, nullable=True)
     last_login_ip = Column(String, nullable=True)

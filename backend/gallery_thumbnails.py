@@ -52,7 +52,7 @@ def generate_all_gallery_thumbnails(
                 next_photos.append(p)
                 continue
 
-            existing = resolve_photo_thumb_url(url, p.get("thumbUrl"), upload_dir)
+            existing = resolve_photo_thumb_url(url, p.get("thumbUrl"), upload_dir, verify_exists=True)
             if existing:
                 if p.get("thumbUrl") != existing:
                     p["thumbUrl"] = existing

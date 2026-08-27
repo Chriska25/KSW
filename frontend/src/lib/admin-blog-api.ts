@@ -16,7 +16,14 @@ export interface AdminBlogPost {
   seoDescription?: string;
   readTime?: string;
   tags?: string[];
+  contentFormat?: 'markdown' | 'plain';
 }
+
+export type AdminBlogPostInput = Omit<AdminBlogPost, 'id' | 'commentsCount' | 'publishedAt'> & {
+  id?: string;
+  commentsCount?: number;
+  publishedAt?: string;
+};
 
 function normalizeAdminPost(raw: Record<string, unknown>): AdminBlogPost {
   return {
@@ -35,6 +42,7 @@ function normalizeAdminPost(raw: Record<string, unknown>): AdminBlogPost {
     seoDescription: raw.seoDescription ? String(raw.seoDescription) : undefined,
     readTime: raw.readTime ? String(raw.readTime) : undefined,
     tags: Array.isArray(raw.tags) ? (raw.tags as string[]) : [],
+    contentFormat: raw.contentFormat === 'plain' ? 'plain' : 'markdown',
   };
 }
 
@@ -50,4 +58,34 @@ export async function saveAllBlogPosts(posts: AdminBlogPost[]): Promise<AdminBlo
     return res.data.data.map((row: Record<string, unknown>) => normalizeAdminPost(row));
   }
   return posts;
+}
+
+export async function createBlogPost(input: AdminBlogPostInput): Promise<AdminBlogPost> {
+  const res = await apiClient.post('/admin/blog', input);
+  return normalizeAdminPost(res.data?.data || {});
+}
+
+export async function updateBlogPost(id: string, input: Partial<AdminBlogPostInput>): Promise<AdminBlogPost> {
+  const res = await apiClient.put(`/admin/blog/${encodeURIComponent(id)}`, input);
+  return normalizeAdminPost(res.data?.data || {});
+}
+
+export async function deleteBlogPost(id: string): Promise<void> {
+  await apiClient.delete(`/admin/blog/${encodeURIComponent(id)}`);
+}
+
+export async function duplicateBlogPost(post: AdminBlogPost): Promise<AdminBlogPost> {
+  return createBlogPost({
+    title: `${post.title} (copie)`,
+    category: post.category,
+    author: post.author,
+    excerpt: post.excerpt,
+    content: post.content,
+    featuredImage: post.featuredImage,
+    isPublished: false,
+    seoTitle: post.seoTitle,
+    seoDescription: post.seoDescription,
+    readTime: post.readTime,
+    tags: post.tags,
+  });
 }

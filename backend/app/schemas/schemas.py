@@ -23,6 +23,7 @@ class AdminUserUpsert(BaseModel):
     role: Optional[str] = None
     status: Optional[str] = None
     password: Optional[str] = None
+    twoFactorEnabled: Optional[bool] = None
 
 
 class RegisterRequest(BaseModel):
@@ -74,6 +75,35 @@ class TestimonialsSaveAll(BaseModel):
 
 class BlogPostsSaveAll(BaseModel):
     posts: List[Dict[str, Any]]
+
+
+class BlogPostUpsert(BaseModel):
+    id: Optional[str] = None
+    slug: Optional[str] = None
+    title: str
+    category: Optional[str] = "Journal"
+    author: Optional[str] = None
+    excerpt: Optional[str] = ""
+    content: Optional[str] = ""
+    featuredImage: Optional[str] = ""
+    isPublished: Optional[bool] = True
+    publishedAt: Optional[str] = None
+    readTime: Optional[str] = None
+    seoTitle: Optional[str] = None
+    seoDescription: Optional[str] = None
+    tags: Optional[List[str]] = None
+    commentsCount: Optional[int] = None
+    contentFormat: Optional[str] = "markdown"
+
+
+class BlogCommentCreate(BaseModel):
+    authorName: str
+    authorEmail: str
+    content: str
+
+
+class BlogCommentModerate(BaseModel):
+    status: str
 
 class FaqSaveAll(BaseModel):
     items: List[Dict[str, Any]]

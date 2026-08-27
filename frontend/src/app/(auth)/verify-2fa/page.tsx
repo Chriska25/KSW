@@ -22,6 +22,7 @@ function Verify2FAForm() {
   const [deliveryEmail, setDeliveryEmail] = useState<string | null>(null);
   const [loginMessage, setLoginMessage] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState<boolean | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -39,6 +40,7 @@ function Verify2FAForm() {
       })();
     setDeliveryEmail(stored);
     setLoginMessage(sessionStorage.getItem('studio_2fa_message'));
+    setEmailError(sessionStorage.getItem('studio_2fa_email_error'));
     const sentFlag = sessionStorage.getItem('studio_2fa_email_sent');
     setEmailSent(sentFlag === '1' ? true : sentFlag === '0' ? false : null);
   }, []);
@@ -51,6 +53,7 @@ function Verify2FAForm() {
       if (typeof window !== 'undefined') {
         sessionStorage.removeItem('studio_2fa_message');
         sessionStorage.removeItem('studio_2fa_email_sent');
+        sessionStorage.removeItem('studio_2fa_email_error');
       }
       const target = isAdminUser(res.user)
         ? safeRedirect(redirect, '/admin/dashboard')
@@ -113,10 +116,21 @@ function Verify2FAForm() {
           {loginMessage && (
             <span className="block text-warning text-caption">{loginMessage}</span>
           )}
+          {emailError && emailSent === false && (
+            <span className="block text-caption text-danger text-left rounded-lg border border-danger/25 bg-danger-muted px-3 py-2">
+              {emailError}
+              <span className="block mt-2 text-muted-foreground">
+                Pour rétablir l&apos;envoi réel : regénérez le token Gmail avec{' '}
+                <code className="text-primary">python3 backend/scripts/gmail_oauth_setup.py</code>{' '}
+                puis mettez à jour <code className="text-primary">GMAIL_REFRESH_TOKEN</code> dans{' '}
+                <code className="text-primary">.env</code> et redémarrez le backend.
+              </span>
+            </span>
+          )}
           {process.env.NODE_ENV === 'development' && (
-            <span className="block text-caption">
-              En local : code universel <strong className="text-foreground font-mono">123456</strong> ou voir{' '}
-              <code className="text-primary">docker logs studio_photography_backend</code>.
+            <span className="block text-caption rounded-lg border border-primary/25 bg-primary-muted px-3 py-2">
+              Mode test local : saisissez <strong className="text-foreground font-mono">123456</strong> puis
+              cliquez « Valider le code » — même si l&apos;email n&apos;a pas été envoyé.
             </span>
           )}
         </CardDescription>

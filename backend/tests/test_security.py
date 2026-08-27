@@ -294,5 +294,37 @@ class ApiSecurityTests(unittest.TestCase):
         self.assertNotIn("permissions", data)
 
 
+class Staff2faHelperTests(unittest.TestCase):
+    def test_staff_requires_2fa_respects_global_setting(self):
+        from auth import staff_requires_2fa, staff_two_factor_enabled_flag
+        from unittest.mock import MagicMock, patch
+
+        user = MagicMock()
+        user.role = "admin"
+        user.two_factor_enabled = None
+        db = MagicMock()
+
+        with patch("auth.is_superuser", return_value=False), patch("auth.get_setting_bool", return_value=False):
+            self.assertFalse(staff_requires_2fa(user, db))
+            self.assertFalse(staff_two_factor_enabled_flag(user, db))
+
+        with patch("auth.is_superuser", return_value=False), patch("auth.get_setting_bool", return_value=True):
+            self.assertTrue(staff_requires_2fa(user, db))
+            self.assertTrue(staff_two_factor_enabled_flag(user, db))
+
+    def test_staff_requires_2fa_respects_user_opt_out(self):
+        from auth import staff_requires_2fa, staff_two_factor_enabled_flag
+        from unittest.mock import MagicMock
+
+        user = MagicMock()
+        user.role = "photographer"
+        user.two_factor_enabled = False
+        db = MagicMock()
+
+        with unittest.mock.patch("auth.get_setting_bool", return_value=True):
+            self.assertFalse(staff_requires_2fa(user, db))
+            self.assertFalse(staff_two_factor_enabled_flag(user, db))
+
+
 if __name__ == "__main__":
     unittest.main()

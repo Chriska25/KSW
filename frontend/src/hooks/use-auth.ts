@@ -164,6 +164,8 @@ export function useAuth() {
         persistSession(data.token || '', normalized);
       } else if (typeof window !== 'undefined') {
         try {
+          // Évite qu'un ancien JWT écrase le token pre-2FA dans les requêtes suivantes.
+          localStorage.removeItem('studio_token');
           sessionStorage.setItem('studio_pending_2fa_user', JSON.stringify(normalized));
           if (data.token) {
             sessionStorage.setItem('studio_pre_2fa_token', data.token);
@@ -175,6 +177,11 @@ export function useAuth() {
             sessionStorage.setItem('studio_2fa_message', String(data.message));
           }
           sessionStorage.setItem('studio_2fa_email_sent', data.email_sent ? '1' : '0');
+          if (data.email_error) {
+            sessionStorage.setItem('studio_2fa_email_error', String(data.email_error));
+          } else {
+            sessionStorage.removeItem('studio_2fa_email_error');
+          }
         } catch {
           // ignore
         }
