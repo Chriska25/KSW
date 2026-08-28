@@ -143,6 +143,8 @@ def _is_gmail_oauth_failure(error: Optional[str]) -> bool:
 
 
 def _should_try_mailtrap_fallback(error: Optional[str]) -> bool:
+    if _email_provider_preference() == "gmail":
+        return False
     return _is_dns_resolution_error(error) or _is_gmail_oauth_failure(error)
 
 
@@ -167,8 +169,68 @@ def _oauth_dns_help_message() -> str:
     )
 
 
+def _mailtrap_live_token() -> str:
+    return os.getenv("MAILTRAP_API_TOKEN", "").strip()
+
+
+def _mailtrap_sandbox_token() -> str:
+    return os.getenv("MAILTRAP_SANDBOX_API_TOKEN", "").strip() or _mailtrap_live_token()
+
+
+def _email_provider_preference() -> str:
+    return os.getenv("EMAIL_PROVIDER", "").strip().lower()
+
+
+def probe_mailtrap_sending_token(token: Optional[str] = None) -> Dict[str, Any]:
+    """Vérifie si le token Mailtrap autorise l'envoi transactionnel (send.api.mailtrap.io)."""
+    tok = (token or _mailtrap_live_token()).strip()
+    if not tok:
+        return {
+            "configured": False,
+            "sending_ready": False,
+            "error": "MAILTRAP_API_TOKEN manquant dans .env",
+        }
+
+    payload = json.dumps({"from": {"email": "probe@example.com"}, "to": [], "subject": "probe"}).encode("utf-8")
+    request = urllib.request.Request(
+        "https://send.api.mailtrap.io/api/send",
+        data=payload,
+        headers={"Authorization": f"Bearer {tok}", "Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            return {"configured": True, "sending_ready": 200 <= response.status < 300, "http_status": response.status}
+    except urllib.error.HTTPError as exc:
+        if exc.code == 403:
+            return {
+                "configured": True,
+                "sending_ready": False,
+                "http_status": 403,
+                "error": "Token sans permission « Email Sending » — recréez-le sur mailtrap.io/api-tokens",
+            }
+        if exc.code == 401:
+            return {
+                "configured": True,
+                "sending_ready": False,
+                "http_status": 401,
+                "error": "Token Mailtrap invalide ou expiré (401)",
+            }
+        if exc.code == 422:
+            return {"configured": True, "sending_ready": True, "http_status": 422}
+        body = exc.read().decode("utf-8", errors="replace")
+        return {
+            "configured": True,
+            "sending_ready": False,
+            "http_status": exc.code,
+            "error": body[:240] or f"Erreur Mailtrap HTTP {exc.code}",
+        }
+    except urllib.error.URLError as exc:
+        return {"configured": True, "sending_ready": False, "error": f"Réseau : {exc.reason}"}
+
+
 def _build_mailtrap_fallback_cfg(db: Session, cfg: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    token = os.getenv("MAILTRAP_API_TOKEN", "").strip()
+    token = _mailtrap_live_token()
     if not token:
         return None
 
@@ -209,8 +271,11 @@ def check_email_connectivity() -> Dict[str, Any]:
 
     return {
         "running_in_docker": os.getenv("RUNNING_IN_DOCKER", "").lower() in ("true", "1", "yes"),
+        "email_provider": _email_provider_preference() or None,
         "gmail_api_configured": is_gmail_api_configured(),
-        "mailtrap_token_present": bool(os.getenv("MAILTRAP_API_TOKEN", "").strip()),
+        "mailtrap_token_present": bool(_mailtrap_live_token()),
+        "mailtrap_sandbox_id_present": bool(os.getenv("MAILTRAP_SANDBOX_ID", "").strip()),
+        "mailtrap_sending": probe_mailtrap_sending_token(),
         "targets": resolved_targets,
         "all_ok": all(item["ok"] for item in resolved_targets),
     }
@@ -250,7 +315,7 @@ def gmail_api_missing_keys() -> list[str]:
 
 
 def _apply_mailtrap_primary_settings(db: Session) -> bool:
-    token = os.getenv("MAILTRAP_API_TOKEN", "").strip()
+    token = _mailtrap_live_token()
     if not token:
         return False
 
@@ -284,49 +349,93 @@ def _apply_mailtrap_primary_settings(db: Session) -> bool:
     return True
 
 
+def _apply_gmail_primary_settings(db: Session, *, use_api: bool = True) -> bool:
+    user = os.getenv("SMTP_USER", "").strip() or "magickasai@gmail.com"
+    from_addr = os.getenv("SMTP_FROM", user).strip() or user
+    configured = bool(
+        os.getenv("GMAIL_REFRESH_TOKEN", "").strip()
+        or os.getenv("GMAIL_APP_PASSWORD", "").strip()
+        or os.getenv("SMTP_PASSWORD", "").strip()
+    )
+    if not configured and not is_gmail_api_configured():
+        return False
+
+    patches = {
+        "smtpEnabled": True,
+        "smtpHost": "smtp.gmail.com",
+        "smtpPort": 587,
+        "smtpUser": user,
+        "smtpFrom": from_addr,
+        "gmailUseApi": use_api,
+        "smtpPasswordConfigured": configured or is_gmail_api_configured(),
+    }
+    for key, val in patches.items():
+        existing = db.query(Setting).filter(Setting.key == key).first()
+        val_str = json.dumps(val)
+        if existing:
+            existing.value = val_str
+        else:
+            db.add(Setting(key=key, value=val_str))
+    db.commit()
+    mode = "API HTTPS" if use_api else "SMTP"
+    print(f"[EMAIL] Envoi configuré sur Gmail ({mode}) — expéditeur {from_addr}")
+    return True
+
+
 def ensure_email_provider(db: Session) -> None:
-    """Si Gmail OAuth est révoqué/expiré, bascule sur Mailtrap quand le token API est présent."""
-    mailtrap_token = os.getenv("MAILTRAP_API_TOKEN", "").strip()
+    """Configure Gmail ou Mailtrap selon .env (EMAIL_PROVIDER) et disponibilité."""
+    mailtrap_token = _mailtrap_live_token()
+    provider = _email_provider_preference()
     creds = _gmail_api_credentials()
     use_gmail_api = os.getenv("GMAIL_USE_API", "").lower() in ("true", "1", "yes")
+    gmail_only = provider == "gmail"
+
+    if provider == "mailtrap" and mailtrap_token:
+        _apply_mailtrap_primary_settings(db)
+        probe = probe_mailtrap_sending_token()
+        if not probe.get("sending_ready"):
+            print(f"[EMAIL] Mailtrap actif mais envoi réel indisponible : {probe.get('error', 'token invalide')}")
+        return
 
     if creds and use_gmail_api:
         _, err = _fetch_gmail_access_token(creds)
+        if not err:
+            _apply_gmail_primary_settings(db, use_api=True)
+            return
         if err and _is_gmail_oauth_failure(err):
             print(f"[EMAIL] Gmail OAuth invalide : {str(err)[:180]}")
             app_password = os.getenv("GMAIL_APP_PASSWORD", os.getenv("SMTP_PASSWORD", "")).strip()
             if app_password and os.getenv("SMTP_USER", "").strip():
-                print("[EMAIL] Tentative envoi via Gmail SMTP (mot de passe d'application).")
-                patches = {
-                    "smtpEnabled": True,
-                    "smtpHost": "smtp.gmail.com",
-                    "smtpPort": 587,
-                    "smtpUser": os.getenv("SMTP_USER", "").strip(),
-                    "smtpFrom": os.getenv("SMTP_FROM", os.getenv("SMTP_USER", "")).strip(),
-                    "gmailUseApi": False,
-                    "smtpPasswordConfigured": True,
-                }
-                for key, val in patches.items():
-                    existing = db.query(Setting).filter(Setting.key == key).first()
-                    val_str = json.dumps(val)
-                    if existing:
-                        existing.value = val_str
-                    else:
-                        db.add(Setting(key=key, value=val_str))
-                db.commit()
+                print("[EMAIL] Bascule Gmail SMTP (mot de passe d'application).")
+                _apply_gmail_primary_settings(db, use_api=False)
+                return
+            if gmail_only or not mailtrap_token:
+                print(
+                    "[EMAIL] Regénérez Gmail OAuth :\n"
+                    "  python3 backend/scripts/gmail_oauth_setup.py\n"
+                    "  puis mettez à jour GMAIL_REFRESH_TOKEN dans .env et redémarrez le backend."
+                )
+                _apply_gmail_primary_settings(db, use_api=True)
                 return
             if _apply_mailtrap_primary_settings(db):
+                print("[EMAIL] Gmail indisponible — fallback temporaire sur Mailtrap.")
                 return
             print(
                 "[EMAIL] Regénérez Gmail : python3 backend/scripts/gmail_oauth_setup.py "
                 "ou ajoutez GMAIL_APP_PASSWORD dans .env"
             )
+            _apply_gmail_primary_settings(db, use_api=True)
             return
         if err:
             print(f"[EMAIL] Avertissement Gmail : {str(err)[:200]}")
+        _apply_gmail_primary_settings(db, use_api=True)
         return
 
-    if mailtrap_token and os.getenv("EMAIL_PROVIDER", "").lower() == "mailtrap":
+    if use_gmail_api or gmail_only or is_gmail_api_configured():
+        _apply_gmail_primary_settings(db, use_api=use_gmail_api)
+        return
+
+    if mailtrap_token and provider != "gmail":
         _apply_mailtrap_primary_settings(db)
 
 
@@ -477,12 +586,12 @@ def _deliver_mailtrap_sandbox_api_message(
     text_body: str,
 ) -> tuple[bool, Optional[str]]:
     """Envoi vers l'inbox Mailtrap Sandbox (test) — ne livre pas chez le vrai destinataire."""
-    token = os.getenv("MAILTRAP_API_TOKEN", "").strip()
+    token = _mailtrap_sandbox_token()
     sandbox_id = os.getenv("MAILTRAP_SANDBOX_ID", "").strip()
     if not token:
-        return False, "MAILTRAP_API_TOKEN manquant."
+        return False, "MAILTRAP_SANDBOX_API_TOKEN ou MAILTRAP_API_TOKEN manquant."
     if not sandbox_id:
-        return False, "MAILTRAP_SANDBOX_ID manquant (ID inbox sandbox Mailtrap)."
+        return False, "MAILTRAP_SANDBOX_ID manquant (Mailtrap → Email Testing → inbox → ID dans l'URL)."
 
     from_email = os.getenv("SMTP_FROM", "contact@kswstudio.fr").strip() or "contact@kswstudio.fr"
     if "mailtrap.io" in from_email.lower():
@@ -757,7 +866,7 @@ def _should_use_mailtrap_api(cfg: Dict[str, Any]) -> bool:
     if is_mailtrap_live_host(host):
         return True
     user = str(cfg.get("user") or "").strip().lower()
-    token = str(cfg.get("password") or "").strip() or os.getenv("MAILTRAP_API_TOKEN", "").strip()
+    token = str(cfg.get("password") or "").strip() or _mailtrap_live_token()
     return user == "api" and bool(token)
 
 
@@ -768,7 +877,7 @@ def _deliver_mailtrap_api_message(
     html_body: str,
     text_body: str,
 ) -> tuple[bool, Optional[str]]:
-    token = str(cfg.get("password") or "").strip() or os.getenv("MAILTRAP_API_TOKEN", "").strip()
+    token = str(cfg.get("password") or "").strip() or _mailtrap_live_token()
     if not token:
         return False, "Token API Mailtrap manquant."
 
@@ -977,6 +1086,26 @@ def _send_email_impl(
         )
         if api_ok:
             return True, None
+        if api_err and ("permission sending" in api_err.lower() or "403" in api_err):
+            sandbox_ok, sandbox_err = _deliver_mailtrap_sandbox_api_message(
+                to_clean, subject, html_body, text
+            )
+            if sandbox_ok:
+                if is_development():
+                    print(
+                        "[EMAIL SANDBOX] Message capturé dans Mailtrap Sandbox "
+                        f"(inbox {os.getenv('MAILTRAP_SANDBOX_ID', '?')}) — pas de livraison réelle."
+                    )
+                return True, None
+            detail = (
+                f"{api_err}\n\n"
+                "Pour l'envoi réel : Mailtrap → Settings → API Tokens → scope « Email Sending », "
+                "puis domaine vérifié (contact@kswstudio.fr).\n"
+                "Pour les tests : MAILTRAP_SANDBOX_ID + token « Email Testing » dans .env."
+            )
+            if sandbox_err:
+                detail += f"\nSandbox : {sandbox_err}"
+            return False, detail
         if is_mailtrap_live_host(cfg["host"]) or str(cfg.get("user", "")).lower() == "api":
             return False, api_err
 

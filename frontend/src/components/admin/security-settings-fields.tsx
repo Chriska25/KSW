@@ -495,7 +495,7 @@ export function SecuritySettingsFields({
           )}
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="primary" size="sm" onClick={applyGmailPreset}>
-              Gmail (envoi réel)
+              Gmail / Google (envoi réel)
             </Button>
             <Button type="button" variant="outline" size="sm" onClick={applyMailtrapLivePreset}>
               Mailtrap production

@@ -195,6 +195,7 @@ def main() -> int:
         return 1
 
     print("\n--- Ajoutez ces lignes dans votre fichier .env ---\n")
+    print("EMAIL_PROVIDER=gmail")
     print("GMAIL_USE_API=true")
     print(f"GMAIL_CLIENT_ID={client_id}")
     print(f"GMAIL_CLIENT_SECRET={client_secret}")

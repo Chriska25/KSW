@@ -520,29 +520,41 @@ async def upload_base64(
 
 def _ensure_smtp_env_settings(db: Session) -> None:
     """Aligne les paramètres SMTP studio sur .env (Gmail API / Mailtrap) au démarrage."""
-    from email_service import is_gmail_api_configured, ensure_email_provider
+    from email_service import is_gmail_api_configured, _mailtrap_live_token, _email_provider_preference
+
+    provider = _email_provider_preference()
+    mailtrap_mode = provider == "mailtrap"
+    gmail_mode = provider == "gmail" or (
+        not mailtrap_mode
+        and (
+            is_gmail_api_configured()
+            or os.getenv("GMAIL_USE_API", "").lower() in ("true", "1", "yes")
+        )
+    )
 
     patches: Dict[str, Any] = {}
-    if os.getenv("SMTP_HOST", "").strip():
-        patches["smtpHost"] = os.getenv("SMTP_HOST", "").strip()
-    if os.getenv("SMTP_PORT", "").strip():
-        patches["smtpPort"] = int(os.getenv("SMTP_PORT", "587"))
-    if os.getenv("SMTP_USER", "").strip():
-        patches["smtpUser"] = os.getenv("SMTP_USER", "").strip()
-    if os.getenv("SMTP_FROM", "").strip():
-        patches["smtpFrom"] = os.getenv("SMTP_FROM", "").strip()
-    if os.getenv("GMAIL_USE_API", "").lower() in ("true", "1", "yes"):
-        patches["gmailUseApi"] = True
+    if gmail_mode or not mailtrap_mode:
+        if os.getenv("SMTP_HOST", "").strip():
+            patches["smtpHost"] = os.getenv("SMTP_HOST", "").strip()
+        if os.getenv("SMTP_PORT", "").strip():
+            patches["smtpPort"] = int(os.getenv("SMTP_PORT", "587"))
+        if os.getenv("SMTP_USER", "").strip():
+            patches["smtpUser"] = os.getenv("SMTP_USER", "").strip()
+        if os.getenv("SMTP_FROM", "").strip():
+            patches["smtpFrom"] = os.getenv("SMTP_FROM", "").strip()
+        if os.getenv("GMAIL_USE_API", "").lower() in ("true", "1", "yes"):
+            patches["gmailUseApi"] = True
     if (
-        os.getenv("SMTP_HOST", "").strip()
+        mailtrap_mode
+        or os.getenv("SMTP_HOST", "").strip()
         or is_gmail_api_configured()
-        or os.getenv("MAILTRAP_API_TOKEN", "").strip()
+        or _mailtrap_live_token()
     ):
         patches["smtpEnabled"] = True
         patches["smtpPasswordConfigured"] = bool(
             os.getenv("GMAIL_REFRESH_TOKEN", "").strip()
             or os.getenv("GMAIL_APP_PASSWORD", "").strip()
-            or os.getenv("MAILTRAP_API_TOKEN", "").strip()
+            or _mailtrap_live_token()
         )
 
     if not patches:
@@ -3132,7 +3144,7 @@ def admin_test_email(
         or get_setting_value(db, "smtpHost", "")
         or ""
     ).strip()
-    if is_gmail_host(host):
+    if is_gmail_host(host) and not is_mailtrap_live_host(host):
         smtp_overrides["gmailUseApi"] = True
         existing = db.query(Setting).filter(Setting.key == "gmailUseApi").first()
         if existing:
