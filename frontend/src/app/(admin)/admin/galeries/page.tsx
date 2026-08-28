@@ -32,6 +32,7 @@ import {
   Link2,
   Loader2,
   Mail,
+  ChevronLeft,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -43,6 +44,7 @@ import { galleryAccessUrl } from '@/lib/gallery-access-path';
 import { useAdminToast } from '@/components/admin/admin-toast';
 import { getApiErrorMessage } from '@/lib/api-error';
 import { LoadingState } from '@/components/common/loading-state';
+import { EmptyState } from '@/components/common/empty-state';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import {
   applyAlbumTrashToGallery,
@@ -165,6 +167,7 @@ export default function AdminGaleriesPage() {
   };
 
   const [selectedGalleryId, setSelectedGalleryId] = useState<string>(() => linkedGalleryId || '1');
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [selectedAlbumFilter, setSelectedAlbumFilter] = useState<string>('all');
   const [searchGalleryQuery, setSearchGalleryQuery] = useState<string>('');
   const [searchAlbumQuery, setSearchAlbumQuery] = useState<string>('');
@@ -248,6 +251,18 @@ export default function AdminGaleriesPage() {
   }, [linkedGalleryId, activeGalleries]);
 
   React.useEffect(() => {
+    if (!linkedGalleryId) return;
+    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches) {
+      setMobileDetailOpen(true);
+    }
+  }, [linkedGalleryId]);
+
+  const openNewGalleryModal = () => {
+    setEditingGallery({ isPrivate: true, category: 'mariage' });
+    setIsGalleryModalOpen(true);
+  };
+
+  React.useEffect(() => {
     if (filteredActiveGalleries.length === 0) return;
     if (!filteredActiveGalleries.some((g) => g.id === selectedGalleryId)) {
       setSelectedGalleryId(filteredActiveGalleries[0].id);
@@ -279,8 +294,20 @@ export default function AdminGaleriesPage() {
 
   if (galleriesLoading) {
     return (
-      <div className="py-24">
-        <LoadingState message="Chargement des galeries…" />
+      <div className="space-y-6 max-w-[1600px] mx-auto animate-pulse">
+        <div className="space-y-2">
+          <div className="h-9 w-72 rounded-lg bg-surface-muted" />
+          <div className="h-4 w-full max-w-2xl rounded bg-surface-muted" />
+        </div>
+        <div className="flex flex-col lg:flex-row gap-5 min-h-[calc(100dvh-10rem)]">
+          <aside className="w-full lg:w-72 space-y-3">
+            <div className="h-10 rounded-lg bg-surface-muted" />
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-20 rounded-xl bg-surface-muted" />
+            ))}
+          </aside>
+          <div className="flex-1 min-h-[420px] rounded-xl bg-surface-muted" />
+        </div>
       </div>
     );
   }
@@ -767,79 +794,45 @@ export default function AdminGaleriesPage() {
           Sauvegarde en cours…
         </div>
       )}
-      {!selectedGallery ? (
-        <div className="text-center py-16 space-y-4">
-          {loadError ? (
-            <p className="text-sm text-red-400">{loadError}</p>
-          ) : trashedGalleries.length > 0 ? (
-            <p className="text-sm text-zinc-400">
-              Toutes les galeries sont dans la corbeille. Restaurez-en une ou créez une nouvelle galerie.
-            </p>
-          ) : (
-            <p className="text-sm text-zinc-400">Aucune galerie. Créez votre première galerie.</p>
-          )}
-          {trashedGalleries.length > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowGalleryTrashPanel(true)}
-              className="space-x-1.5 border-zinc-800 text-rose-400 hover:bg-rose-500/10"
-            >
-              <Trash2 className="h-4 w-4" />
-              <span>Corbeille galeries ({trashedGalleries.length})</span>
-            </Button>
-          )}
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => {
-              setEditingGallery({ isPrivate: true, category: 'mariage' });
-              setIsGalleryModalOpen(true);
-            }}
-          >
-            <FolderPlus className="h-4 w-4 mr-2" /> Nouvelle Galerie
-          </Button>
-        </div>
-      ) : (
-      <>
       <AdminPageHeader
         title="Gestionnaire de"
         accent="Galeries & Albums (Public/Privé)"
         description="Créer des galeries, des sous-albums publics ou verrouillés en privé, uploader et synchroniser."
         actions={
           <>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={generatingThumbs}
-              onClick={handleGenerateThumbnails}
-              className="space-x-1.5 border-zinc-800 text-zinc-300 hover:bg-zinc-800/80 text-xs font-semibold hidden lg:inline-flex"
-            >
-              {generatingThumbs ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <ImageIcon className="h-4 w-4" />
-              )}
-              <span>{generatingThumbs ? 'Optimisation…' : 'Optimiser vignettes'}</span>
-            </Button>
+            {selectedGallery && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={generatingThumbs}
+                  onClick={handleGenerateThumbnails}
+                  className="space-x-1.5 border-border text-foreground hover:bg-muted text-xs font-semibold inline-flex"
+                >
+                  {generatingThumbs ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ImageIcon className="h-4 w-4" />
+                  )}
+                  <span>{generatingThumbs ? 'Génération…' : 'Générer miniatures'}</span>
+                </Button>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRestoreBrokenPhotos}
-              className="space-x-1.5 border-zinc-800 text-primary hover:bg-primary-muted text-xs font-semibold hidden md:inline-flex"
-            >
-              <RefreshCw className="h-4 w-4" />
-              <span>Restaurer les Photos</span>
-            </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRestoreBrokenPhotos}
+                  className="space-x-1.5 border-border text-primary hover:bg-primary-muted text-xs font-semibold hidden md:inline-flex"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  <span>Restaurer les Photos</span>
+                </Button>
+              </>
+            )}
 
             <Button
               variant="primary"
               size="sm"
-              onClick={() => {
-                setEditingGallery({ isPrivate: true, category: 'mariage' });
-                setIsGalleryModalOpen(true);
-              }}
+              onClick={openNewGalleryModal}
               className="space-x-2 font-semibold"
             >
               <FolderPlus className="h-4 w-4" />
@@ -849,12 +842,47 @@ export default function AdminGaleriesPage() {
         }
       />
 
+      {!selectedGallery ? (
+        <div className="space-y-4">
+          {loadError && (
+            <p className="text-sm text-danger rounded-lg border border-danger/30 bg-danger-muted px-4 py-3">{loadError}</p>
+          )}
+          <EmptyState
+            title={
+              trashedGalleries.length > 0
+                ? 'Galeries en corbeille'
+                : 'Aucune galerie pour le moment'
+            }
+            description={
+              trashedGalleries.length > 0
+                ? 'Toutes les galeries sont dans la corbeille. Restaurez-en une ou créez une nouvelle galerie.'
+                : 'Créez votre première galerie pour commencer à organiser albums et photos.'
+            }
+            actionLabel="Nouvelle galerie"
+            onAction={openNewGalleryModal}
+          />
+          {trashedGalleries.length > 0 && (
+            <div className="flex justify-center">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowGalleryTrashPanel(true)}
+                className="space-x-1.5 text-danger hover:bg-danger-muted"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span>Corbeille galeries ({trashedGalleries.length})</span>
+              </Button>
+            </div>
+          )}
+        </div>
+      ) : (
+      <>
       {/* Workspace : liste galeries | albums + photos */}
       <div className="flex flex-col lg:flex-row gap-5 min-h-[calc(100dvh-10rem)]">
         {/* Colonne gauche — navigateur de galeries */}
-        <aside className="w-full lg:w-72 shrink-0 flex flex-col gap-3">
+        <aside className={`${mobileDetailOpen ? 'hidden lg:flex' : 'flex'} w-full lg:w-72 shrink-0 flex-col gap-3`}>
           <div className="relative">
-            <Search className="h-4 w-4 absolute left-3 top-3 text-zinc-500" />
+            <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
             <Input
               placeholder="Galerie, client, clé, facture…"
               value={searchGalleryQuery}
@@ -862,13 +890,28 @@ export default function AdminGaleriesPage() {
               className="pl-9 h-10 text-xs"
             />
           </div>
-          <p className="text-[10px] text-zinc-500 px-1">
+          <p className="text-[10px] text-muted-foreground px-1">
             Nom, client, clé d&apos;accès, n° facture, réf. réservation
           </p>
 
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={generatingThumbs}
+            onClick={handleGenerateThumbnails}
+            className="w-full space-x-1.5 border-border text-foreground hover:bg-muted text-xs font-semibold"
+          >
+            {generatingThumbs ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <ImageIcon className="h-4 w-4" />
+            )}
+            <span>{generatingThumbs ? 'Génération…' : 'Générer miniatures'}</span>
+          </Button>
+
           <div className="flex-1 overflow-y-auto space-y-2 max-h-[50vh] sm:max-h-[420px] lg:max-h-[calc(100dvh-14rem)] pr-1 custom-scrollbar">
             {filteredActiveGalleries.length === 0 ? (
-              <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4 text-center text-xs text-zinc-500">
+              <div className="rounded-xl border border-border bg-surface-muted p-4 text-center text-xs text-muted-foreground">
                 Aucune galerie ne correspond à « {searchGalleryQuery} »
               </div>
             ) : (
@@ -883,6 +926,9 @@ export default function AdminGaleriesPage() {
                       setSelectedGalleryId(gal.id);
                       setSelectedAlbumFilter('all');
                       setSearchAlbumQuery('');
+                      if (typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches) {
+                        setMobileDetailOpen(true);
+                      }
                     }}
                     className={`w-full text-left rounded-xl border p-3 flex gap-3 transition-all cursor-pointer ${
                       isSelected
@@ -893,22 +939,22 @@ export default function AdminGaleriesPage() {
                     <img
                       src={gal.coverUrl}
                       alt={gal.title}
-                      className="h-14 w-[4.5rem] object-cover rounded-lg border border-zinc-700 shrink-0"
+                      className="h-14 w-[4.5rem] object-cover rounded-lg border border-border shrink-0"
                     />
                     <div className="min-w-0 flex-1">
-                      <p className={`text-xs font-bold truncate ${isSelected ? 'text-primary' : 'text-white'}`}>
+                      <p className={`text-xs font-bold truncate ${isSelected ? 'text-primary' : 'text-foreground'}`}>
                         {gal.title}
                       </p>
-                      <p className="text-[10px] text-zinc-500 truncate mt-0.5 flex items-center gap-1">
+                      <p className="text-[10px] text-muted-foreground truncate mt-0.5 flex items-center gap-1">
                         <User className="h-3 w-3 shrink-0" />
                         {gal.clientName}
                       </p>
                       <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                        <code className="text-[9px] font-mono text-primary/90 bg-zinc-900 px-1.5 py-0.5 rounded border border-zinc-800">
+                        <code className="text-[9px] font-mono text-primary/90 bg-surface-muted px-1.5 py-0.5 rounded border border-border">
                           {gal.accessKey}
                         </code>
                         {meta?.invoiceNumber && (
-                          <span className="text-[9px] font-mono text-zinc-500 flex items-center gap-0.5">
+                          <span className="text-[9px] font-mono text-muted-foreground flex items-center gap-0.5">
                             <FileText className="h-2.5 w-2.5" />
                             {meta.invoiceNumber}
                           </span>
@@ -919,7 +965,7 @@ export default function AdminGaleriesPage() {
                           <Globe className="h-3 w-3 text-emerald-400" />
                         )}
                       </div>
-                      <p className="text-[10px] text-zinc-600 mt-1">{gal.photos.length} photo(s)</p>
+                      <p className="text-[10px] text-muted-foreground/80 mt-1">{gal.photos.length} photo(s)</p>
                     </div>
                   </button>
                 );
@@ -928,14 +974,14 @@ export default function AdminGaleriesPage() {
           </div>
 
           {/* Corbeille galeries — toujours accessible */}
-          <div className="border-t border-zinc-800 pt-3 space-y-2">
+          <div className="border-t border-border pt-3 space-y-2">
             <button
               type="button"
               onClick={() => setShowGalleryTrashPanel((open) => !open)}
               className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
                 showGalleryTrashPanel
                   ? 'border-rose-500/40 bg-rose-500/10 text-rose-400'
-                  : 'border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-rose-400'
+                  : 'border-border text-muted-foreground hover:border-border hover:text-rose-400'
               }`}
             >
               <span className="flex items-center gap-2">
@@ -948,27 +994,27 @@ export default function AdminGaleriesPage() {
             </button>
 
             {showGalleryTrashPanel && (
-              <div className="rounded-xl border border-zinc-800 bg-zinc-950/80 p-3 space-y-2 max-h-56 overflow-y-auto custom-scrollbar">
-                <p className="text-[10px] text-zinc-500 leading-relaxed">
+              <div className="rounded-xl border border-border bg-surface-muted p-3 space-y-2 max-h-56 overflow-y-auto custom-scrollbar">
+                <p className="text-[10px] text-muted-foreground leading-relaxed">
                   Galeries masquées du portfolio et de l&apos;espace client.
                 </p>
                 {trashedGalleries.length === 0 ? (
-                  <p className="text-[11px] text-zinc-600 text-center py-3">Corbeille vide</p>
+                  <p className="text-[11px] text-muted-foreground/80 text-center py-3">Corbeille vide</p>
                 ) : (
                   trashedGalleries.map((gal) => (
                     <div
                       key={gal.id}
-                      className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-2.5 space-y-2"
+                      className="rounded-lg border border-border bg-surface-muted p-2.5 space-y-2"
                     >
                       <div className="flex gap-2 min-w-0">
                         <img
                           src={gal.coverUrl}
                           alt={gal.title}
-                          className="h-10 w-12 object-cover rounded-md border border-zinc-700 shrink-0"
+                          className="h-10 w-12 object-cover rounded-md border border-border shrink-0"
                         />
                         <div className="min-w-0">
-                          <p className="text-[11px] font-semibold text-zinc-200 truncate">{gal.title}</p>
-                          <p className="text-[9px] text-zinc-500 mt-0.5">
+                          <p className="text-[11px] font-semibold text-foreground truncate">{gal.title}</p>
+                          <p className="text-[9px] text-muted-foreground mt-0.5">
                             {gal.photos.length} photo(s) • {formatTrashDate(gal.deletedAt)}
                           </p>
                         </div>
@@ -1004,10 +1050,19 @@ export default function AdminGaleriesPage() {
         </aside>
 
         {/* Colonne droite — contenu galerie sélectionnée */}
-        <div className="flex-1 min-w-0">
+        <div className={`flex-1 min-w-0 ${!mobileDetailOpen ? 'hidden lg:block' : ''}`}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="lg:hidden text-muted-foreground -ml-2 mb-3"
+            onClick={() => setMobileDetailOpen(false)}
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" /> Retour aux galeries
+          </Button>
       <Card className="border-primary/30 overflow-hidden h-full flex flex-col">
         {/* En-tête galerie compact */}
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 p-5 border-b border-zinc-800 bg-zinc-950/40">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 p-5 border-b border-border bg-surface-muted/80">
           <div className="flex items-center gap-4 min-w-0">
             <img
               src={selectedGallery.coverUrl}
@@ -1016,15 +1071,15 @@ export default function AdminGaleriesPage() {
             />
             <div className="min-w-0 space-y-1">
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-lg font-extrabold text-white truncate">{selectedGallery.title}</h2>
+                <h2 className="text-lg font-extrabold text-foreground truncate">{selectedGallery.title}</h2>
                 <Badge variant={selectedGallery.isPrivate ? 'gold' : 'success'} className="text-[10px]">
                   {selectedGallery.isPrivate ? 'Privée' : 'Publique'}
                 </Badge>
               </div>
-              <p className="text-[11px] text-zinc-400">
+              <p className="text-[11px] text-muted-foreground">
                 {selectedGallery.clientName} • <span className="text-primary uppercase font-mono">{selectedGallery.category}</span>
               </p>
-              <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono text-zinc-500">
+              <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono text-muted-foreground">
                 <span className="inline-flex items-center gap-1">
                   <Key className="h-3 w-3 text-primary" />
                   {selectedGallery.accessKey}
@@ -1033,7 +1088,7 @@ export default function AdminGaleriesPage() {
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-6 px-2 text-[10px] text-zinc-400 hover:text-primary"
+                  className="h-6 px-2 text-[10px] text-muted-foreground hover:text-primary"
                   onClick={() => handleCopyGalleryLink(selectedGallery.accessKey)}
                 >
                   {copiedLink ? (
@@ -1076,7 +1131,7 @@ export default function AdminGaleriesPage() {
                 setEditingGallery(selectedGallery);
                 setIsGalleryModalOpen(true);
               }}
-              className="text-xs border-zinc-800"
+              className="text-xs border-border"
             >
               <Edit3 className="h-3.5 w-3.5 text-primary mr-1.5" />
               Modifier
@@ -1086,7 +1141,7 @@ export default function AdminGaleriesPage() {
               size="sm"
               onClick={handleTrashGallery}
               title="Mettre la galerie dans la corbeille"
-              className="text-xs border-zinc-800 text-zinc-400 hover:text-rose-400 hover:border-rose-500/40"
+              className="text-xs border-border text-muted-foreground hover:text-rose-400 hover:border-rose-500/40"
             >
               <Trash2 className="h-3.5 w-3.5 mr-1.5" />
               Mettre en corbeille
@@ -1099,12 +1154,12 @@ export default function AdminGaleriesPage() {
         </div>
 
         {/* Split albums | photos */}
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(240px,280px)_1fr] flex-1 min-h-0 divide-y lg:divide-y-0 lg:divide-x divide-zinc-800">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(240px,280px)_1fr] flex-1 min-h-0 divide-y lg:divide-y-0 lg:divide-x divide-border">
           {/* Panneau albums */}
-          <div className="flex flex-col min-h-0 bg-zinc-950/30">
-            <div className="p-4 space-y-3 border-b border-zinc-800/80">
+          <div className="flex flex-col min-h-0 bg-surface-muted/60">
+            <div className="p-4 space-y-3 border-b border-border/80">
               <div className="flex items-center justify-between gap-2">
-                <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                   <Layers className="h-3.5 w-3.5" />
                   Albums ({activeAlbums.length})
                 </h3>
@@ -1112,7 +1167,7 @@ export default function AdminGaleriesPage() {
                   <button
                     type="button"
                     onClick={() => setShowTrashPanel((open) => !open)}
-                    className="text-[10px] text-zinc-500 hover:text-rose-400 flex items-center gap-1"
+                    className="text-[10px] text-muted-foreground hover:text-rose-400 flex items-center gap-1"
                   >
                     <Trash2 className="h-3 w-3" />
                     {trashedAlbums.length}
@@ -1120,7 +1175,7 @@ export default function AdminGaleriesPage() {
                 )}
               </div>
               <div className="relative">
-                <Search className="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-zinc-500" />
+                <Search className="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
                 <Input
                   placeholder="Album, mot de passe…"
                   value={searchAlbumQuery}
@@ -1137,7 +1192,7 @@ export default function AdminGaleriesPage() {
                 className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer flex items-center justify-between ${
                   selectedAlbumFilter === 'all'
                     ? 'border-primary bg-primary-muted text-primary'
-                    : 'border-transparent text-zinc-400 hover:bg-zinc-900/60 hover:text-white'
+                    : 'border-transparent text-muted-foreground hover:bg-muted hover:text-foreground'
                 }`}
               >
                 <span>Toutes les photos</span>
@@ -1145,7 +1200,7 @@ export default function AdminGaleriesPage() {
               </button>
 
               {filteredAlbums.length === 0 ? (
-                <p className="text-[11px] text-zinc-600 text-center py-4">Aucun album trouvé</p>
+                <p className="text-[11px] text-muted-foreground/80 text-center py-4">Aucun album trouvé</p>
               ) : (
                 filteredAlbums.map((alb) => {
                   const albumCount = (selectedGallery.photos || []).filter(
@@ -1156,7 +1211,7 @@ export default function AdminGaleriesPage() {
                     <div
                       key={alb.id}
                       className={`rounded-xl border transition-all ${
-                        isActive ? 'border-primary/50 bg-primary-muted' : 'border-zinc-800/80'
+                        isActive ? 'border-primary/50 bg-primary-muted' : 'border-border/80'
                       }`}
                     >
                       <button
@@ -1165,10 +1220,10 @@ export default function AdminGaleriesPage() {
                         className="w-full text-left px-3 py-2.5 flex items-start justify-between gap-2 cursor-pointer"
                       >
                         <div className="min-w-0">
-                          <p className={`text-xs font-semibold truncate ${isActive ? 'text-primary' : 'text-zinc-200'}`}>
+                          <p className={`text-xs font-semibold truncate ${isActive ? 'text-primary' : 'text-foreground'}`}>
                             {alb.name}
                           </p>
-                          <p className="text-[10px] text-zinc-500 mt-0.5">{albumCount} photo(s)</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">{albumCount} photo(s)</p>
                         </div>
                         {alb.isPrivate ? (
                           <Lock className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
@@ -1176,7 +1231,7 @@ export default function AdminGaleriesPage() {
                           <Globe className="h-3.5 w-3.5 text-emerald-400 shrink-0 mt-0.5" />
                         )}
                       </button>
-                      <div className="flex border-t border-zinc-800/80">
+                      <div className="flex border-t border-border/80">
                         <button
                           type="button"
                           onClick={(e) => {
@@ -1199,7 +1254,7 @@ export default function AdminGaleriesPage() {
                             handleTrashAlbum(alb.id);
                           }}
                           title="Corbeille"
-                          className="flex-1 py-1.5 text-[10px] text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer border-l border-zinc-800/80"
+                          className="flex-1 py-1.5 text-[10px] text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer border-l border-border/80"
                         >
                           Suppr.
                         </button>
@@ -1210,14 +1265,14 @@ export default function AdminGaleriesPage() {
               )}
             </div>
 
-            <div className="border-t border-zinc-800 p-3 space-y-2">
+            <div className="border-t border-border p-3 space-y-2">
               <button
                 type="button"
                 onClick={() => setShowTrashPanel((open) => !open)}
                 className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg border text-[10px] font-semibold transition-all cursor-pointer ${
                   showTrashPanel
                     ? 'border-rose-500/40 bg-rose-500/10 text-rose-400'
-                    : 'border-zinc-800 text-zinc-500 hover:text-rose-400'
+                    : 'border-border text-muted-foreground hover:text-rose-400'
                 }`}
               >
                 <span className="flex items-center gap-1.5">
@@ -1231,12 +1286,12 @@ export default function AdminGaleriesPage() {
               {showTrashPanel && (
                 <div className="space-y-2 max-h-40 overflow-y-auto custom-scrollbar">
                   {trashedAlbums.length === 0 ? (
-                    <p className="text-[10px] text-zinc-600 text-center py-2">Corbeille vide</p>
+                    <p className="text-[10px] text-muted-foreground/80 text-center py-2">Corbeille vide</p>
                   ) : (
                     trashedAlbums.map((album) => (
-                      <div key={album.id} className="rounded-lg border border-zinc-800 bg-zinc-900/50 px-2.5 py-2 space-y-1.5">
-                        <p className="text-[11px] font-semibold text-zinc-300 truncate">{album.name}</p>
-                        <p className="text-[9px] text-zinc-600">{formatTrashDate(album.deletedAt)}</p>
+                      <div key={album.id} className="rounded-lg border border-border bg-surface-muted px-2.5 py-2 space-y-1.5">
+                        <p className="text-[11px] font-semibold text-foreground truncate">{album.name}</p>
+                        <p className="text-[9px] text-muted-foreground/80">{formatTrashDate(album.deletedAt)}</p>
                         <div className="flex gap-1">
                           <Button type="button" variant="outline" size="sm" className="h-7 text-[10px] flex-1" onClick={() => handleRestoreAlbum(album.id)}>
                             <RotateCcw className="h-3 w-3 mr-1" />
@@ -1256,10 +1311,10 @@ export default function AdminGaleriesPage() {
 
           {/* Panneau photos */}
           <div className="flex flex-col min-h-0 min-w-0">
-            <div className="p-4 border-b border-zinc-800/80 space-y-3">
+            <div className="p-4 border-b border-border/80 space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="relative flex-1 max-w-sm">
-                  <Search className="h-4 w-4 absolute left-3 top-2.5 text-zinc-500" />
+                  <Search className="h-4 w-4 absolute left-3 top-2.5 text-muted-foreground" />
                   <Input
                     placeholder="Rechercher une photo…"
                     value={searchPhotoQuery}
@@ -1274,7 +1329,7 @@ export default function AdminGaleriesPage() {
                     className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-semibold transition-all cursor-pointer ${
                       showPhotoTrashPanel
                         ? 'border-rose-500/40 bg-rose-500/10 text-rose-400'
-                        : 'border-zinc-800 text-zinc-400 hover:text-rose-400 hover:border-rose-500/30'
+                        : 'border-border text-muted-foreground hover:text-rose-400 hover:border-rose-500/30'
                     }`}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -1283,29 +1338,29 @@ export default function AdminGaleriesPage() {
                       <Badge variant="warning" className="text-[9px] ml-0.5">{trashedPhotos.length}</Badge>
                     )}
                   </button>
-                  <span className="text-[11px] text-zinc-500">
+                  <span className="text-[11px] text-muted-foreground">
                     {filteredPhotos.length} / {totalVisiblePhotos}
                   </span>
                 </div>
               </div>
 
               {showPhotoTrashPanel && (
-                <div className="rounded-xl border border-rose-500/20 bg-zinc-950/80 p-3 space-y-3">
-                  <p className="text-[10px] text-zinc-500">
+                <div className="rounded-xl border border-rose-500/20 bg-surface-muted p-3 space-y-3">
+                  <p className="text-[10px] text-muted-foreground">
                     Photos supprimées — restaurez-les ou supprimez-les définitivement.
                   </p>
                   {trashedPhotos.length === 0 ? (
-                    <p className="text-[11px] text-zinc-600 text-center py-4">Aucune photo en corbeille</p>
+                    <p className="text-[11px] text-muted-foreground/80 text-center py-4">Aucune photo en corbeille</p>
                   ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-52 overflow-y-auto custom-scrollbar">
                       {trashedPhotos.map((photo) => (
-                        <div key={photo.id} className="rounded-lg border border-zinc-800 bg-zinc-900/60 overflow-hidden">
+                        <div key={photo.id} className="rounded-lg border border-border bg-surface-muted overflow-hidden">
                           <div className="relative aspect-[4/3]">
                             <img src={photo.url} alt={photo.title} className="absolute inset-0 w-full h-full object-cover opacity-70" />
                           </div>
                           <div className="p-2 space-y-1.5">
-                            <p className="text-[10px] font-semibold text-zinc-300 truncate">{photo.title}</p>
-                            <p className="text-[9px] text-zinc-600">{formatTrashDate(photo.deletedAt)}</p>
+                            <p className="text-[10px] font-semibold text-foreground truncate">{photo.title}</p>
+                            <p className="text-[9px] text-muted-foreground/80">{formatTrashDate(photo.deletedAt)}</p>
                             <div className="flex gap-1">
                               <Button
                                 type="button"
@@ -1335,12 +1390,12 @@ export default function AdminGaleriesPage() {
               )}
 
               {/* Uploader compact */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-3 rounded-xl border border-dashed border-primary/30 bg-zinc-950/50">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-3 rounded-xl border border-dashed border-primary/30 bg-surface-muted">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <div className="h-9 w-9 rounded-lg bg-primary-muted text-primary flex items-center justify-center shrink-0">
                     <UploadCloud className="h-4 w-4" />
                   </div>
-                  <p className="text-[11px] text-zinc-400 truncate">
+                  <p className="text-[11px] text-muted-foreground truncate">
                     Glisser-déposer ou sélectionner — WebP & filigrane auto
                   </p>
                 </div>
@@ -1357,7 +1412,7 @@ export default function AdminGaleriesPage() {
                     <span>Traitement…</span>
                     <span>{uploadProgress}%</span>
                   </div>
-                  <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
+                  <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
                     <div className="h-full bg-primary transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
                   </div>
                 </div>
@@ -1369,7 +1424,7 @@ export default function AdminGaleriesPage() {
 
             <div className="flex-1 overflow-y-auto p-4 max-h-[520px] lg:max-h-[calc(100vh-20rem)] custom-scrollbar">
               {filteredPhotos.length === 0 ? (
-                <div className="p-10 text-center rounded-xl border border-zinc-800 bg-zinc-950/60 text-zinc-500 text-xs">
+                <div className="p-10 text-center rounded-xl border border-border bg-surface-muted text-muted-foreground text-xs">
                   Aucune photo dans cette sélection.
                 </div>
               ) : (
@@ -1415,7 +1470,7 @@ export default function AdminGaleriesPage() {
                     </div>
 
                     {/* Hover Overlay with Edit Actions */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-4 flex flex-col justify-between z-20">
+                    <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-4 flex flex-col justify-between z-20">
                       <div className="flex justify-end space-x-2">
                         <button
                           onClick={() => handleToggleFavorite(photo.id)}
@@ -1432,14 +1487,14 @@ export default function AdminGaleriesPage() {
                             setIsPhotoEditModalOpen(true);
                           }}
                           title="Modifier le titre, l'album et la catégorie"
-                          className="h-8 w-8 rounded-xl bg-zinc-900/80 text-zinc-300 hover:text-primary flex items-center justify-center transition-all cursor-pointer"
+                          className="h-8 w-8 rounded-xl bg-surface-muted text-foreground hover:text-primary flex items-center justify-center transition-all cursor-pointer"
                         >
                           <Edit3 className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => handleDeletePhoto(photo.id)}
                           title="Mettre dans la corbeille"
-                          className="h-8 w-8 rounded-xl bg-rose-500/20 text-rose-400 hover:bg-rose-500 hover:text-white flex items-center justify-center transition-all cursor-pointer"
+                          className="h-8 w-8 rounded-xl bg-rose-500/20 text-rose-400 hover:bg-rose-500 hover:text-primary-foreground flex items-center justify-center transition-all cursor-pointer"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -1449,7 +1504,7 @@ export default function AdminGaleriesPage() {
                         <div className="text-xs uppercase font-mono text-primary tracking-wider">
                           {photo.albumName || 'Album Général'}
                         </div>
-                        <h4 className="text-sm font-bold text-white line-clamp-1">{photo.title}</h4>
+                        <h4 className="text-sm font-bold text-foreground line-clamp-1">{photo.title}</h4>
 
                         {!photo.isCover && (
                           <Button
@@ -1481,19 +1536,19 @@ export default function AdminGaleriesPage() {
       {isGalleryModalOpen && (
         <div className="fixed inset-0 z-50 bg-background/80 flex items-center justify-center p-4">
           <Card className="surface-elevated border-primary/50 w-full max-w-lg p-6 space-y-6">
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
-              <h3 className="text-lg font-bold text-white flex items-center">
+            <div className="flex items-center justify-between border-b border-border pb-4">
+              <h3 className="text-lg font-bold text-foreground flex items-center">
                 <FolderPlus className="h-5 w-5 text-primary mr-2" />
                 {editingGallery.id ? 'Modifier la Galerie' : 'Créer une Nouvelle Galerie'}
               </h3>
-              <button onClick={() => setIsGalleryModalOpen(false)} className="text-zinc-400 hover:text-white">
+              <button onClick={() => setIsGalleryModalOpen(false)} className="text-muted-foreground hover:text-foreground">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             <form onSubmit={handleSaveGallery} className="space-y-4 text-xs">
               <div>
-                <label className="text-zinc-400 block mb-1 font-semibold">Titre de la Galerie *</label>
+                <label className="text-muted-foreground block mb-1 font-semibold">Titre de la Galerie *</label>
                 <Input
                   required
                   placeholder="Ex: Mariage Sophie & Alexandre"
@@ -1504,7 +1559,7 @@ export default function AdminGaleriesPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-zinc-400 block mb-1 font-semibold">Nom du Client</label>
+                  <label className="text-muted-foreground block mb-1 font-semibold">Nom du Client</label>
                   <Input
                     placeholder="Ex: Sophie Dupont"
                     value={editingGallery.clientName || ''}
@@ -1513,11 +1568,11 @@ export default function AdminGaleriesPage() {
                 </div>
 
                 <div>
-                  <label className="text-zinc-400 block mb-1 font-semibold">Catégorie</label>
+                  <label className="text-muted-foreground block mb-1 font-semibold">Catégorie</label>
                   <select
                     value={editingGallery.category || 'mariage'}
                     onChange={(e) => setEditingGallery({ ...editingGallery, category: e.target.value })}
-                    className="w-full h-11 rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-xs text-zinc-100"
+                    className="w-full h-11 rounded-xl border border-border bg-surface px-3 text-xs text-foreground"
                   >
                     <option value="mariage">Mariage</option>
                     <option value="portrait">Portrait</option>
@@ -1526,25 +1581,25 @@ export default function AdminGaleriesPage() {
                 </div>
               </div>
 
-              <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-950 space-y-3">
+              <div className="p-4 rounded-xl border border-border bg-surface space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="font-bold text-white">Galerie Privée Sécurisée</div>
-                    <div className="text-zinc-400 text-[11px]">Nécessite une clé d'accès pour déverrouiller.</div>
+                    <div className="font-bold text-foreground">Galerie Privée Sécurisée</div>
+                    <div className="text-muted-foreground text-[11px]">Nécessite une clé d'accès pour déverrouiller.</div>
                   </div>
                   <input
                     type="checkbox"
                     checked={editingGallery.isPrivate ?? true}
                     onChange={(e) => setEditingGallery({ ...editingGallery, isPrivate: e.target.checked })}
-                    className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 accent-primary focus:ring-primary cursor-pointer"
+                    className="h-4 w-4 rounded border-border bg-surface-muted accent-primary focus:ring-primary cursor-pointer"
                   />
                 </div>
 
                 {editingGallery.isPrivate && (
-                  <div className="space-y-4 pt-2 border-t border-zinc-800">
+                  <div className="space-y-4 pt-2 border-t border-border">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="text-zinc-400 block mb-1 font-semibold">Client enregistré</label>
+                        <label className="text-muted-foreground block mb-1 font-semibold">Client enregistré</label>
                         <select
                           value={editingGallery.clientEmail || ''}
                           onChange={(e) => {
@@ -1556,7 +1611,7 @@ export default function AdminGaleriesPage() {
                               clientName: match?.name || editingGallery.clientName,
                             });
                           }}
-                          className="w-full h-11 rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-xs text-zinc-100"
+                          className="w-full h-11 rounded-xl border border-border bg-surface px-3 text-xs text-foreground"
                         >
                           <option value="">— Choisir un client du système —</option>
                           {registeredClients.map((client) => (
@@ -1567,7 +1622,7 @@ export default function AdminGaleriesPage() {
                         </select>
                       </div>
                       <div>
-                        <label className="text-zinc-400 block mb-1 font-semibold">Email de réception</label>
+                        <label className="text-muted-foreground block mb-1 font-semibold">Email de réception</label>
                         <Input
                           type="email"
                           placeholder="client@email.com"
@@ -1578,7 +1633,7 @@ export default function AdminGaleriesPage() {
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-zinc-400 block mb-1 font-semibold">Clé d'Accès Personnalisée</label>
+                      <label className="text-muted-foreground block mb-1 font-semibold">Clé d'Accès Personnalisée</label>
                       <Input
                         value={editingGallery.accessKey || ''}
                         onChange={(e) => setEditingGallery({ ...editingGallery, accessKey: e.target.value.toUpperCase() })}
@@ -1587,7 +1642,7 @@ export default function AdminGaleriesPage() {
                     </div>
 
                     <div>
-                      <label className="text-zinc-400 block mb-1 font-semibold">Mot de Passe Confidentiel</label>
+                      <label className="text-muted-foreground block mb-1 font-semibold">Mot de Passe Confidentiel</label>
                       <Input
                         type="text"
                         placeholder={
@@ -1605,7 +1660,7 @@ export default function AdminGaleriesPage() {
               </div>
 
               <div>
-                <label className="text-zinc-400 block mb-1 font-semibold">URL de la Photo de Couverture</label>
+                <label className="text-muted-foreground block mb-1 font-semibold">URL de la Photo de Couverture</label>
                 <Input
                   value={editingGallery.coverUrl || ''}
                   onChange={(e) => setEditingGallery({ ...editingGallery, coverUrl: e.target.value })}
@@ -1613,7 +1668,7 @@ export default function AdminGaleriesPage() {
                 />
               </div>
 
-              <div className="flex justify-end space-x-3 pt-4 border-t border-zinc-800">
+              <div className="flex justify-end space-x-3 pt-4 border-t border-border">
                 <Button type="button" variant="outline" size="sm" onClick={() => setIsGalleryModalOpen(false)}>
                   Annuler
                 </Button>
@@ -1630,18 +1685,18 @@ export default function AdminGaleriesPage() {
       {isAlbumModalOpen && (
         <div className="fixed inset-0 z-50 bg-background/80 flex items-center justify-center p-4">
           <Card className="surface-elevated border-primary/50 w-full max-w-md p-6 space-y-6">
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
-              <h3 className="text-lg font-bold text-white flex items-center">
+            <div className="flex items-center justify-between border-b border-border pb-4">
+              <h3 className="text-lg font-bold text-foreground flex items-center">
                 <Layers className="h-5 w-5 text-primary mr-2" /> Créer un Sous-Album (Public ou Privé)
               </h3>
-              <button onClick={() => setIsAlbumModalOpen(false)} className="text-zinc-400 hover:text-white">
+              <button onClick={() => setIsAlbumModalOpen(false)} className="text-muted-foreground hover:text-foreground">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             <form onSubmit={handleAddAlbum} className="space-y-4 text-xs">
               <div>
-                <label className="text-zinc-400 block mb-1 font-semibold">Nom du Sous-Album *</label>
+                <label className="text-muted-foreground block mb-1 font-semibold">Nom du Sous-Album *</label>
                 <Input
                   required
                   placeholder="Ex: Préparatifs, Cérémonie, Cocktail, Valse..."
@@ -1650,14 +1705,14 @@ export default function AdminGaleriesPage() {
                 />
               </div>
 
-              <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-950 space-y-3">
+              <div className="p-4 rounded-xl border border-border bg-surface space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="font-bold text-white flex items-center space-x-1.5">
+                    <div className="font-bold text-foreground flex items-center space-x-1.5">
                       {newAlbumForm.isPrivate ? <Lock className="h-4 w-4 text-primary" /> : <Globe className="h-4 w-4 text-emerald-400" />}
                       <span>{newAlbumForm.isPrivate ? 'Album Privé Verrouillé' : 'Album Public Visible Tous'}</span>
                     </div>
-                    <div className="text-zinc-400 text-[11px] mt-0.5">
+                    <div className="text-muted-foreground text-[11px] mt-0.5">
                       {newAlbumForm.isPrivate
                         ? 'Masqué du portfolio public. Accession uniquement via Espace Client.'
                         : 'Affiché directement sur la page Portfolio publique.'}
@@ -1667,13 +1722,13 @@ export default function AdminGaleriesPage() {
                     type="checkbox"
                     checked={newAlbumForm.isPrivate}
                     onChange={(e) => setNewAlbumForm({ ...newAlbumForm, isPrivate: e.target.checked })}
-                    className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 accent-primary focus:ring-primary cursor-pointer"
+                    className="h-4 w-4 rounded border-border bg-surface-muted accent-primary focus:ring-primary cursor-pointer"
                   />
                 </div>
 
                 {newAlbumForm.isPrivate && (
-                  <div className="pt-2 border-t border-zinc-800">
-                    <label className="text-zinc-400 block mb-1 font-semibold">Mot de Passe d'Album (Optionnel)</label>
+                  <div className="pt-2 border-t border-border">
+                    <label className="text-muted-foreground block mb-1 font-semibold">Mot de Passe d'Album (Optionnel)</label>
                     <Input
                       placeholder="Ex: Secret2026!"
                       value={newAlbumForm.password}
@@ -1683,7 +1738,7 @@ export default function AdminGaleriesPage() {
                 )}
               </div>
 
-              <div className="flex justify-end space-x-3 pt-4 border-t border-zinc-800">
+              <div className="flex justify-end space-x-3 pt-4 border-t border-border">
                 <Button type="button" variant="outline" size="sm" onClick={() => setIsAlbumModalOpen(false)}>
                   Annuler
                 </Button>
@@ -1700,26 +1755,26 @@ export default function AdminGaleriesPage() {
       {isPhotoEditModalOpen && editingPhoto && (
         <div className="fixed inset-0 z-50 bg-background/80 flex items-center justify-center p-4">
           <Card className="surface-elevated border-primary/50 w-full max-w-lg p-6 space-y-6">
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
-              <h3 className="text-lg font-bold text-white flex items-center">
+            <div className="flex items-center justify-between border-b border-border pb-4">
+              <h3 className="text-lg font-bold text-foreground flex items-center">
                 <Edit3 className="h-5 w-5 text-primary mr-2" /> Personnaliser la Photo
               </h3>
-              <button onClick={() => setIsPhotoEditModalOpen(false)} className="text-zinc-400 hover:text-white">
+              <button onClick={() => setIsPhotoEditModalOpen(false)} className="text-muted-foreground hover:text-foreground">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             <form onSubmit={handleSavePhotoDetails} className="space-y-4 text-xs">
-              <div className="flex items-center space-x-4 p-3 rounded-xl border border-zinc-800 bg-zinc-950">
+              <div className="flex items-center space-x-4 p-3 rounded-xl border border-border bg-surface">
                 <img src={editingPhoto.url} alt={editingPhoto.title} className="h-16 w-20 object-cover rounded-lg" />
                 <div className="space-y-1">
-                  <div className="font-bold text-white">{editingPhoto.title}</div>
-                  <div className="text-[11px] text-zinc-400">ID: {editingPhoto.id}</div>
+                  <div className="font-bold text-foreground">{editingPhoto.title}</div>
+                  <div className="text-[11px] text-muted-foreground">ID: {editingPhoto.id}</div>
                 </div>
               </div>
 
               <div>
-                <label className="text-zinc-400 block mb-1 font-semibold">Titre de la Photo *</label>
+                <label className="text-muted-foreground block mb-1 font-semibold">Titre de la Photo *</label>
                 <Input
                   value={editingPhoto.title}
                   onChange={(e) => setEditingPhoto({ ...editingPhoto, title: e.target.value })}
@@ -1728,11 +1783,11 @@ export default function AdminGaleriesPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-zinc-400 block mb-1 font-semibold">Catégorie du Portfolio</label>
+                  <label className="text-muted-foreground block mb-1 font-semibold">Catégorie du Portfolio</label>
                   <select
                     value={editingPhoto.cat || 'mariage'}
                     onChange={(e) => setEditingPhoto({ ...editingPhoto, cat: e.target.value })}
-                    className="w-full h-11 rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-xs text-zinc-100"
+                    className="w-full h-11 rounded-xl border border-border bg-surface px-3 text-xs text-foreground"
                   >
                     <option value="mariage">Mariage</option>
                     <option value="portrait">Portrait</option>
@@ -1741,7 +1796,7 @@ export default function AdminGaleriesPage() {
                 </div>
 
                 <div>
-                  <label className="text-zinc-400 block mb-1 font-semibold">Sous-Album Rattaché</label>
+                  <label className="text-muted-foreground block mb-1 font-semibold">Sous-Album Rattaché</label>
                   <select
                     value={editingPhoto.albumId || ''}
                     onChange={(e) => {
@@ -1752,7 +1807,7 @@ export default function AdminGaleriesPage() {
                         albumName: albObj?.name || 'Général',
                       });
                     }}
-                    className="w-full h-11 rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-xs text-zinc-100"
+                    className="w-full h-11 rounded-xl border border-border bg-surface px-3 text-xs text-foreground"
                   >
                     {(getActiveAlbums(selectedGallery.albums || []) || []).map((alb) => (
                       <option key={alb.id} value={alb.id}>
@@ -1763,7 +1818,7 @@ export default function AdminGaleriesPage() {
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-3 pt-4 border-t border-zinc-800">
+              <div className="flex justify-end space-x-3 pt-4 border-t border-border">
                 <Button type="button" variant="outline" size="sm" onClick={() => setIsPhotoEditModalOpen(false)}>
                   Annuler
                 </Button>

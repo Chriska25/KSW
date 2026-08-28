@@ -32,6 +32,11 @@ import { useAdminToast } from '@/components/admin/admin-toast';
 import { galleryAccessUrl } from '@/lib/gallery-access-path';
 import { LoadingState } from '@/components/common/loading-state';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
+import {
+  AdminMobileListCard,
+  AdminMobileListCardRow,
+  AdminMobileListCardActions,
+} from '@/components/admin/admin-mobile-list-card';
 import { AdminModal } from '@/components/admin/admin-modal';
 import {
   fetchAdminBookings,
@@ -247,6 +252,67 @@ export default function AdminReservationsPage() {
     return matchesSearch && matchesStatus;
   });
 
+  const getStatusLabel = (status: BookingRow['status']) => {
+    if (status === 'confirmed') return 'Confirmé';
+    if (status === 'pending') return 'En attente';
+    if (status === 'completed') return 'Effectué';
+    return 'Annulé';
+  };
+
+  const getStatusVariant = (status: BookingRow['status']) => {
+    if (status === 'confirmed') return 'success' as const;
+    if (status === 'pending') return 'warning' as const;
+    return 'outline' as const;
+  };
+
+  const renderBookingActions = (b: BookingRow, compact = false) => (
+    <>
+      <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(b)}>
+        <Edit className="h-3.5 w-3.5 mr-1" /> {compact ? 'Modifier' : 'Modifier'}
+      </Button>
+      <Button variant="outline" size="sm" onClick={() => handleOpenGalleryModal(b)}>
+        <Key className="h-3.5 w-3.5 mr-1" /> Galerie
+      </Button>
+      {b.paymentStatus === 'mobile_money_pending' && (
+        <Button variant="primary" size="sm" onClick={() => handleOpenMobileMoneyConfirm(b)}>
+          Valider MM
+        </Button>
+      )}
+      {b.status === 'pending' && (
+        <Button variant="primary" size="sm" onClick={() => handleUpdateStatus(b.id, 'confirmed')}>
+          Valider
+        </Button>
+      )}
+      {b.status === 'confirmed' && (
+        <Button variant="outline" size="sm" onClick={() => handleUpdateStatus(b.id, 'completed')}>
+          Terminer
+        </Button>
+      )}
+      {b.status !== 'cancelled' && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-destructive"
+          onClick={() => handleUpdateStatus(b.id, 'cancelled')}
+        >
+          Annuler
+        </Button>
+      )}
+      {superUser && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-rose-500 hover:text-rose-400 hover:bg-rose-500/10"
+          onClick={() => handleDeleteBooking(b)}
+          title="Suppression définitive (super admin)"
+        >
+          <Trash2 className="h-3.5 w-3.5 mr-1" />
+          Suppr.
+        </Button>
+      )}
+    </>
+  );
+
   if (loading) {
     return <LoadingState message="Chargement des réservations…" />;
   }
@@ -312,6 +378,57 @@ export default function AdminReservationsPage() {
           {filteredBookings.length === 0 ? (
             <p className="text-muted-foreground text-sm text-center py-8">Aucune réservation pour le moment.</p>
           ) : (
+            <>
+              <div className="md:hidden space-y-3">
+                {filteredBookings.map((b) => (
+                  <AdminMobileListCard key={b.id}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-mono text-xs text-primary">{b.reference}</p>
+                        <p className="font-semibold text-foreground mt-1">{b.clientName}</p>
+                        <p className="text-caption truncate">{b.clientEmail}</p>
+                      </div>
+                      <Badge variant={getStatusVariant(b.status)}>{getStatusLabel(b.status)}</Badge>
+                    </div>
+                    <AdminMobileListCardRow label="Prestation" value={b.serviceTitle} />
+                    <AdminMobileListCardRow
+                      label="Date"
+                      value={
+                        <span className="inline-flex flex-col items-end gap-0.5">
+                          <span className="inline-flex items-center gap-1">
+                            <CalendarIcon className="h-3.5 w-3.5 text-primary" aria-hidden /> {b.date}
+                          </span>
+                          <span className="inline-flex items-center gap-1 text-muted-foreground font-normal">
+                            <Clock className="h-3.5 w-3.5" aria-hidden /> {b.startTime}
+                          </span>
+                        </span>
+                      }
+                    />
+                    <AdminMobileListCardRow
+                      label="Tarif"
+                      value={
+                        <span className="inline-flex flex-col items-end gap-0.5">
+                          <span className="tabular-nums">{formatPrice(b.totalAmount)}</span>
+                          <span className="text-success font-normal">Acompte: {formatPrice(b.depositAmount)}</span>
+                        </span>
+                      }
+                    />
+                    {b.galleryAccessKey && (
+                      <AdminMobileListCardRow
+                        label="Clé galerie"
+                        value={
+                          <span className="font-mono text-primary inline-flex items-center gap-1">
+                            <Key className="h-3 w-3" aria-hidden /> {b.galleryAccessKey}
+                          </span>
+                        }
+                      />
+                    )}
+                    <AdminMobileListCardActions>{renderBookingActions(b, true)}</AdminMobileListCardActions>
+                  </AdminMobileListCard>
+                ))}
+              </div>
+
+              <div className="hidden md:block responsive-table-wrap -mx-5 sm:-mx-6">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -362,79 +479,19 @@ export default function AdminReservationsPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant={
-                          b.status === 'confirmed'
-                            ? 'success'
-                            : b.status === 'pending'
-                              ? 'warning'
-                              : 'outline'
-                        }
-                      >
-                        {b.status === 'confirmed'
-                          ? 'Confirmé'
-                          : b.status === 'pending'
-                            ? 'En attente'
-                            : b.status === 'completed'
-                              ? 'Effectué'
-                              : 'Annulé'}
-                      </Badge>
+                      <Badge variant={getStatusVariant(b.status)}>{getStatusLabel(b.status)}</Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex flex-wrap justify-end gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(b)}>
-                          <Edit className="h-3.5 w-3.5 mr-1" /> Modifier
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => handleOpenGalleryModal(b)}>
-                          <Key className="h-3.5 w-3.5 mr-1" /> Galerie
-                        </Button>
-                        {b.paymentStatus === 'mobile_money_pending' && (
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            onClick={() => handleOpenMobileMoneyConfirm(b)}
-                          >
-                            Valider MM
-                          </Button>
-                        )}
-                        {b.status === 'pending' && (
-                          <Button variant="primary" size="sm" onClick={() => handleUpdateStatus(b.id, 'confirmed')}>
-                            Valider
-                          </Button>
-                        )}
-                        {b.status === 'confirmed' && (
-                          <Button variant="outline" size="sm" onClick={() => handleUpdateStatus(b.id, 'completed')}>
-                            Terminer
-                          </Button>
-                        )}
-                        {b.status !== 'cancelled' && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive"
-                            onClick={() => handleUpdateStatus(b.id, 'cancelled')}
-                          >
-                            Annuler
-                          </Button>
-                        )}
-                        {superUser && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-rose-500 hover:text-rose-400 hover:bg-rose-500/10"
-                            onClick={() => handleDeleteBooking(b)}
-                            title="Suppression définitive (super admin)"
-                          >
-                            <Trash2 className="h-3.5 w-3.5 mr-1" />
-                            Suppr.
-                          </Button>
-                        )}
+                        {renderBookingActions(b)}
                       </div>
                     </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

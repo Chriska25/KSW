@@ -16,7 +16,7 @@ export function AdminBreadcrumb() {
   return (
     <nav
       aria-label="Fil d'Ariane admin"
-      className="mb-4 sm:mb-5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground"
+      className="mb-4 sm:mb-5 hidden sm:flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground"
     >
       <Link
         href="/admin/dashboard"

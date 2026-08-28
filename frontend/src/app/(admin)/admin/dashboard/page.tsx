@@ -24,8 +24,8 @@ import {
   TableEmpty,
 } from '@/components/ui/table';
 import { useSettings } from '@/context/settings-context';
-import { LoadingState } from '@/components/common/loading-state';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
+import { AdminDashboardSkeleton } from '@/components/admin/admin-dashboard-skeleton';
 import { fetchDashboardData, type DashboardStats } from '@/lib/admin-dashboard';
 import { fetchVisitAnalytics } from '@/lib/visit-analytics';
 import { getApiErrorMessage } from '@/lib/api-error';
@@ -65,7 +65,7 @@ export default function AdminDashboardPage() {
   }, [load]);
 
   if (loading) {
-    return <LoadingState message="Chargement du tableau de bord…" />;
+    return <AdminDashboardSkeleton />;
   }
 
   if (!stats) {

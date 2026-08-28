@@ -341,7 +341,7 @@ export function AdminTopbar({ onToggleSidebar }: AdminTopbarProps) {
 
           <ThemeSwitcher variant="compact" />
 
-          <div ref={actionsRef} className="relative hidden md:block">
+          <div ref={actionsRef} className="relative">
             <button
               type="button"
               onClick={() => {
@@ -350,11 +350,12 @@ export function AdminTopbar({ onToggleSidebar }: AdminTopbarProps) {
                 setMobileSearchOpen(false);
                 setActionsOpen((o) => !o);
               }}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg surface-muted text-foreground hover:bg-muted text-xs font-medium transition-colors"
+              className="flex items-center gap-1.5 p-2 md:px-3 md:py-2 rounded-lg surface-muted text-foreground hover:bg-muted text-xs font-medium transition-colors"
+              aria-label="Actions rapides"
             >
               <Zap className="h-4 w-4 text-primary" />
               <span className="hidden lg:inline">Actions</span>
-              <ChevronDown className={`h-3.5 w-3.5 opacity-60 transition-transform ${actionsOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`hidden md:block h-3.5 w-3.5 opacity-60 transition-transform ${actionsOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {actionsOpen && (

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   Settings,
   CreditCard,
@@ -102,11 +103,47 @@ type SettingsTabId =
   | 'security'
   | 'integrations';
 
+const SETTINGS_TAB_IDS: SettingsTabId[] = [
+  'appearance',
+  'home',
+  'portfolio',
+  'prestations',
+  'legal',
+  'general',
+  'booking',
+  'payments',
+  'integrations',
+  'watermark',
+  'security',
+];
+
+function isSettingsTabId(value: string | null): value is SettingsTabId {
+  return value !== null && SETTINGS_TAB_IDS.includes(value as SettingsTabId);
+}
+
 export default function AdminSettingsPage() {
   const { settings: globalSettings, updateSettings } = useSettings();
   const { mode: themeMode } = useTheme();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
 
-  const [activeTab, setActiveTab] = useState<SettingsTabId>('general');
+  const tabFromUrl = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState<SettingsTabId>(
+    isSettingsTabId(tabFromUrl) ? tabFromUrl : 'general'
+  );
+
+  useEffect(() => {
+    const nextTab = searchParams.get('tab');
+    if (isSettingsTabId(nextTab)) setActiveTab(nextTab);
+  }, [searchParams]);
+
+  const selectTab = (tabId: SettingsTabId) => {
+    setActiveTab(tabId);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', tabId);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
@@ -351,36 +388,39 @@ export default function AdminSettingsPage() {
         </div>
       </Card>
 
-      <div className="flex items-center gap-2 border-b border-border pb-2 overflow-x-auto">
-        {[
-          { id: 'appearance', label: 'Apparence', icon: Sun },
-          { id: 'home', label: 'Page d\'accueil', icon: Home },
-          { id: 'portfolio', label: 'Portfolio & Vidéos', icon: Clapperboard },
-          { id: 'prestations', label: 'Page Prestations', icon: Package },
-          { id: 'legal', label: 'Mentions & RGPD', icon: Scale },
-          { id: 'general', label: '1. Titre & Infos Studio', icon: Settings },
-          { id: 'booking', label: '2. Réservation & Acomptes', icon: Clock },
-          { id: 'payments', label: '3. Clés Stripe & PayPal', icon: CreditCard },
-          { id: 'integrations', label: '4. Intégrations', icon: Plug },
-          { id: 'watermark', label: '5. Filigrane Photo', icon: ImageIcon },
-          { id: 'security', label: '6. Sécurité & Sauvegardes', icon: Shield },
-        ].map((tab) => {
-          const IconComp = tab.icon;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as SettingsTabId)}
-              className={`px-4 py-2.5 rounded-lg font-semibold text-xs transition-colors flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-                activeTab === tab.id
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-surface-muted'
-              }`}
-            >
-              <IconComp className="h-4 w-4" />
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
+      <div className="sticky top-0 z-20 -mx-1 px-1 py-2 bg-background/95 backdrop-blur-sm border-b border-border">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+          {[
+            { id: 'appearance', label: 'Apparence', icon: Sun },
+            { id: 'home', label: 'Page d\'accueil', icon: Home },
+            { id: 'portfolio', label: 'Portfolio & Vidéos', icon: Clapperboard },
+            { id: 'prestations', label: 'Page Prestations', icon: Package },
+            { id: 'legal', label: 'Mentions & RGPD', icon: Scale },
+            { id: 'general', label: '1. Titre & Infos Studio', icon: Settings },
+            { id: 'booking', label: '2. Réservation & Acomptes', icon: Clock },
+            { id: 'payments', label: '3. Clés Stripe & PayPal', icon: CreditCard },
+            { id: 'integrations', label: '4. Intégrations', icon: Plug },
+            { id: 'watermark', label: '5. Filigrane Photo', icon: ImageIcon },
+            { id: 'security', label: '6. Sécurité & Sauvegardes', icon: Shield },
+          ].map((tab) => {
+            const IconComp = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => selectTab(tab.id as SettingsTabId)}
+                className={`shrink-0 px-4 py-2.5 rounded-lg font-semibold text-xs transition-colors flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+                  activeTab === tab.id
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-surface-muted'
+                }`}
+              >
+                <IconComp className="h-4 w-4" />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {activeTab === 'appearance' && (

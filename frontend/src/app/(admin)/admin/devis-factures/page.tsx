@@ -13,13 +13,17 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  TableEmpty,
 } from '@/components/ui/table';
 import { Select } from '@/components/ui/select';
 import { useSettings } from '@/context/settings-context';
 import { useAdminToast } from '@/components/admin/admin-toast';
 import { LoadingState } from '@/components/common/loading-state';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
+import {
+  AdminMobileListCard,
+  AdminMobileListCardRow,
+  AdminMobileListCardActions,
+} from '@/components/admin/admin-mobile-list-card';
 import { AdminModal } from '@/components/admin/admin-modal';
 import { fetchAdminBookings, recordBalancePayment, deleteBookingPermanently } from '@/lib/admin-crm-api';
 import { bookingsToInvoices, computeInvoiceSummary, type InvoiceRow } from '@/lib/admin-dashboard';
@@ -204,6 +208,97 @@ export default function AdminDevisFacturesPage() {
         </CardHeader>
 
         <CardContent>
+          {filteredInvoices.length === 0 ? (
+            <p className="text-muted-foreground text-sm text-center py-8">
+              Aucune facture — les réservations apparaîtront ici.
+            </p>
+          ) : (
+            <>
+              <div className="md:hidden space-y-3">
+                {filteredInvoices.map((inv) => {
+                  const remaining = inv.remainingAmount ?? Math.max(0, inv.totalAmount - inv.paidAmount);
+                  const canRecordBalance =
+                    inv.status === 'partially_paid' && remaining > 0.01 && (inv.paymentLines?.length || 0) <= 1;
+
+                  return (
+                    <AdminMobileListCard key={inv.id}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-mono text-xs font-semibold text-primary">{inv.number}</p>
+                          <p className="font-semibold text-foreground mt-1">{inv.clientName}</p>
+                          <p className="text-caption">{inv.serviceTitle}</p>
+                        </div>
+                        <Badge
+                          variant={
+                            inv.status === 'paid' ? 'success' : inv.status === 'partially_paid' ? 'accent' : 'warning'
+                          }
+                        >
+                          {inv.status === 'paid'
+                            ? 'Soldée'
+                            : inv.status === 'partially_paid'
+                              ? 'Acompte réglé'
+                              : 'En attente'}
+                        </Badge>
+                      </div>
+                      <AdminMobileListCardRow
+                        label="Total"
+                        value={formatInvoiceAmount(inv.totalAmount, inv.currency)}
+                      />
+                      <AdminMobileListCardRow
+                        label="Réglé"
+                        value={
+                          <span className="text-success">{formatInvoiceAmount(inv.paidAmount, inv.currency)}</span>
+                        }
+                      />
+                      <AdminMobileListCardRow
+                        label="Solde"
+                        value={
+                          <span className="text-primary">{formatInvoiceAmount(remaining, inv.currency)}</span>
+                        }
+                      />
+                      <AdminMobileListCardRow
+                        label="Paiement"
+                        value={
+                          <span className="inline-flex items-start gap-1 justify-end">
+                            <CreditCard className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+                            <span>{inv.paymentSummary || inv.paymentMethod}</span>
+                          </span>
+                        }
+                      />
+                      <AdminMobileListCardActions>
+                        {canRecordBalance && (
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            className="text-xs"
+                            onClick={() => handleOpenBalanceModal(inv)}
+                          >
+                            <Wallet className="h-3.5 w-3.5 mr-1" />
+                            Encaisser solde
+                          </Button>
+                        )}
+                        <Button variant="outline" size="sm" onClick={() => handleDownloadPdf(inv)}>
+                          <Download className="h-3.5 w-3.5 mr-1" />
+                          PDF
+                        </Button>
+                        {superUser && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive"
+                            onClick={() => handleDeleteInvoice(inv)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 mr-1" />
+                            Suppr.
+                          </Button>
+                        )}
+                      </AdminMobileListCardActions>
+                    </AdminMobileListCard>
+                  );
+                })}
+              </div>
+
+              <div className="hidden md:block responsive-table-wrap -mx-5 sm:-mx-6">
           <Table>
             <TableHeader>
               <TableRow>
@@ -219,10 +314,7 @@ export default function AdminDevisFacturesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredInvoices.length === 0 ? (
-                <TableEmpty colSpan={9} message="Aucune facture — les réservations apparaîtront ici." />
-              ) : (
-                filteredInvoices.map((inv) => {
+              {filteredInvoices.map((inv) => {
                   const remaining = inv.remainingAmount ?? Math.max(0, inv.totalAmount - inv.paidAmount);
                   const canRecordBalance =
                     inv.status === 'partially_paid' && remaining > 0.01 && (inv.paymentLines?.length || 0) <= 1;
@@ -297,10 +389,12 @@ export default function AdminDevisFacturesPage() {
                       </TableCell>
                     </TableRow>
                   );
-                })
-              )}
+                })}
             </TableBody>
           </Table>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 

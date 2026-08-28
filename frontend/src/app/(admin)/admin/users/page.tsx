@@ -43,6 +43,11 @@ import {
 } from '@/components/ui/table';
 import { LoadingState } from '@/components/common/loading-state';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
+import {
+  AdminMobileListCard,
+  AdminMobileListCardRow,
+  AdminMobileListCardActions,
+} from '@/components/admin/admin-mobile-list-card';
 import { AdminModal } from '@/components/admin/admin-modal';
 
 export interface UserAccountItem {
@@ -550,6 +555,86 @@ export default function AdminUsersPage() {
               ) : usersError ? (
                 <div className="py-8 text-center text-sm text-danger">{usersError}</div>
               ) : (
+                <>
+                  <div className="md:hidden space-y-3">
+                    {filteredUsers.length === 0 ? (
+                      <p className="text-muted-foreground text-sm text-center py-8">Aucun utilisateur trouvé.</p>
+                    ) : (
+                      filteredUsers.map((u) => {
+                        const meta = getRoleMeta(u.role);
+                        return (
+                          <AdminMobileListCard key={u.id}>
+                            <div className="flex items-start gap-3">
+                              <div className="h-10 w-10 rounded-full bg-primary-muted border border-primary/25 flex items-center justify-center text-primary font-semibold text-sm shrink-0">
+                                {u.name.charAt(0).toUpperCase()}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="font-semibold text-foreground">{u.name}</p>
+                                <p className="text-caption font-mono truncate">{u.email}</p>
+                                <p className="text-caption font-mono text-muted-foreground">ID: {u.id}</p>
+                              </div>
+                              <Badge variant={meta.color} className="text-[10px] shrink-0">
+                                {meta.label}
+                              </Badge>
+                            </div>
+                            <AdminMobileListCardRow
+                              label="2FA"
+                              value={
+                                u.twoFactorEnabled ? (
+                                  <span className="inline-flex items-center text-success font-normal">
+                                    <ShieldCheck className="h-3.5 w-3.5 mr-1" /> Activé
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center text-muted-foreground font-normal">
+                                    <ShieldAlert className="h-3.5 w-3.5 mr-1" /> Désactivé
+                                  </span>
+                                )
+                              }
+                            />
+                            <AdminMobileListCardRow
+                              label="Statut"
+                              value={
+                                <button type="button" onClick={() => handleToggleStatus(u.id)} className="cursor-pointer">
+                                  <Badge
+                                    variant={
+                                      u.status === 'active'
+                                        ? 'success'
+                                        : u.status === 'pending'
+                                          ? 'warning'
+                                          : 'outline'
+                                    }
+                                  >
+                                    {u.status === 'active'
+                                      ? 'Actif'
+                                      : u.status === 'pending'
+                                        ? 'En attente'
+                                        : 'Suspendu'}
+                                  </Badge>
+                                </button>
+                              }
+                            />
+                            <AdminMobileListCardActions>
+                              <Button variant="outline" size="sm" onClick={() => handleOpenEditUser(u)}>
+                                <Edit className="h-3.5 w-3.5 mr-1" />
+                                Modifier
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive"
+                                onClick={() => handleDeleteUser(u.id)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5 mr-1" />
+                                Supprimer
+                              </Button>
+                            </AdminMobileListCardActions>
+                          </AdminMobileListCard>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  <div className="hidden md:block responsive-table-wrap -mx-5 sm:-mx-6">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -644,6 +729,8 @@ export default function AdminUsersPage() {
                     )}
                   </TableBody>
                 </Table>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
