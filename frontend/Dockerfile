@@ -9,10 +9,11 @@ COPY . .
 
 ARG NEXT_PUBLIC_APP_URL=https://kswstudio.fr
 ARG NEXT_PUBLIC_API_URL=/api/v1
+ARG BACKEND_INTERNAL_URL=http://backend:8000
 
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-ENV BACKEND_INTERNAL_URL=http://backend:8000
+ENV BACKEND_INTERNAL_URL=$BACKEND_INTERNAL_URL
 
 RUN npm run build
 
@@ -22,7 +23,8 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_PUBLIC_API_URL=/api/v1
-ENV BACKEND_INTERNAL_URL=http://backend:8000
+ARG BACKEND_INTERNAL_URL=http://backend:8000
+ENV BACKEND_INTERNAL_URL=$BACKEND_INTERNAL_URL
 
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/.next ./.next
@@ -33,4 +35,4 @@ RUN npm ci --omit=dev
 
 EXPOSE 3000
 
-CMD ["npm", "start"]
+CMD ["sh", "-c", "npm start -- -p ${PORT:-3000}"]
